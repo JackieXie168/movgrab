@@ -1228,6 +1228,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-ssl       use Secure Sockets Layer
   --enable-oss       use Open Sound System
+  --enable-esd       use ESound
 
 Some influential environment variables:
   CC          C compiler command
@@ -3853,6 +3854,14 @@ fi
 fi
 
 
+# Check whether --enable-esd was given.
+if test "${enable_esd+set}" = set; then
+  enableval=$enable_esd; cf_use_esd=$enableval 
+fi
+
+
+if test "$cf_use_esd" = "yes"
+then
 
 { echo "$as_me:$LINENO: checking for esd_open_sound in -lesd" >&5
 echo $ECHO_N "checking for esd_open_sound in -lesd... $ECHO_C" >&6; }
@@ -3940,7 +3949,8 @@ _ACEOF
 
 fi
 
-#cf_have_libesd=$ac_cv_lib_esd_esd_open_sound
+cf_have_libesd=$ac_cv_lib_esd_esd_open_sound
+fi
 
 
 echo

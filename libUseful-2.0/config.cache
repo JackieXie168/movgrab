@@ -12,9 +12,20 @@
 # config.status only pays attention to the cache file if you give it the
 # --recheck option to rerun configure.
 #
+ac_cv_func_EVP_aes_128_cbc=${ac_cv_func_EVP_aes_128_cbc=yes}
+ac_cv_func_EVP_aes_256_cbc=${ac_cv_func_EVP_aes_256_cbc=yes}
+ac_cv_func_EVP_bf_cbc=${ac_cv_func_EVP_bf_cbc=yes}
+ac_cv_func_EVP_cast5_cbc=${ac_cv_func_EVP_cast5_cbc=yes}
+ac_cv_func_EVP_des_cbc=${ac_cv_func_EVP_des_cbc=yes}
+ac_cv_func_EVP_desx_cbc=${ac_cv_func_EVP_desx_cbc=yes}
+ac_cv_func_EVP_idea_cbc=${ac_cv_func_EVP_idea_cbc=yes}
+ac_cv_func_EVP_rc2_cbc=${ac_cv_func_EVP_rc2_cbc=yes}
+ac_cv_func_EVP_rc4=${ac_cv_func_EVP_rc4=yes}
+ac_cv_func_EVP_rc5_32_12_16_cbc=${ac_cv_func_EVP_rc5_32_12_16_cbc=no}
+ac_cv_func_OpenSSL_add_all_algorithms=${ac_cv_func_OpenSSL_add_all_algorithms=no}
+ac_cv_func_SSL_library_init=${ac_cv_func_SSL_library_init=yes}
 ac_cv_header_stdc=${ac_cv_header_stdc=yes}
 ac_cv_lib_crypto_EVP_CIPHER_CTX_init=${ac_cv_lib_crypto_EVP_CIPHER_CTX_init=yes}
-ac_cv_lib_esd_esd_open_sound=${ac_cv_lib_esd_esd_open_sound=yes}
 ac_cv_lib_ssl_SSL_library_init=${ac_cv_lib_ssl_SSL_library_init=yes}
 ac_cv_lib_z_deflate=${ac_cv_lib_z_deflate=yes}
 ac_cv_prog_CC=${ac_cv_prog_CC=gcc}

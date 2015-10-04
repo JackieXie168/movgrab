@@ -11,7 +11,6 @@ typedef struct
 	int Flags;
 	int MaxSize;
 	STREAM *S;
-	char *Tag;
 	int LogFacility;
 	int LastFlushTime;
 	int FlushInterval;
@@ -59,6 +58,7 @@ TLogFile *LogFileGetEntry(char *FileName)
 			LogFile->Flags=LogFileDefaults->Flags;
 			LogFile->MaxSize=LogFileDefaults->MaxSize;
 			LogFile->S=S;
+			if (strcmp(FileName,"SYSLOG")==0) LogFile->Flags |= LOGFILE_SYSLOG;
 			ListAddNamedItem(LogFiles,FileName,LogFile);
 		}
 	}
@@ -88,6 +88,10 @@ void LogFileInternalDoRotate(TLogFile *LogFile)
   char *Tempstr=NULL;
 
 	if (! LogFile) return;
+	if (strcmp(LogFile->Path,"SYSLOG")==0) return;
+	if (strcmp(LogFile->Path,"STDOUT")==0) return;
+	if (strcmp(LogFile->Path,"STDERR")==0) return;
+
   if (LogFile->MaxSize > 0)
   {
   fstat(LogFile->S->out_fd,&FStat);
@@ -112,17 +116,19 @@ int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval)
 	if (! LogFileDefaults) LogFileSetupDefaults();
 	if (StrLen(FileName)==0) LogFile=LogFileDefaults;
 	else LogFile=LogFileGetEntry(FileName);
+
 	if (LogFile)
 	{
-		 LogFile->MaxSize=MaxSize;
-		  LogFile->FlushInterval=FlushInterval;
-		   LogFile->Flags=Flags;
+		LogFile->MaxSize=MaxSize;
+		LogFile->FlushInterval=FlushInterval;
+		LogFile->Flags=Flags;
+		if (strcmp(FileName,"SYSLOG")==0) LogFile->Flags |= LOGFILE_SYSLOG;
 	}
 	return(TRUE);
 }
 
 
-int LogFileInternalWrite(STREAM *S,int LogLevel, int Facility, int Flags, char *Tag, char *Str)
+int LogFileInternalWrite(STREAM *S,int LogLevel, int Flags, char *Str)
 {
 	char *Tempstr=NULL, *LogStr=NULL;
 	time_t Now;
@@ -130,8 +136,7 @@ int LogFileInternalWrite(STREAM *S,int LogLevel, int Facility, int Flags, char *
 	int result=FALSE;
 
 
-	if (S)
-	{
+
 		time(&Now);
 		TimeStruct=localtime(&Now);
 		LogStr=SetStrLen(LogStr,40);
@@ -157,18 +162,12 @@ int LogFileInternalWrite(STREAM *S,int LogLevel, int Facility, int Flags, char *
 			//if (Flags & LOGFILE_FLUSH) 
 			STREAMFlush(S);
 			STREAMLock(S,LOCK_UN);
+			result=TRUE;
 		}
 
-		if (Flags & LOGFILE_SYSLOG)
-		{
-			if (Facility != LOG_USER)
-			{
-				openlog(Tag,0,Facility);
-				syslog(LOG_INFO,"%s",LogStr);
-				closelog();
-			}
-			else syslog(LOG_INFO,"%s",LogStr);
-		}
+	if (Flags & LOGFILE_SYSLOG)
+	{
+		syslog(LOG_INFO,"%s",LogStr);
 		result=TRUE;
 	}
 
@@ -187,7 +186,7 @@ int LogToSTREAM(STREAM *S, int Flags, char *Str)
 {
 if (! S) return(FALSE);
 
-return(LogFileInternalWrite(S, 0, 0, LOGFILE_FLUSH, "", Str));
+return(LogFileInternalWrite(S, 0, LOGFILE_FLUSH, Str));
 }
 
 
@@ -237,7 +236,7 @@ int LogToFile(char *FileName,char *fmt, ...)
 	Tempstr=VFormatStr(Tempstr,fmt,args);
 	va_end(args);
 	StripTrailingWhitespace(Tempstr);
-	result=LogFileInternalWrite(LogFile->S,LOG_INFO, LogFile->LogFacility, LogFile->Flags, LogFile->Tag, Tempstr);
+	result=LogFileInternalWrite(LogFile->S,LOG_INFO, LogFile->Flags, Tempstr);
 	}
 
 DestroyString(Tempstr);

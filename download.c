@@ -212,6 +212,9 @@ RetVal=TRUE;
 //give a bit of time for 'player' program to finish
 sleep(3);
 
+DisplayProgress(Title, Format, *BytesRead,DocSize,Now,FALSE);
+printf("\n");
+
 DestroyString(Tempstr);
 
 return(RetVal);
@@ -276,7 +279,7 @@ if (Con)
 			else val=0;
 			RetVal=TransferItem(Con,Title, URL, Format, val, &BytesRead);
 
-			Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Doc));
+			Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Format, Doc));
 			CloseOutputFiles(Extn);
 		}
 		STREAMClose(Con);

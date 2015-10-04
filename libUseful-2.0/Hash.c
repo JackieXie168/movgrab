@@ -1,4 +1,5 @@
 #include "Hash.h"
+#include "string.h"
 
 char *EncodeBase64(char *Return, char *Text, int len)
 {
@@ -20,6 +21,51 @@ RetStr=SetStrLen(Return,StrLen(Text) *2);
 return(RetStr);
 }
 
+int HMAC(char **Return, char *Algo, char *iKey, int iKeyLen, char *iText, int iTextLen)
+{
+int blocksize=64, len, i;
+char *Key=NULL, *Text=NULL;
+int KeyLen, TextLen;
+char *Tempstr=NULL, *Digest=NULL, *OpadKey=NULL, *IpadKey=NULL;
+
+len=StrLen(iKey);
+
+if (len > blocksize) KeyLen=HashBytes(&Key,Algo,iKey,iKeyLen,"");
+else 
+{
+KeyLen=len;
+Key=SetStrLen(Key,len);
+memcpy(Key,iKey,len);
+}
+
+Key=SetStrLen(Key,blocksize);
+IpadKey=SetStrLen(IpadKey,blocksize);
+OpadKey=SetStrLen(OpadKey,blocksize);
+
+for (i=0; i < blocksize; i++)
+{
+IpadKey[i]=Key[i] ^ 0x5c;
+OpadKey[i]=Key[i] ^ 0x36;
+}
+
+len=StrLen(Text);
+Tempstr=SetStrLen(Tempstr,blocksize+len);
+memcpy(Tempstr,IpadKey,blocksize);
+memcpy(Tempstr+blocksize,Text,len);
+len=HashBytes(&Digest,Algo,Tempstr,blocksize+len,"");
+
+Tempstr=SetStrLen(Tempstr,blocksize+len);
+memcpy(Tempstr,OpadKey,blocksize);
+memcpy(Tempstr+blocksize,Digest,len);
+len=HashBytes(&Return,Algo,Tempstr,blocksize+len,"");
+
+DestroyString(Digest);
+DestroyString(Tempstr);
+DestroyString(IpadKey);
+DestroyString(OpadKey);
+
+return(len);
+}
 
 
 char *EncodeHash(char *Buffer, char *Digest, int len, int Encoding)
@@ -53,14 +99,26 @@ crc32Update((unsigned long *) &Hash->Ctx, Data, Len);
 }
 
 
-void HashFinishCRC(THash *Hash, int Encoding, char **HashStr)
+int HashFinishCRC(THash *Hash, int Encoding, char **HashStr)
 {
 unsigned long crc;
+int len;
 
+len=sizeof(unsigned long);
 crc32Finish((unsigned long *) Hash->Ctx);
 crc=htonl((unsigned long *) Hash->Ctx);
 
-*HashStr=EncodeHash(*HashStr, (char *) &crc, sizeof(unsigned long), Encoding);
+if (Encoding > 0) 
+{
+*HashStr=EncodeHash(*HashStr, (char *) &crc, len, Encoding);
+return(StrLen(*HashStr));
+}
+else
+{
+*HashStr=SetStrLen(*HashStr,len);
+memcpy(*HashStr,&crc,len);
+return(len);
+}
 }
 
 
@@ -82,17 +140,30 @@ MD5Update((MD5_CTX *) Hash->Ctx, Data, Len);
 }
 
 
-void HashFinishMD5(THash *Hash, int Encoding, char **HashStr)
+int HashFinishMD5(THash *Hash, int Encoding, char **HashStr)
 {
-int count;
+int count, len;
 char *Tempstr=NULL, *DigestBuff=NULL;
 
 DigestBuff=(char *) calloc(1,MD5LEN+1);
 MD5Final(DigestBuff, (MD5_CTX *) Hash->Ctx);
+
+if (Encoding > 0)
+{
 *HashStr=EncodeHash(*HashStr, DigestBuff, MD5LEN, Encoding);
+len=StrLen(*HashStr);
+}
+else
+{
+len=MD5LEN;
+*HashStr=SetStrLen(*HashStr,len);
+memcpy(*HashStr,DigestBuff,len);
+}
 
 DestroyString(DigestBuff);
 DestroyString(Tempstr);
+
+return(len);
 }
 
 
@@ -113,17 +184,29 @@ sha1_process_bytes(Data,Len,(struct sha1_ctx *) Hash->Ctx);
 }
 
 
-void HashFinishSHA1(THash *Hash, int Encoding, char **HashStr)
+int HashFinishSHA1(THash *Hash, int Encoding, char **HashStr)
 {
-int count;
+int count, len;
 char *Tempstr=NULL, *DigestBuff=NULL;
 
 DigestBuff=(char *) calloc(1,SHA1LEN+1);
 sha1_finish_ctx((struct sha1_ctx *) Hash->Ctx, DigestBuff);
-*HashStr=EncodeHash(*HashStr, DigestBuff, SHA1LEN, Encoding);
+if (Encoding > 0)
+{
+	 *HashStr=EncodeHash(*HashStr, DigestBuff, SHA1LEN, Encoding);
+	 len=StrLen(*HashStr);
+}
+else
+{
+len=SHA1LEN;
+*HashStr=SetStrLen(*HashStr,len);
+memcpy(*HashStr,DigestBuff,len);
+}
 
 DestroyString(DigestBuff);
 DestroyString(Tempstr);
+
+return(len);
 }
 
 
@@ -152,16 +235,12 @@ Hash=NULL;
 return(Hash);
 }
 
-char *HashBytes(char *Return, char *Type, char *text, int len, int Encoding)
+int HashBytes(char **Return, char *Type, char *text, int len, int Encoding)
 {
 THash *Hash;
-char *RetStr=NULL;
 
-RetStr=Return;
 Hash=HashInit(Type);
 Hash->Update(Hash, text, len);
-Hash->Finish(Hash, Encoding, &RetStr);
-
-return(RetStr);
+return(Hash->Finish(Hash, Encoding, Return));
 }
 

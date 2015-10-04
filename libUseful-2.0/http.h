@@ -25,7 +25,9 @@
 #define HTTP_HEADERS_SENT 8
 #define HTTP_NOCOMPRESS 16
 #define HTTP_NOREDIRECT 32
-#define HTTP_KEEPALIVE 128
+#define HTTP_TRY_HTTPS 64
+#define HTTP_REQ_HTTPS 128
+#define HTTP_KEEPALIVE 256
 #define HTTP_PROXY 512
 #define HTTP_SSL 1024
 #define HTTP_SSL_REWRITE 2048
@@ -65,6 +67,7 @@ char *PostContentType;
 int PostContentLength;
 char *Proxy;
 time_t IfModifiedSince;
+ListNode *ServerHeaders;
 ListNode *CustomSendHeaders;
 HTTPAuthStruct *Authorization;
 HTTPAuthStruct *ProxyAuthorization;
@@ -93,6 +96,7 @@ int HTTPDownload(char *URL, char *Login, char *Password, STREAM *S);
 void HTTPSetUserAgent(char *AgentName);
 void HTTPSetProxy(char *Proxy);
 void HTTPSetFlags(int Flags);
+int HTTPGetFlags();
 char *HTTPParseURL(char *URL, char **Proto, char **Host, int *Port, char **Login, char **Password);
 
 #endif

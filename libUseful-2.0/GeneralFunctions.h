@@ -64,6 +64,9 @@ double ParseHumanReadableDataQty(char *Data, int Type);
 char *GetHumanReadableDataQty(double Size, int Type);
 char *FindFileInPath(char *InBuff, char *File, char *Path);
 
+char *HtmlGetTag(char *Input, char **TagType, char **TagData);
+char *HtmlDeQuote(char *RetStr, char *Data);
+
 
 #ifdef __cplusplus
 }

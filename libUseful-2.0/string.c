@@ -227,6 +227,7 @@ return(tempstr);
 }
 
 
+
 char *FormatStr(char *InBuff, const char *FmtStr, ...)
 {
 int inc=100, count=1, result;
@@ -313,8 +314,8 @@ void StripTrailingWhitespace(char *String)
 {
 int count,len;
 
-if (String==NULL) return;
 len=StrLen(String);
+if (len==0) return;
 for(count = len-1; (count >-1) && isspace(String[count]); count--) String[count]=0;
 }
 
@@ -322,7 +323,9 @@ for(count = len-1; (count >-1) && isspace(String[count]); count--) String[count]
 void StripLeadingWhitespace(char *String)
 {
 int count,len;
+
 len=StrLen(String);
+if (len==0) return;
 for(count = 0; (count <len -1) && isspace(String[count]); count++);
 memmove(String,String+count,len-count);
 String[len-count]=0;

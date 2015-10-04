@@ -158,7 +158,7 @@ if (result==0)
 	*LocalPort=ntohs(sa.sin_port);
 
 	//Set Address to be the same as control sock, as it might not be INADDR_ANY
-	result=getsockname(sock, (struct sockaddr *) &sa, &salen);
+	result=getpeername(sock, (struct sockaddr *) &sa, &salen);
 
 	if (result==0)
 	{
@@ -453,7 +453,7 @@ return(result);
 
 int STREAMInternalConnect(STREAM *S, char *Host, int Port,int Flags)
 {
-int val, result=FALSE;;
+int val, result=FALSE;
 
 S->in_fd=ConnectToHost(Host,Port,Flags);
 S->out_fd=S->in_fd;
@@ -839,7 +839,9 @@ static int InitDone=FALSE;
 
 if (InitDone) return(TRUE);
   SSL_library_init();
+#ifdef USE_OPENSSL_ADD_ALL_ALGORITHMS
   OpenSSL_add_all_algorithms();
+#endif
   SSL_load_error_strings();
 
   InitDone=TRUE;
@@ -927,6 +929,7 @@ return(result);
 const char *STREAMQuerySSLCipher(STREAM *S)
 {
 if (! S) return(NULL);
+if (! S->Extra) return(NULL);
 #ifdef HAVE_LIBSSL
 return(SSL_get_cipher((SSL *) S->Extra));
 #else

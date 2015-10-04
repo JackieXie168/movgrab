@@ -97,6 +97,7 @@ int FDCheckForBytes(int);
 int STREAMCheckForBytes(STREAM *);
 int STREAMCheckForWaitingChar(STREAM *S, char check_char);
 int STREAMCountWaitingBytes(STREAM *);
+STREAM *STREAMSelect(ListNode *Streams);
 
 
 int IndexedFileLoad(STREAM *S);

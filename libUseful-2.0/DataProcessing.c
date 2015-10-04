@@ -157,8 +157,7 @@ Tempstr=SetStrLen(Tempstr,klen+slen);
 memcpy(Tempstr,Salt,slen);
 memcpy(Tempstr+slen,TmpKey,klen);
 
-*Key=HashBytes(*Key,"md5",Tempstr,slen+klen,0);
-*KeyLen=StrLen(*Key);
+*KeyLen=HashBytes(Key,"md5",Tempstr,slen+klen,0);
 
 
 DestroyString(Name);
@@ -326,6 +325,76 @@ return(TRUE);
 
 #ifdef HAVE_LIBCRYPTO
 
+typedef enum {CI_BLOWFISH, CI_RC2, CI_RC4, CI_RC5, CI_DES, CI_DESX, CI_CAST,CI_IDEA,CI_AES, CI_AES_256} LIBUSEFUL_CRYPT_CIPHERS;
+
+int libCryptoCipherAvailable(int CipherNum)
+{
+switch(CipherNum)
+{
+	case CI_BLOWFISH:
+		#ifdef HAVE_EVP_BF_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_RC2:
+		#ifdef HAVE_EVP_RC2_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_RC4:
+		#ifdef HAVE_EVP_RC4_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_RC5:
+		#ifdef HAVE_EVP_RC5_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_DES:
+		#ifdef HAVE_EVP_DES_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_DESX:
+		#ifdef HAVE_EVP_DESX_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_CAST:
+		#ifdef HAVE_EVP_CAST5_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_IDEA:
+		#ifdef HAVE_EVP_IDEA_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_AES:
+		#ifdef HAVE_EVP_AES_129_CBC
+		return(TRUE);
+		#endif
+		break;
+
+	case CI_AES_256:
+		#ifdef HAVE_EVP_AES_256_CBC
+		return(TRUE);
+		#endif
+		break;
+}
+return(FALSE);
+}
+
+
 int libCryptoProcessorInit(TProcessingModule *ProcMod, const char *Args)
 {
 int result=FALSE;
@@ -334,10 +403,12 @@ int result=FALSE;
 libCryptoProcessorData *Data;
 EVP_CIPHER_CTX *ctx;
 char *CipherList[]={"blowfish","rc2","rc4","rc5","des","desx","cast","idea","aes","aes-256",NULL};
-typedef enum {CI_BLOWFISH, CI_RC2, CI_RC4, CI_RC5, CI_DES, CI_DESX, CI_CAST,CI_IDEA,CI_AES, CI_AES_256} LIBUSEFUL_CRYPT_CIPHERS;
 int val;
 char *Tempstr=NULL;
 
+val=MatchTokenFromList(ProcMod->Name,CipherList,0);
+if (val==-1) return(FALSE);
+if (! libCryptoCipherAvailable(val)) return(FALSE);
 Data=(libCryptoProcessorData *) calloc(1,sizeof(libCryptoProcessorData));
 
 //Tempstr here holds the cipher name
@@ -345,7 +416,6 @@ InitialiseEncryptionComponents(Args, &Tempstr, &Data->InputVector, &Data->InputV
 
 if (StrLen(ProcMod->Name)==0) ProcMod->Name=CopyStr(ProcMod->Name,Tempstr);
 
-val=MatchTokenFromList(ProcMod->Name,CipherList,0);
 
 switch(val)
 {
@@ -356,43 +426,63 @@ switch(val)
 */
 
 	case CI_BLOWFISH:
+		#ifdef HAVE_EVP_BF_CBC
 		Data->Cipher=EVP_bf_cbc();
+		#endif
 		break;
 
 	case CI_RC2:
+		#ifdef HAVE_EVP_RC2_CBC
 		Data->Cipher=EVP_rc2_cbc();
+		#endif
 		break;
 
 	case CI_RC4:
+		#ifdef HAVE_EVP_RC4_CBC
 		Data->Cipher=EVP_rc4();
+		#endif
 		break;
 
 	case CI_RC5:
+		#ifdef HAVE_EVP_RC5_32_12_16_CBC
 		//Data->Cipher=EVP_rc5_32_12_16_cbc();
+		#endif
 		break;
 
 	case CI_DES:
+		#ifdef HAVE_EVP_DES_CBC
 		Data->Cipher=EVP_des_cbc();
+		#endif
 		break;
 
 	case CI_DESX:
+		#ifdef HAVE_EVP_DESX_CBC
 		Data->Cipher=EVP_desx_cbc();
+		#endif
 		break;
 
 	case CI_CAST:
+		#ifdef HAVE_EVP_CAST5_CBC
 		Data->Cipher=EVP_cast5_cbc();
+		#endif
 		break;
 
 	case CI_IDEA:
+		#ifdef HAVE_EVP_IDEA_CBC
 		Data->Cipher=EVP_idea_cbc();
+		#endif
 		break;
 
 	case CI_AES:
+		#ifdef HAVE_EVP_AES_128_CBC
 		Data->Cipher=EVP_aes_128_cbc();
+		#endif
 		break;
 
 	case CI_AES_256:
+		#ifdef HAVE_EVP_AES_256_CBC
 		Data->Cipher=EVP_aes_256_cbc();
+		#endif
 		break;
 }
 

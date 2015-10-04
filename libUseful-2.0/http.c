@@ -52,6 +52,7 @@ DestroyString(Info->PostData);
 DestroyString(Info->PostContentType);
 DestroyString(Info->Proxy);
 
+ListDestroy(Info->ServerHeaders,DestroyString);
 ListDestroy(Info->CustomSendHeaders,DestroyString);
 if (Info->Authorization) HTTPAuthDestroy(Info->Authorization);
 if (Info->ProxyAuthorization) HTTPAuthDestroy(Info->ProxyAuthorization);
@@ -283,7 +284,7 @@ void HTTPInfoSetValues(HTTPInfoStruct *Info, char *Host, int Port, char *Logon, 
 
 Info->Host=CopyStr(Info->Host,Host);
 if (Port > 0) Info->Port=Port;
-else Info->Port=80;
+else Info->Port=0;
 Info->Method=CopyStr(Info->Method,Method);
 Info->Doc=CopyStr(Info->Doc,Doc);
 Info->PostContentType=CopyStr(Info->PostContentType,ContentType);
@@ -307,6 +308,7 @@ HTTPInfoStruct *Info;
 Info=(HTTPInfoStruct *) calloc(1,sizeof(HTTPInfoStruct));
 HTTPInfoSetValues(Info, Host, Port, Logon, Password, Method, Doc, ContentType, ContentLength);
 
+Info->ServerHeaders=ListCreate();
 Info->CustomSendHeaders=ListCreate();
 if (StrLen(g_Proxy)) Info->Proxy=CopyStr(Info->Proxy,g_Proxy);
 if (g_Flags) Info->Flags=g_Flags;
@@ -434,6 +436,7 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 
 	Tempstr=MCopyStr(Tempstr,"HTTP:",Token,NULL);
 	STREAMSetValue(S,Tempstr,ptr);
+	ListAddNamedItem(Info->ServerHeaders,Token,CopyStr(NULL,ptr));
 
 	if (StrLen(Token) && StrLen(ptr))
 	{
@@ -548,9 +551,9 @@ SendStr=CatStr(RetStr,"");
   {
     AuthCounter++;
     Tempstr=FormatStr(Tempstr,"%s:%s:%s",AuthInfo->Logon,AuthInfo->AuthRealm,AuthInfo->Password);
-    HA1=HashBytes(HA1,"md5",Tempstr,StrLen(Tempstr),0);
+    HashBytes(&HA1,"md5",Tempstr,StrLen(Tempstr),0);
     Tempstr=FormatStr(Tempstr,"%s:%s",Info->Method,Info->Doc);
-    HA2=HashBytes(HA2,"md5",Tempstr,StrLen(Tempstr),0);
+    HashBytes(&HA2,"md5",Tempstr,StrLen(Tempstr),0);
 
     for (i=0; i < 10; i++)
     {
@@ -559,7 +562,7 @@ SendStr=CatStr(RetStr,"");
     }
 
     Tempstr=FormatStr(Tempstr,"%s:%s:%08d:%s:auth:%s",HA1,AuthInfo->AuthNonce,AuthCounter,ClientNonce,HA2);
-    Digest=HashBytes(Digest,"md5",Tempstr,StrLen(Tempstr),0);
+    HashBytes(&Digest,"md5",Tempstr,StrLen(Tempstr),0);
     Tempstr=FormatStr(Tempstr,"%s: Digest username=\"%s\",realm=\"%s\",nonce=\"%s\",uri=\"%s\",qop=auth,nc=%08d,cnonce=\"%s\",response=\"%s\"\r\n",AuthHeader,AuthInfo->Logon,AuthInfo->AuthRealm,AuthInfo->AuthNonce,Info->Doc,AuthCounter,ClientNonce,Digest);
     SendStr=CatStr(SendStr,Tempstr);
     AuthInfo->Flags |= HTTP_SENT_AUTH;
@@ -596,7 +599,7 @@ int i;
 char *ptr;
 static int AuthCounter=0;
 
-//STREAMClearDataProcessors(S);
+STREAMClearDataProcessors(S);
 SendStr=CopyStr(SendStr,Info->Method);
 SendStr=CatStr(SendStr," ");
 
@@ -845,12 +848,12 @@ switch (RCode)
 	if (strcmp(Tempstr,"https")==0) 
 	{
 		HTTPInfo->Flags |= HTTP_SSL;
-		if (HTTPInfo->Port==0) HTTPInfo->Port=443;
+		//if (HTTPInfo->Port==0) HTTPInfo->Port=443;
 	}
 	else 
 	{
 		HTTPInfo->Flags &= ~HTTP_SSL;
-		if (HTTPInfo->Port==0) HTTPInfo->Port=80;
+		//if (HTTPInfo->Port==0) HTTPInfo->Port=80;
 	}
 
 	HTTPInfo->Doc=MCopyStr(HTTPInfo->Doc,"/",ptr,NULL);
@@ -891,12 +894,11 @@ DestroyString(Tempstr);
 return(result);
 }
 
-
-STREAM *HTTPConnect(HTTPInfoStruct *Info)
+STREAM *HTTPSetupConnection(HTTPInfoStruct *Info, int ForceHTTPS)
 {
-STREAM *S;
 char *Proto=NULL, *Host=NULL;
-int Port=80, Flags=0;
+int Port=0, Flags=0;
+STREAM *S;
 
 S=STREAMCreate();
 
@@ -908,7 +910,9 @@ if (StrLen(Info->Proxy))
 	}
 	HTTPParseURL(Info->Proxy, &Proto, &Host, &Port, &Info->ProxyAuthorization->Logon, &Info->ProxyAuthorization->Password);
 	
-	if (strcasecmp(Proto,"https")==0) 
+	if (ForceHTTPS) Proto=CopyStr(Proto,"https");
+
+	if (strcasecmp(Proto,"https")==0)
 	{
 		Flags |= CONNECT_SSL; 
 		if (Port==0) Port=443;
@@ -924,9 +928,20 @@ else
 	Port=Info->Port;
 
 	if (Info->Flags & HTTP_SSL) Flags |= CONNECT_SSL;
+	if (ForceHTTPS) 
+	{
+		Flags |= CONNECT_SSL;
+	}
+
+	if (Port==0)
+	{
+		if (Flags & CONNECT_SSL) Port=443;
+		else Port=80;
+	}
 }
 
-S->Path=MCopyStr(S->Path,"http://",Host,Info->Doc,NULL);
+S->Path=MCopyStr(S->Path,Proto,"://",Host,Info->Doc,NULL);
+
 
 if (STREAMConnectToHost(S,Host,Port,Flags))
 {
@@ -942,6 +957,27 @@ Info->S=S;
 
 DestroyString(Proto);
 DestroyString(Host);
+
+return(S);
+}
+
+
+
+STREAM *HTTPConnect(HTTPInfoStruct *Info)
+{
+STREAM *S=NULL;
+
+if (
+		(g_Flags & HTTP_REQ_HTTPS) ||
+		(g_Flags & HTTP_TRY_HTTPS)
+	)
+{
+S=HTTPSetupConnection(Info, TRUE);
+if (g_Flags & HTTP_REQ_HTTPS) return(S);
+}
+
+if (!S) S=HTTPSetupConnection(Info, FALSE);
+
 return(S);
 }
 
@@ -1035,12 +1071,14 @@ if (StrLen(User) || StrLen(Pass))
 	HTTPAuthSet(Info->Authorization,User, Pass, HTTP_AUTH_BASIC);
 }
 
-
+/*
 if (Info->Port==0)
 {
 	if (strcmp(Proto,"https")==0) Info->Port=443;
 	else Info->Port=80;
 }
+*/
+
 if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
 
 Info->Doc=MCopyStr(Info->Doc,"/",dptr,NULL);
@@ -1160,4 +1198,9 @@ g_Proxy=CopyStr(g_Proxy,Proxy);
 void HTTPSetFlags(int Flags)
 {
 g_Flags=Flags;
+}
+
+int HTTPGetFlags()
+{
+return(g_Flags);
 }

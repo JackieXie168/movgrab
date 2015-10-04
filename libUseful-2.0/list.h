@@ -47,6 +47,8 @@ ListNode *ListFindItem(ListNode *Head, void *Item);
 ListNode *ListJoin(ListNode *, ListNode *);
 ListNode *ListClone(ListNode *, LIST_ITEM_CLONE_FUNC);
 void ListSort(ListNode *, void *Data, int (*LessThanFunc)(void *, void *, void *));
+void ListSortNamedItems(ListNode *List);
+
 void ListSwapItems(ListNode *, ListNode *);
 int ListSize(ListNode *);
 

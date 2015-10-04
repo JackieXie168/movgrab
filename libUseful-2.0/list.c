@@ -171,6 +171,30 @@ ListNode *ListAddItem(ListNode *ListStart,void *Item)
 return(ListAddNamedItem(ListStart,NULL,Item));
 }
 
+void ListUnthreadNode(ListNode *Node)
+{
+ListNode *Prev, *Next;
+
+Prev=Node->Prev;
+Next=Node->Next;
+if (Prev) Prev->Next=Next;
+if (Next) Next->Prev=Prev;
+}
+
+void ListThreadNode(ListNode *Prev, ListNode *Node)
+{
+ListNode *NewItem, *Next;
+
+//Never thread something to itself!
+if (Prev==Node) return;
+
+Next=Prev->Next;
+Node->Prev=Prev;
+Prev->Next=Node;
+Node->Next=Next;
+if (Next) Next->Prev=Node; /* Next might be NULL! */
+}
+
 
 ListNode *InsertNamedItemIntoList(ListNode *InsertNode, const char *Name, void *Item)
 {
@@ -487,14 +511,18 @@ return(Curr);
 }
 
 
-void ListSwapItems(ListNode *List1, ListNode *List2)
+void ListSwapItems(ListNode *Item1, ListNode *Item2)
 {
-void *Item1, *Item2;
+ListNode *I1Prev, *I2Prev;
 
-Item1=List1->Item;
-Item2=List2->Item;
-List1->Item=Item2;
-List2->Item=Item1;
+I1Prev=Item1->Prev;
+if (I1Prev==Item2) I1Prev=I1Prev->Prev;
+I2Prev=Item2->Prev;
+ListUnthreadNode(Item1);
+ListUnthreadNode(Item2);
+
+ListThreadNode(I1Prev, Item2);
+ListThreadNode(I2Prev, Item1);
 }
 
 
@@ -513,6 +541,34 @@ while (! sorted)
     if (Prev !=NULL)
     {
        if ( (*LessThanFunc)(Data,Prev->Item,Curr->Item) )
+       {
+         sorted=0;
+         ListSwapItems(Prev,Curr);
+       }
+    }
+
+    Prev=Curr;
+    Curr=ListGetNext(Curr);
+  }
+}
+
+}
+
+void ListSortNamedItems(ListNode *List)
+{
+ListNode *Curr=NULL, *Prev=NULL;
+int sorted=0;
+
+while (! sorted)
+{ 
+  sorted=1;
+  Prev=NULL;
+  Curr=ListGetNext(List);
+  while (Curr)
+  {
+    if (Prev !=NULL)
+    {
+       if (strcmp(Prev->Tag,Curr->Tag) < 0)
        {
          sorted=0;
          ListSwapItems(Prev,Curr);

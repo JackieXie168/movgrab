@@ -105,7 +105,19 @@ StripLeadingWhitespace(Tempstr);
 
 if (StrLen(Tempstr))
 {
-	if (*Tempstr != '#') ListAddItem(Items,CopyStr(NULL,Tempstr));
+	if (*Tempstr != '#') 
+	{
+		if (strncasecmp(Tempstr,"http",4) !=0) 
+		{
+			Doc=CopyStr(Doc,URL);
+			ptr=strrchr(Doc,'/');
+			if (ptr) *ptr='\0';
+			Doc=MCatStr(Doc,"/",Tempstr,NULL);
+		}
+		else Doc=CopyStr(Doc,Tempstr);
+
+		ListAddItem(Items,CopyStr(NULL,Doc));
+	}
 	else if (strncmp("#EXT-X-STREAM-INF",Tempstr,StrLen("#EXT-X-STREAM-INF"))==0) M3UType=M3U_STREAMINFO;
 	else if (strncmp("#EXT-X-MEDIA-SEQUENCE",Tempstr,StrLen("#EXT-X-MEDIA-SEQUENCE"))==0) M3UType=M3U_PLAYLIST;
 }

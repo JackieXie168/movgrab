@@ -87,6 +87,41 @@ if (read_result==STREAM_DATA_ERROR) return(EOF);
 return(0);
 }
 
+STREAM *STREAMSelect(ListNode *Streams)
+{
+ fd_set SelectSet;
+ STREAM *S;
+ ListNode *Curr;
+ int highfd=0, result;
+ 
+ FD_ZERO(&SelectSet);
+ 
+ Curr=ListGetNext(Streams);
+ while (Curr)
+ {
+   S=(STREAM *) Curr->Item;
+   if (S->InEnd > S->InStart) return(S);
+   FD_SET(S->in_fd,&SelectSet);
+   if (S->in_fd > highfd) highfd=S->in_fd;
+   Curr=ListGetNext(Curr);
+ }
+   
+ result=select(highfd+1,&SelectSet,NULL,NULL,NULL);
+ 
+ if (result > 0)
+ {
+   Curr=ListGetNext(Streams);
+   while (Curr)
+   {
+     S=(STREAM *) Curr->Item;
+    if (FD_ISSET(S->in_fd,&SelectSet)) return(S);
+     Curr=ListGetNext(Curr);
+   }
+ }
+ 
+ return(NULL);
+}
+
 
 int STREAMCheckForWaitingChar(STREAM *S, char check_char)
 {
@@ -504,7 +539,7 @@ int STREAMDisassociateFromFD(STREAM *Stream)
 {
 int fd;
 
-if (! Stream) return;
+if (! Stream) return(-1);
 fd=Stream->in_fd;
 STREAMFlush(Stream);
 DestroyString(Stream->InputBuff);

@@ -1,10 +1,11 @@
+# Generated automatically from Makefile.in by configure.
 CC = gcc
 VERSION = 0.0.1
 CFLAGS = -g -O2
-LIBS = -lesd 
-FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBESD=1 
+LIBS = -lz 
+FLAGS=$(CFLAGS) -fPIC  -DSTDC_HEADERS=1 -DHAVE_LIBZ=1  
 prefix=/usr/local
-OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o Hash.o
+OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o Hash.o Compression.o
 
 
 all: $(OBJ)
@@ -57,6 +58,9 @@ EncryptedFiles.o: EncryptedFiles.h EncryptedFiles.c
 
 Hash.o: Hash.h Hash.c
 	$(CC) $(FLAGS) -c Hash.c
+
+Compression.o: Compression.h Compression.c
+	$(CC) $(FLAGS) -c Compression.c
 
 ConnectManager.o: ConnectManager.h ConnectManager.c
 	$(CC) $(FLAGS) -c ConnectManager.c

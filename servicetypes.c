@@ -13,7 +13,7 @@ Then site specific
 
 
 //Site type names used at the command line etc
-char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","sdnhm","princeton","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","princeton","reuters","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com","discovery","bloomberg",NULL};
 
 //Longer names used in display
 char *DownloadNames[]={"none",
@@ -34,10 +34,8 @@ char *DownloadNames[]={"none",
 "www.redbalcony.com",
 "www.mobango.com",
 "Yale University: http://oyc.yale.edu",
-"San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html",
 "Princeton University: http://www.princeton.edu/WebMedia/",
 "Reuters: http://www.reuters.com/",
-"clipfish.de",
 "Liveleak: http://www.liveleak.com",
 "Academic Earth: http://www.academicearth.org",
 "Photobucket: http://www.photobucket.com",
@@ -45,7 +43,6 @@ char *DownloadNames[]={"none",
 "Videos Facebook: http://www.videosfacebook.net",
 "Aljazeera: english.aljazeera.net",
 "mefeedia.com",
-"myvido1.com",
 "iViewTube: www.iviewtube.com",
 "Washington Post: www.washingtonpost.com",
 "CBS News: www.cbsnews.com",
@@ -65,6 +62,8 @@ char *DownloadNames[]={"none",
 "dotsub.com",
 "astronomy.com",
 "teachertube.com",
+"dsc.discovery.com",
+"www.bloomberg.com (not bloomberg.tv)",
 NULL};
 
 //links used by the -test-sites feature to test if a download site still
@@ -80,16 +79,14 @@ char *TestLinks[]={"", "",
 "http://www.vbox7.com/play:1417ad5a",
 "http://blip.tv/file/4855647/",
 "http://www.ted.com/talks/janine_benyus_shares_nature_s_designs.html",
-"http://www.myvideo.de/watch/8045043#featuredvideo1",
+"http://www.myvideo.de/watch/9949/tornados",
 "http://www.clipshack.com/Clip.aspx?key=F9F949CE15A12B50",
 "http://www.mytopclip.com/videos/32501/flip-over-card-trick-revealed",
-"http://www.redbalcony.com/?vid=23083",
+"http://www.redbalcony.com/?vid=29433",
 "http://www.mobango.com/media_details/struck_in_tsunami/%21tKpzdHIo5E%3D/",
 "http://oyc.yale.edu/economics/game-theory/contents/sessions/session-1-introduction-five-first-lessons",
-"http://www.sdnhm.org/webcasts/lectures/scottsampson.html",
 "http://www.princeton.edu/WebMedia/flash/lectures/20100428_publect_taibbi_tett.shtml",
 "http://www.reuters.com/news/video/story?videoId=193471398&videoChannel=4",
-"http://www.clipfish.de/musikvideos/video/3527775/daft-punk-derezzed/",
 "http://www.liveleak.com/view?i=a7b_1299633723",
 "http://www.academicearth.org/lectures/interaction-with-physical-environment",
 "http://gs147.photobucket.com/groups/r299/QM25Y4IJEP/?action=view&current=BlackSwan1.mp4",
@@ -97,7 +94,6 @@ char *TestLinks[]={"", "",
 "http://www.videosfacebook.net/sueper-best-dance-songs-2-aaaa-1",
 "http://english.aljazeera.net/programmes/countingthecost/2011/02/2011219142816937101.html",
 "http://www.mefeedia.com/video/36135458",
-"http://www.myvido1.com/QWxgGMihFZEl1aOJlTy0UP_bob-marley-don-039t-worry-be-happy",
 "http://www.iviewtube.com/v/152128/insane-hail-storm-oklahoma-city",
 "http://www.washingtonpost.com/business/on-leadership-modern-day-machiavellis-/2011/02/18/ABYgckH_video.html",
 "http://www.cbsnews.com/video/watch/?id=7357739n",
@@ -117,6 +113,8 @@ char *TestLinks[]={"", "",
 "http://dotsub.com/view/5d90ef11-d5e5-42fb-8263-a4c128fb64df",
 "http://www.astronomy.com/News-Observing/Liz%20and%20Bills%20Cosmic%20Adventures/2011/02/Episode%202.aspx",
 "http://www.teachertube.com/viewVideo.php?video_id=114089&title=Marco_Polo",
+"http://dsc.discovery.com/videos/how-the-universe-works-birth-of-a-black-hole.html",
+"http://www.bloomberg.com/video/72477250/",
 NULL};
 
 
@@ -161,10 +159,6 @@ else if (strcmp(Server,"oyc.yale.edu")==0)
 {
  Type=TYPE_YALE;
 }
-else if (strcmp(Server,"www.sdnhm.org")==0)
-{
- Type=TYPE_SDNHM;
-}
 else if (strcmp(Server,"www.princeton.edu")==0)
 {
  Type=TYPE_PRINCETON;
@@ -184,10 +178,6 @@ else if (strstr(Server,"vbox7.com"))
 else if (strstr(Server,"myvideo"))
 {
  Type=TYPE_MYVIDEO;
-}
-else if (strstr(Server,"myvido1"))
-{
- Type=TYPE_MYVIDO1;
 }
 else if (strstr(Server,"redbalcony.com"))
 {
@@ -233,21 +223,17 @@ else if (strstr(Server,"reuters"))
 {
  Type=TYPE_REUTERS;
 }
-else if (strstr(Server,"clipfish.de"))
-{
- Type=TYPE_CLIPFISH_DE;
-}
 else if (strstr(Server,"mefeedia.com"))
 {
  Type=TYPE_MEFEEDIA;
 }
 else if (strstr(Server,"ucsd.tv"))
 {
- Type=TYPE_UCSDTV;
+ Type=TYPE_UCTV;
 }
 else if (strstr(Server,"uctv.tv"))
 {
- Type=TYPE_UCSDTV;
+ Type=TYPE_UCTV;
 }
 else if (strstr(Server,"aljazeera.net"))
 {
@@ -320,6 +306,14 @@ else if (strstr(Server,"astronomy.com"))
 else if (strstr(Server,"teachertube.com"))
 {
  Type=TYPE_TEACHERTUBE;
+}
+else if (strstr(Server,"dsc.discovery.com"))
+{
+ Type=TYPE_DISCOVERY;
+}
+else if (strstr(Server,"bloomberg.com"))
+{
+ Type=TYPE_BLOOMBERG;
 }
 return(Type);
 }
@@ -523,25 +517,6 @@ else if (Type==TYPE_PRINCETON)
 	}
  	NextPath=CopyStr(NextPath,Path);
 }
-else if (Type==TYPE_CLIPFISH_DE)
-{
-	ptr=strstr(Doc,"video/");
-	if (ptr)
-	{
-		ptr+=6;
- 		Tempstr=CopyStr(Tempstr,ptr);
-		ptr=strchr(Tempstr,'/');
-		if (ptr)
-		{
-			 *ptr='\0';
-			ptr++;
-			*Title=CopyStr(*Title,ptr);
-			ptr=strchr(*Title,'/');
-			if (ptr) *ptr='\0';
-		}
-		NextPath=MCopyStr(NextPath,"http://www.clipfish.de/video_n.php?p=0|DE&vid=",Tempstr,NULL);
-	}
-}
 else
 {
  NextPath=CopyStr(NextPath,Path);
@@ -631,7 +606,7 @@ case TYPE_DAILYMOTION_STAGE3:
     RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 
 case TYPE_MOBANGO:
- Tempstr=SubstituteVarsInString(Tempstr,"http://media.mobango.com/$(ID)",Vars,0);
+ Tempstr=SubstituteVarsInString(Tempstr,"http://www.mobango.com/$(ID)",Vars,0);
   	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
@@ -656,10 +631,6 @@ break;
 
 case TYPE_VBOX7:
 	RetVal=DoVBOX7(GetVar(Vars,"ID"), Title);
-break;
-
-case TYPE_MYVIDO1:
- 	RetVal=DownloadPage(GetVar(Vars,"ID"),TYPE_MYVIDO1_STAGE2,Title,Flags | FLAG_RETRY_DOWNLOAD);
 break;
 
 case TYPE_VIMEO:
@@ -770,6 +741,11 @@ case TYPE_TEACHERTUBE_STAGE2:
  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
+case TYPE_BLOOMBERG:
+ 	Tempstr=SubstituteVarsInString(Tempstr,"http://videos.bloomberg.com/$(ID).flv",Vars,0);
+ 	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+break;
+
 
 case TYPE_KAVLIINSTITUTE_STAGE2:
 case TYPE_SCIVEE:
@@ -779,17 +755,14 @@ case TYPE_GENERIC:
 case TYPE_MYTOPCLIP:
 case TYPE_PRINCETON:
 case TYPE_TED:
-case TYPE_SDNHM:
-case TYPE_UCSDTV:
+case TYPE_UCTV:
 case TYPE_IZLESE:
 case TYPE_REUTERS:
 case TYPE_LIVELEAK:
-case TYPE_CLIPFISH_DE:
 case TYPE_ACADEMIC_EARTH:
 case TYPE_PHOTOBUCKET:
 case TYPE_VIDEOSFACEBOOK:
 case TYPE_ALJAZEERA:
-case TYPE_MYVIDO1_STAGE2:
 case TYPE_IVIEWTUBE:
 case TYPE_WASHINGTONPOST:
 case TYPE_CBSNEWS:
@@ -965,55 +938,6 @@ case TYPE_BLIPTV_STAGE3:
 	{
 	GenericExtractFromLine(Tempstr, "item:flv",BLIPTV_S3_ITEM,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 	}
-break;
-
-
-case TYPE_MYVIDO1:
-#define MYVIDO1_FRONTPAGE "dl.php"
-#define MYVIDO1_MP4 "Download MP4 Format of Video</a>"
-#define MYVIDO1_3GP "Download 3GP Format of Video</a>"
-#define MYVIDO1_3GP2 "Download 3GPFormat of Video</a>"
-#define MYVIDO1_FLV "Download Flv Format of Video</a>"
-#define MYVIDO1_TITLE_START "meta property=\"og:title\" content=\""
-#define MYVIDO1_TITLE_END "\""
-
-ptr=strstr(Tempstr,MYVIDO1_FRONTPAGE);
-if (ptr)
-{
-	GenericExtractFromLine(Tempstr, "ID","href=\"","\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-}
-
-//Fall through
-
-case TYPE_MYVIDO1_STAGE2:
-	ptr=strstr(Tempstr,MYVIDO1_MP4);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "item:mp4","href=\"","\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-	Type=TYPE_MYVIDO1_STAGE2;
-	}
-
-	ptr=strstr(Tempstr,MYVIDO1_3GP);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "item:3gp","href=\"","\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		Type=TYPE_MYVIDO1_STAGE2;
-	}
-
-	ptr=strstr(Tempstr,MYVIDO1_3GP2);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "item:3gp","href=\"","\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		Type=TYPE_MYVIDO1_STAGE2;
-	}
-
-
-	ptr=strstr(Tempstr,MYVIDO1_TITLE_START);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "Title",MYVIDO1_TITLE_START,MYVIDO1_TITLE_END,Vars,EXTRACT_DEQUOTE);
-	}
-
 break;
 
 
@@ -1306,7 +1230,7 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 break;
 
 case TYPE_REDBALCONY:
-#define REDBALCONY_ITEM_START "so.addVariable(\"file\", \""
+#define REDBALCONY_ITEM_START "playlist\":\""
 #define REDBALCONY_ITEM_END "\""
 
 if (strstr(Tempstr,REDBALCONY_ITEM_START))
@@ -1323,12 +1247,14 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 break;
 
 case TYPE_REDBALCONY_STAGE2:
-#define REDBALCONY_S2_ITEM_START "<link><![CDATA["
-#define REDBALCONY_S2_ITEM_END "]"
+#define REDBALCONY_S2_VID_LINE "medium=\"video\""
+#define REDBALCONY_S2_ITEM_START " url=\""
+#define REDBALCONY_S2_ITEM_END "\""
 
-if (strstr(Tempstr,REDBALCONY_S2_ITEM_START))
+if (strstr(Tempstr,REDBALCONY_S2_VID_LINE))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",REDBALCONY_S2_ITEM_START,REDBALCONY_S2_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
+		GenericExtractFromLine(Tempstr, "item:flv",REDBALCONY_S2_ITEM_START,REDBALCONY_S2_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES );
+
 }
 
 break;
@@ -1379,21 +1305,20 @@ break;
 
 
 case TYPE_MOBANGO:
-#define MOBANGO_ITEM_START "so.addVariable('flvfile','"
-#define MOBANGO_ITEM_END "'"
+#define MOBANGO_EXT_START "?extension="
+#define MOBANGO_EXT_END "&"
+#define MOBANGO_ITEM_START "href=\""
+#define MOBANGO_ITEM_END "?"
 
-#define MOBANGO_TITLE_START "name=\"flname\" value=\""
-#define MOBANGO_TITLE_END "\""
-
-if (strstr(Tempstr,MOBANGO_ITEM_START))
+if (strstr(Tempstr,MOBANGO_EXT_START))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",MOBANGO_ITEM_START,MOBANGO_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
-}
+		GenericExtractFromLine(Tempstr, "extension",MOBANGO_EXT_START,MOBANGO_EXT_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		ptr=GetVar(Vars,"extension");
 
-
-if (strstr(Tempstr,MOBANGO_TITLE_START))
-{
-		GenericExtractFromLine(Tempstr, "Title",MOBANGO_TITLE_START,MOBANGO_TITLE_END,Vars,EXTRACT_DEQUOTE);
+		Token=MCopyStr(Token,"item:",ptr,NULL);
+		GenericExtractFromLine(Tempstr, Token,MOBANGO_ITEM_START,MOBANGO_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		ptr=strrchr(URL,'/');
+		SetVar(Vars,"Title",ptr+1);
 }
 
 break;
@@ -1539,15 +1464,6 @@ case TYPE_PHOTOBUCKET:
 	}
 break;
 
-
-#define CLIPFISH_ITEM_START "&url="
-case TYPE_CLIPFISH_DE:
-	ptr=strstr(Tempstr,CLIPFISH_ITEM_START);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "item:flv",CLIPFISH_ITEM_START,"&",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES|EXTRACT_GUESSTYPE);
-	}
-break;
 
 #define LIVELEAK_ITEM_START "file: \""
 #define LIVELEAK_ITEM_END "'\""
@@ -1873,6 +1789,7 @@ else if (strstr(Tempstr,GENERIC_TITLE_START))
 }
 break;
 
+
 case TYPE_ROYALSOCIETY:
 #define ROYALSOCIETY_ITEM "ipadUrl: '"
 
@@ -1993,18 +1910,47 @@ case TYPE_TEACHERTUBE_STAGE2:
 		{
 			 GenericExtractFromLine(Tempstr, "item:flv",TEACHERTUBE_S2_ITEMSTART,TEACHERTUBE_S2_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		}
+break;
 
+case TYPE_DISCOVERY:
+#define DISCOVERY_ITEMSTART "\"m3u8\":\""
+#define DISCOVERY_ITEMEND "\""
+#define DISCOVERY_TITLE_START "<meta property=\"og:title\" content=\""
+#define DISCOVERY_TITLE_END "\""
 
+	if (strstr(Tempstr,DISCOVERY_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",DISCOVERY_TITLE_START,DISCOVERY_TITLE_END,Vars,EXTRACT_DEQUOTE);
+	}
 
+		if (strstr(Tempstr,DISCOVERY_ITEMSTART))
+		{
+			//Only get the first item
+			if (StrLen(GetVar(Vars,"item:reference"))==0) GenericExtractFromLine(Tempstr, "item:reference",DISCOVERY_ITEMSTART,DISCOVERY_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		}
+break;
+
+case TYPE_BLOOMBERG:
+#define BLOOMBERG_ITEMSTART "BLOOMBERG._fvid_id = \""
+#define BLOOMBERG_ITEMEND "\""
+
+	if (strstr(Tempstr,BLOOMBERG_ITEMSTART))
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",BLOOMBERG_ITEMSTART,BLOOMBERG_ITEMEND,Vars,EXTRACT_DESLASHQUOTE | EXTRACT_NOSPACES);
+	}
+
+	if (strstr(Tempstr,GENERIC_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",GENERIC_TITLE_START,GENERIC_TITLE_END,Vars,0);
+	}
 
 break;
 
 
 
 case TYPE_MYTOPCLIP:
-case TYPE_SDNHM:
 case TYPE_PRINCETON:
-case TYPE_UCSDTV:
+case TYPE_UCTV:
 case TYPE_GENERIC:
 case TYPE_ALJAZEERA:
 

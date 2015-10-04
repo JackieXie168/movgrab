@@ -215,7 +215,6 @@ return(Tempstr);
 
 int FmtIDMatches(char *FmtID, char *CurrItem, char *ItemData)
 {
-
 				if (strncmp(CurrItem,"item:",5) !=0) return(FALSE);
 				if (StrLen(FmtID)==0) return(TRUE);
 				if (strcmp(FmtID,"item:*")==0) return(TRUE);
@@ -249,14 +248,6 @@ if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie:
 		Curr=ListGetNext(Vars);
 		while (Curr)
 		{
-					if  (RetVal==-1) 
-					{
-						if (strcmp(Curr->Tag,"item:reference")==0) 
-						{
-						SetVar(Vars,"ID",(char *) Curr->Item);
-            RetVal=TYPE_REFERENCE;
-						}
-					}
 
 			if (FmtIDMatches(FmtID,Curr->Tag, (char *) Curr->Item))
 				{
@@ -267,10 +258,10 @@ if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie:
 					}
 
 					FoundMatch=TRUE;
-					if (RetVal==-1)
+					//where available a local filetype overrides a reference
+					if ((RetVal==-1) || (RetVal==TYPE_REFERENCE))
 					{
 					Selected=CopyStr(Selected,Curr->Tag);
-          RetVal=WebsiteType;
 					SetVar(Vars,"ID",(char *) Curr->Item);
 					}
 					break;
@@ -280,6 +271,13 @@ if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie:
 			if ((! FoundMatch) && (Flags & (FLAG_DEBUG))) fprintf(stderr,"... no\n",Fmt);
 			ptr=GetToken(ptr,",",&Fmt,0);
 	}
+
+
+if (StrLen(Selected))
+{
+	if (strcmp(Selected,"item:reference")==0) RetVal=TYPE_REFERENCE;
+	else RetVal=WebsiteType;
+}
 
 if (! (Flags & FLAG_TEST_SITES))
 {
@@ -356,7 +354,7 @@ fprintf(stdout,"\nFeel free to email me and tell me if you've used this software
 
 fprintf(stdout,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
 
-fprintf(stdout,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', Ashish Disawal, Timo Juhani Lindfors and others.\n");
+fprintf(stdout,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', 'nibbles', Omair Eshkenazi, Matthias B, Ashish Disawal, Timo Juhani Lindfors and others.\n");
 fprintf(stdout,"\nSpecial thanks to:\n");
 fprintf(stdout,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
 fprintf(stdout,"	Robert Crowley (http://tools.99k.org/) For all sorts of bug reports and advice.\n");
@@ -421,6 +419,8 @@ for (i=1; i < argc; i++)
 	else if (strcmp(argv[i],"-st")==0) STREAMTimeout=atoi(argv[++i]);
 	else if (strcmp(argv[i],"-P")==0) Player=CopyStr(Player,argv[++i]);
 	else if (strcmp(argv[i],"-Pp")==0) PlayerLaunchPercent=atoi(argv[++i]);
+	else if (strcmp(argv[i],"-?")==0) Flags |= FLAG_PRINT_USAGE;
+	else if (strcmp(argv[i],"-h")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"-help")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"--help")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"-test-sites")==0) 

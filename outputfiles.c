@@ -28,18 +28,24 @@ return(Str);
 
 //guess the extension of a file, some sites don't have extensions
 //on their filenames
-char *GuessExtn(char *ContentType, char *ID)
+char *GuessExtn(char *ContentType, char *Format, char *ID)
 {
-char *ptr=NULL;
+static char *Extn=NULL;
+char *ptr;
 
-if (! StrLen(ID)) return(".flv");
+Extn=CopyStr(Extn,".flv");
 
-ptr=strchr(ID,'.');
-if (! StrLen(ptr)) ptr=".flv";
+if (StrLen(ID)) 
+{
+	ptr=strchr(ID,'.');
+	if (StrLen(ptr)) Extn=CopyStr(Extn,ptr);
+}
 
+if (StrLen(Format)) Extn=MCopyStr(Extn,".",Format,NULL);
 
 if (StrLen(ContentType))
 {
+ptr=NULL;
 if (strcasecmp(ContentType,"audio/mp3")==0) ptr=".mp3";
 else if (strcasecmp(ContentType,"audio/mpeg")==0) ptr=".mp3";
 else if (strcasecmp(ContentType,"video/x-flv")==0) ptr=".flv";
@@ -48,10 +54,10 @@ else if (strcasecmp(ContentType,"video/mp4")==0) ptr=".mp4";
 else if (strcasecmp(ContentType,"video/3gpp")==0) ptr=".3gp";
 else if (strcasecmp(ContentType,"audio/webm")==0) ptr=".webm";
 else if (strcasecmp(ContentType,"video/webm")==0) ptr=".webm";
+if (StrLen(ptr)) Extn=CopyStr(Extn,ptr);
 }
 
-
-return(ptr);
+return(Extn);
 }
 
 
@@ -85,8 +91,8 @@ if (ptr && (StrLen(ptr) < 6)) *ptr='\0';
 
 if (! (Flags & FLAG_RESUME))
 {
-MD5=HashBytes(MD5,"md5",URL,StrLen(URL),0);
-Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
+	HashBytes(&MD5,"md5",URL,StrLen(URL),ENCODE_HEX);
+	Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
 }
 
 DestroyString(MD5);

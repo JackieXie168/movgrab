@@ -924,21 +924,33 @@ ListNode *Node;
 
 FmtPtr=*Fmt;
 
-        if (*FmtPtr=='(') FmtPtr++;
+  if (*FmtPtr=='(') FmtPtr++;
 	while (*FmtPtr != ')')
 	{
 		VarName=AddCharToBuffer(VarName,len,*FmtPtr);
 		len++;
 		FmtPtr++;
 	}
-        if (*FmtPtr==')') FmtPtr++;
+  if (*FmtPtr==')') FmtPtr++;
 
 MsgPtr=*Msg;
-while ((*MsgPtr !=0) && (*MsgPtr != *FmtPtr)) MsgPtr++;
+while ((*MsgPtr !=0) && (*MsgPtr != *FmtPtr))
+{
+ if (*MsgPtr=='"')
+ {
+		do 
+		{
+			MsgPtr++;
+		} while ((*MsgPtr != '"') && (*MsgPtr != 0));
+ }
+ MsgPtr++;
+}
 
 Node=ListFindNamedItem(Vars,VarName);
+
 if (Node) Node->Item=(void *) CopyStrLen((char *) Node->Item, *Msg, MsgPtr-*Msg);
-else ListAddNamedItem(Vars,VarName,CopyStrLen(NULL, *Msg, MsgPtr-*Msg));
+else Node=ListAddNamedItem(Vars,VarName,CopyStrLen(NULL, *Msg, MsgPtr-*Msg));
+
 *Fmt=FmtPtr;
 *Msg=MsgPtr;
 
@@ -964,7 +976,6 @@ char *FmtPtr, *MsgPtr, *Token=NULL;
 int Match=TRUE, len;
 
 FmtPtr=FormatStr;
-if (*FmtPtr=='"') FmtPtr++;
 MsgPtr=Data;
 
 while ( (*FmtPtr !=0) && (Match))
@@ -1272,11 +1283,8 @@ MEG=MEGIBYTE;
 GIG=GIGIBYTE;
 //TERA=TERIBYTE;
 }
-
-val=Size;
-kMGT=' ';
-
-
+    val=Size;
+    kMGT=' ';
 /*    if (val > (TERA))
     {
       val=val / TERA;
@@ -1292,6 +1300,7 @@ kMGT=' ';
     {
       val=val / MEG;
       kMGT='M';
+
     }
     else if (val > (KAY))
     {
