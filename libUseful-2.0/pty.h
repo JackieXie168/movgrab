@@ -11,6 +11,7 @@
 #define TTYFLAG_HARDWARE_FLOW 32
 #define TTYFLAG_SOFTWARE_FLOW 64
 #define TTYFLAG_CRLF_KEEP 128
+#define TTYFLAG_ISIG 256
 
 void HangUpLine(int tty);
 int OpenTTY(char *devname, int LineSpeed, int Flags);

@@ -789,6 +789,35 @@ return(result);
 void STREAM_INTERNAL_SSL_ADD_SECURE_KEYS(STREAM *S, SSL_CTX *ctx)
 {
 ListNode *Curr;
+char *VerifyFile=NULL, *VerifyPath=NULL;
+
+Curr=ListGetNext(LibUsefulValuesGetHead());
+while (Curr)
+{
+  if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_CERT_FILE:",14)==0))
+  {
+	  SSL_CTX_use_certificate_file(ctx,(char *) Curr->Item,SSL_FILETYPE_PEM);
+  }
+
+  if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_KEY_FILE:",13)==0))
+  {
+	  SSL_CTX_use_PrivateKey_file(ctx,(char *) Curr->Item,SSL_FILETYPE_PEM);
+  }
+
+  if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_VERIFY_CERTDIR",18)==0))
+  {
+	  VerifyPath=CopyStr(VerifyPath,(char *) Curr->Item);
+  }
+
+	if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_VERIFY_CERTFILE",19)==0))
+	{
+	  VerifyFile=CopyStr(VerifyFile,(char *) Curr->Item);
+	}
+
+  Curr=ListGetNext(Curr);
+}
+
+
 
 Curr=ListGetNext(S->Values);
 while (Curr)
@@ -805,16 +834,23 @@ while (Curr)
 
   if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_VERIFY_CERTDIR",18)==0))
   {
-	  SSL_CTX_load_verify_locations(ctx,NULL,(char *) Curr->Item);
+	  VerifyPath=CopyStr(VerifyPath,(char *) Curr->Item);
   }
 
 	if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_VERIFY_CERTFILE",19)==0))
 	{
-		SSL_CTX_load_verify_locations(ctx,(char *) Curr->Item,NULL);
+	  VerifyFile=CopyStr(VerifyFile,(char *) Curr->Item);
 	}
+
 
   Curr=ListGetNext(Curr);
 }
+
+
+SSL_CTX_load_verify_locations(ctx,VerifyFile,VerifyPath);
+
+DestroyString(VerifyFile);
+DestroyString(VerifyPath);
 
 }
 #endif
@@ -856,6 +892,7 @@ int result=FALSE, val;
 SSL_METHOD *Method;
 SSL_CTX *ctx;
 SSL *ssl;
+struct x509 *cert=NULL;
 
 if (S)
 {
@@ -873,9 +910,55 @@ INTERNAL_SSL_INIT();
   S->Extra=ssl;
   result=SSL_connect(ssl);
   S->Flags|=SF_SSL;
+
+	val=SSL_get_verify_result(ssl);
+
+	switch(val)
+	{
+		case X509_V_OK: STREAMSetValue(S,"SSL-Certificate-Verify","OK"); break;
+		case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: STREAMSetValue(S,"SSL-Certificate-Verify","unable to get issuer"); break;
+		case X509_V_ERR_UNABLE_TO_GET_CRL: STREAMSetValue(S,"SSL-Certificate-Verify","unable to get certificate CRL"); break;
+		case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: STREAMSetValue(S,"SSL-Certificate-Verify","unable to decrypt certificate's signature"); break;
+		case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE: STREAMSetValue(S,"SSL-Certificate-Verify","unable to decrypt CRL's signature"); break;
+		case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: STREAMSetValue(S,"SSL-Certificate-Verify","unable to decode issuer public key"); break;
+		case X509_V_ERR_CERT_SIGNATURE_FAILURE: STREAMSetValue(S,"SSL-Certificate-Verify","certificate signature invalid"); break;
+		case X509_V_ERR_CRL_SIGNATURE_FAILURE: STREAMSetValue(S,"SSL-Certificate-Verify","CRL signature invalid"); break;
+		case X509_V_ERR_CERT_NOT_YET_VALID: STREAMSetValue(S,"SSL-Certificate-Verify","certificate is not yet valid"); break;
+		case X509_V_ERR_CERT_HAS_EXPIRED: STREAMSetValue(S,"SSL-Certificate-Verify","certificate has expired"); break;
+		case X509_V_ERR_CRL_NOT_YET_VALID: STREAMSetValue(S,"SSL-Certificate-Verify","CRL is not yet valid the CRL is not yet valid."); break;
+		case X509_V_ERR_CRL_HAS_EXPIRED: STREAMSetValue(S,"SSL-Certificate-Verify","CRL has expired the CRL has expired."); break;
+		case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: STREAMSetValue(S,"SSL-Certificate-Verify","invalid notBefore value"); break;
+		case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: STREAMSetValue(S,"SSL-Certificate-Verify","invalid notAfter value"); break;
+		case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: STREAMSetValue(S,"SSL-Certificate-Verify","invalid CRL lastUpdate value"); break;
+		case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: STREAMSetValue(S,"SSL-Certificate-Verify","invalid CRL nextUpdate value"); break;
+		case X509_V_ERR_OUT_OF_MEM: STREAMSetValue(S,"SSL-Certificate-Verify","out of memory"); break;
+		case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: STREAMSetValue(S,"SSL-Certificate-Verify","self signed certificate"); break;
+		case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: STREAMSetValue(S,"SSL-Certificate-Verify","self signed certificate in certificate chain"); break;
+		case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: STREAMSetValue(S,"SSL-Certificate-Verify","cant find root certificate in local database"); break;
+		case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: STREAMSetValue(S,"SSL-Certificate-Verify","ERROR: unable to verify the first certificate"); break;
+		case X509_V_ERR_CERT_CHAIN_TOO_LONG: STREAMSetValue(S,"SSL-Certificate-Verify","certificate chain too long"); break;
+		case X509_V_ERR_CERT_REVOKED: STREAMSetValue(S,"SSL-Certificate-Verify","certificate revoked"); break;
+		case X509_V_ERR_INVALID_CA: STREAMSetValue(S,"SSL-Certificate-Verify","invalid CA certificate"); break;
+		case X509_V_ERR_PATH_LENGTH_EXCEEDED: STREAMSetValue(S,"SSL-Certificate-Verify","path length constraint exceeded"); break;
+		case X509_V_ERR_INVALID_PURPOSE: STREAMSetValue(S,"SSL-Certificate-Verify","unsupported certificate purpose"); break;
+		case X509_V_ERR_CERT_UNTRUSTED: STREAMSetValue(S,"SSL-Certificate-Verify","certificate not trusted"); break;
+		case X509_V_ERR_CERT_REJECTED: STREAMSetValue(S,"SSL-Certificate-Verify","certificate rejected"); break;
+		case X509_V_ERR_SUBJECT_ISSUER_MISMATCH: STREAMSetValue(S,"SSL-Certificate-Verify","subject issuer mismatch"); break;
+		case X509_V_ERR_AKID_SKID_MISMATCH: STREAMSetValue(S,"SSL-Certificate-Verify","authority and subject key identifier mismatch"); break;
+		case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH: STREAMSetValue(S,"SSL-Certificate-Verify","authority and issuer serial number mismatch"); break;
+		case X509_V_ERR_KEYUSAGE_NO_CERTSIGN: STREAMSetValue(S,"SSL-Certificate-Verify","key usage does not include certificate signing"); break;
+		case X509_V_ERR_APPLICATION_VERIFICATION: STREAMSetValue(S,"SSL-Certificate-Verify","application verification failure"); break;
+	}
   }
 
+cert=SSL_get_peer_certificate(ssl);
+if (cert)
+{
+ STREAMSetValue(S,"SSL-Certificate-Issuer",X509_NAME_oneline( X509_get_issuer_name(cert),NULL, 0));
 }
+}
+
+STREAMSetValue(S,"SSL-Cipher",STREAMQuerySSLCipher(S));
 
 #endif
 return(result);

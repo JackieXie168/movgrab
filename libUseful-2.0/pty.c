@@ -71,8 +71,10 @@ tty_data.c_iflag=IGNBRK | IGNPAR;
 
 //Enable Special Characters
 if (Flags & TTYFLAG_CANON) tty_data.c_iflag|= ICANON;
-else tty_data.c_iflag &= ~ICANON;
+//else tty_data.c_iflag &= ~ICANON;
 
+
+/*
 if (! (Flags & TTYFLAG_CRLF_KEEP))
 {
 	//translate carriage-return to newline
@@ -91,15 +93,19 @@ if (! (Flags & TTYFLAG_CRLF_KEEP))
 	//postprocess and translate newline to cr-nl
 	if (Flags & TTYFLAG_LFCR) tty_data.c_oflag |= ONLCR | OPOST;
 }
+*/
 
-tty_data.c_cflag=CREAD | CS8 | HUPCL;
+tty_data.c_cflag=CREAD | CS8 | HUPCL | CLOCAL;
 if (Flags & TTYFLAG_SOFTWARE_FLOW) 
 {
 tty_data.c_iflag |= IXON | IXOFF;
 }
 if (Flags & TTYFLAG_HARDWARE_FLOW) tty_data.c_cflag |=CRTSCTS;
 if (Flags & TTYFLAG_ECHO) tty_data.c_cflag |= ECHO;
-tty_data.c_lflag=ISIG;
+
+tty_data.c_lflag=0;
+if (Flags & TTYFLAG_ISIG) tty_data.c_lflag=ISIG;
+
 tty_data.c_cc[VMIN]=1;
 tty_data.c_cc[VTIME]=0;
 

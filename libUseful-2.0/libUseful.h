@@ -29,5 +29,6 @@
 #include "pty.h"
 #include "Log.h"
 #include "http.h"
+#include "oauth.h"
 
 #endif

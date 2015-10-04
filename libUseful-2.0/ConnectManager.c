@@ -182,7 +182,12 @@ while (1)
 		{
 			Item=(TConnectManagerItem *) Curr->Item;
 		  S=(STREAM *) Item->Data;
-	
+			if (! S) 
+			{
+				ListDeleteNode(Curr);
+				continue;
+			}
+ 
 			if (S->Flags & SF_CONNECTING)
 			{
 				FD_SET(S->in_fd,&WriteSet);
@@ -220,7 +225,14 @@ while (1)
 		{
 			Item=(TConnectManagerItem *) Curr->Item;
 
-	    		S=(STREAM *) Item->Data;
+   		S=(STREAM *) Item->Data;
+			if (! S) 
+			{
+				ListDeleteNode(Curr);
+				continue;
+			}
+
+
 			if (FD_ISSET(S->in_fd,&ReadSet))
 			{
 				sock=TCPServerSockAccept(S->in_fd,&ipaddr);
@@ -244,6 +256,12 @@ while (1)
 		{
 			Item=(TConnectManagerItem *) Curr->Item;
 	 		S=(STREAM *) Item->Data;
+			if (! S) 
+			{
+				ListDeleteNode(Curr);
+				continue;
+			}
+
 			if ((SelectResult > 0) && FD_ISSET(S->in_fd,&WriteSet))
 			{
 				if (S->Flags & SF_CONNECTING)

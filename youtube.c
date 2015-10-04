@@ -33,6 +33,7 @@ while (ptr)
 {
  if (StrLen(Name))
  {
+	if (strcmp(Name,"sig")==0) *URL=MCatStr(*URL,"&signature=", Value, NULL);
 	if (strcmp(Name,"url")==0) *URL=HTTPUnQuote(*URL,Value);
 	if (strcmp(Name,"itag")==0) *Code=CopyStr(*Code,Value);
  }

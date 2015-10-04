@@ -619,11 +619,12 @@ break;
 
 case TYPE_DAILYMOTION_STAGE3:
   Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
-    RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+  RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+break;
 
 case TYPE_MOBANGO:
  Tempstr=SubstituteVarsInString(Tempstr,"http://www.mobango.com/$(ID)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+ RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_WASHINGTONPOST_JSON:

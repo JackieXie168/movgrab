@@ -3,8 +3,6 @@
 #include "Hash.h"
 
 ListNode *Cookies=NULL;
-char *g_UserAgent=NULL;
-char *g_Proxy=NULL;
 int g_Flags=0;
 
 void HTTPAuthSet(HTTPAuthStruct *Auth, char *Logon, char *Password, int Type)
@@ -304,13 +302,17 @@ if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeo
 HTTPInfoStruct *HTTPInfoCreate(char *Host, int Port, char *Logon, char *Password, char *Method, char *Doc, char *ContentType, int ContentLength)
 {
 HTTPInfoStruct *Info;
+char *ptr;
 
 Info=(HTTPInfoStruct *) calloc(1,sizeof(HTTPInfoStruct));
 HTTPInfoSetValues(Info, Host, Port, Logon, Password, Method, Doc, ContentType, ContentLength);
 
 Info->ServerHeaders=ListCreate();
 Info->CustomSendHeaders=ListCreate();
-if (StrLen(g_Proxy)) Info->Proxy=CopyStr(Info->Proxy,g_Proxy);
+//SetVar(Info->CustomSendHeaders,"Accept","*/*");
+
+ptr=LibUsefulGetValue("HTTP:Proxy");
+if (StrLen(ptr)) Info->Proxy=CopyStr(Info->Proxy,ptr);
 if (g_Flags) Info->Flags=g_Flags;
 
 return(Info);
@@ -471,27 +473,33 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 			(strcasecmp(Token,"Transfer-Encoding")==0)
 		)
 		{
-			strlwr(ptr);
-			if (strstr(ptr,"chunked")) 
+			if (! (Info->Flags & HTTP_NODECODE))
 			{
-				Info->Flags |= HTTP_CHUNKED;
+				strlwr(ptr);
+				if (strstr(ptr,"chunked")) 
+				{
+					Info->Flags |= HTTP_CHUNKED;
+				}
 			}
 		}
-		else if (strcasecmp(Token,"Content-Encoding")==0) 
+		else if ((strcasecmp(Token,"Content-Encoding")==0) )
 		{
-			strlwr(ptr);
-			if (
-					(strcmp(ptr,"gzip")==0) ||
-					(strcmp(ptr,"x-gzip")==0)
-				)
+			if (! (Info->Flags & HTTP_NODECODE))
 			{
-				Info->Flags |= HTTP_GZIP;
-			}
-			if (
-					(strcmp(ptr,"deflate")==0) 
-				)
-			{
-				Info->Flags |= HTTP_DEFLATE;
+				strlwr(ptr);
+				if (
+						(strcmp(ptr,"gzip")==0) ||
+						(strcmp(ptr,"x-gzip")==0)
+					)
+				{
+					Info->Flags |= HTTP_GZIP;
+				}
+				if (
+						(strcmp(ptr,"deflate")==0) 
+					)
+				{
+					Info->Flags |= HTTP_DEFLATE;
+				}
 			}
 
 		}
@@ -591,19 +599,19 @@ return(SendStr);
 
 void HTTPSendHeaders(STREAM *S, HTTPInfoStruct *Info)
 {
-char *SendStr=NULL, *Tempstr=NULL;
+char *SendStr=NULL, *Tempstr=NULL, *ptr;
 ListNode *Curr;
 int count;
 char *Doc=NULL;
 int i;
-char *ptr;
 static int AuthCounter=0;
 
 STREAMClearDataProcessors(S);
 SendStr=CopyStr(SendStr,Info->Method);
 SendStr=CatStr(SendStr," ");
 
-Doc=HTTPQuoteChars(Doc,Info->Doc," :");
+//Doc=HTTPQuoteChars(Doc,Info->Doc," :");
+Doc=HTTPQuoteChars(Doc,Info->Doc," ");
 if (StrLen(Info->Proxy)) SendStr=MCatStr(SendStr,"http://",Info->Host,Doc,NULL);
 else SendStr=CatStr(SendStr,Doc);
 
@@ -615,7 +623,7 @@ SendStr=MCatStr(SendStr," HTTP/1.1\r\n","Host: ",Info->Host,"\r\n",NULL);
 
 if (StrLen(Info->PostContentType) >0)
 {
-Tempstr=FormatStr(Tempstr,"Content-Type: %s\r\n",Info->PostContentType);
+Tempstr=FormatStr(Tempstr,"Content-type: %s\r\n",Info->PostContentType);
 SendStr=CatStr(SendStr,Tempstr);
 }
 if (Info->PostContentLength > 0) 
@@ -662,7 +670,6 @@ if (
 		 (strcasecmp(Info->Method,"PUT") !=0) 
 	)
 {
-SendStr=CatStr(SendStr,"Accept: */*\r\n");
 
 Tempstr=CopyStr(Tempstr,"");
 
@@ -691,7 +698,8 @@ else
 SendStr=CatStr(SendStr,"Connection: Close\r\n");
 }
 
-if (StrLen(g_UserAgent)) SendStr=MCatStr(SendStr,"User-Agent: ",g_UserAgent, "\r\n",NULL);
+ptr=LibUsefulGetValue("HTTP:User-Agent");
+if (StrLen(ptr)) SendStr=MCatStr(SendStr,"User-Agent: ",ptr, "\r\n",NULL);
 
 Curr=ListGetNext(Info->CustomSendHeaders);
 while (Curr)
@@ -703,7 +711,7 @@ Curr=ListGetNext(Curr);
 SendStr=AppendCookies(SendStr,Cookies);
 SendStr=CatStr(SendStr,"\r\n");
 
-Info->Flags |= HTTP_HEADERS_SENT;
+Info->State |= HTTP_HEADERS_SENT;
 if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HTTPSEND: ------\n%s------\n\n",SendStr);
 STREAMWriteLine(SendStr,S);
 STREAMFlush(S);
@@ -715,7 +723,7 @@ DestroyString(SendStr);
 
 char *HTTPParseURL(char *URL, char **Proto, char **Host, int *Port, char **Login, char **Password)
 {
-char *ptr, *p_port;
+char *ptr, *p_port, *dptr;
 char *Token=NULL, *AuthCred=NULL;
 
 //if no port given
@@ -738,7 +746,7 @@ if (Proto)
 
 while (*ptr=='/') ptr++;
 
-ptr=GetToken(ptr,"/",&Token,0);
+dptr=GetToken(ptr,"/",&Token,0);
 
 if (StrLen(Token))
 {
@@ -770,7 +778,7 @@ if (StrLen(AuthCred))
 
 DestroyString(Token);
 DestroyString(AuthCred);
-return(ptr);
+return(dptr);
 }
 
 
@@ -781,6 +789,7 @@ void HTTPReadHeaders(STREAM *S, HTTPInfoStruct *Header)
 char *Tempstr=NULL;
 
 
+ListClear(Header->ServerHeaders,DestroyString);
 Header->ContentLength=0;
 Header->RedirectPath=CopyStr(Header->RedirectPath,"");
 Header->Flags &= ~(HTTP_CHUNKED | HTTP_GZIP | HTTP_DEFLATE);
@@ -837,6 +846,7 @@ switch (RCode)
 	case 302:
 	case 303:
 	case 307:
+	case 308:
 	if (HTTPInfo->PreviousRedirect && (strcmp(HTTPInfo->RedirectPath,HTTPInfo->PreviousRedirect)==0)) result=HTTP_CIRCULAR_REDIRECTS;
 	else
 	{
@@ -988,18 +998,34 @@ int result=HTTP_NOCONNECT;
 
 while (1)
 {
+
 	if (! Info->S) Info->S=HTTPConnect(Info);
-	//else if (! (Info->Flags & HTTP_HEADERS_SENT)) HTTPSendHeaders(Info->S,Info);
-	else HTTPSendHeaders(Info->S,Info);
+	else if (! (Info->State & HTTP_HEADERS_SENT)) HTTPSendHeaders(Info->S,Info);	
 
 	if (Info->S && STREAMIsConnected(Info->S))
 	{
 		Info->ResponseCode=CopyStr(Info->ResponseCode,"");
-		if (StrLen(Info->PostData)) 
+
+		if (! (Info->State & HTTP_CLIENTDATA_SENT))
 		{
-			STREAMWriteLine(Info->PostData,Info->S);
-			STREAMFlush(Info->S);
+		//Set this even if no client data to send, so we no we've been
+		//through here once
+		Info->State |= HTTP_CLIENTDATA_SENT;
+
+			if (StrLen(Info->PostData)) 
+			{
+				STREAMWriteLine(Info->PostData,Info->S);
+			}
+			else
+			{
+				if (strcasecmp(Info->Method,"POST")==0) break;
+			}
 		}
+
+
+		//Must clear this once the headers and clientdata sent
+		Info->State=0;
+
 		HTTPReadHeaders(Info->S,Info);
 		result=HTTPProcessResponse(Info);
 	  STREAMSetValue(Info->S,"HTTP:URL",Info->Doc);
@@ -1052,6 +1078,7 @@ while (1)
 	else break;
 }
 
+
 return(Info->S);
 }
 
@@ -1084,7 +1111,7 @@ if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
 Info->Doc=MCopyStr(Info->Doc,"/",dptr,NULL);
 if (StrLen(dptr))
 {
-	if (strcmp(Method,"POST")==0)
+	if (strcasecmp(Method,"POST")==0)
 	{
 	ptr=strchr(Info->Doc,'?');
 	if (ptr) 
@@ -1187,12 +1214,12 @@ return(TRUE);
 
 void HTTPSetUserAgent(char *AgentName)
 {
-g_UserAgent=CopyStr(g_UserAgent,AgentName);
+LibUsefulSetValue("HTTP:User-Agent",AgentName);
 }
 
 void HTTPSetProxy(char *Proxy)
 {
-g_Proxy=CopyStr(g_Proxy,Proxy);
+LibUsefulSetValue("HTTP:Proxy",Proxy);
 }
 
 void HTTPSetFlags(int Flags)

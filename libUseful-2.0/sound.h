@@ -58,12 +58,14 @@ unsigned int DataSize;
 #endif
 
 
+TAudioInfo *AudioInfoCreate(unsigned int Format, unsigned int Channels, unsigned int SampleRate, unsigned int SampleSize, unsigned int DataSize);
 int SoundPlayFile(char *Path, int Vol, int Flags);
 int SoundAlterVolume(char *Device, char *Channel, int delta);
 int SoundOpenOutput(char *Dev, TAudioInfo *Info);
 int SoundOpenInput(char *Dev, TAudioInfo *Info);
 TAudioInfo *SoundReadWAV(STREAM *S);
 TAudioInfo *SoundReadAU(STREAM *S);
+void SoundWriteWAVHeader(STREAM *S, TAudioInfo *AI);
 
 
 #endif

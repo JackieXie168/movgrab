@@ -196,7 +196,7 @@ if (Next) Next->Prev=Node; /* Next might be NULL! */
 }
 
 
-ListNode *InsertNamedItemIntoList(ListNode *InsertNode, const char *Name, void *Item)
+ListNode *ListInsertNamedItem(ListNode *InsertNode, const char *Name, void *Item)
 {
 ListNode *NewItem, *Next;
 
@@ -310,9 +310,9 @@ return(NewItem);
 
 
 
-ListNode *InsertItemIntoList(ListNode *InsertNode, void *Item)
+ListNode *ListInsertItem(ListNode *InsertNode, void *Item)
 {
-return(InsertNamedItemIntoList(InsertNode, NULL, Item));
+return(ListInsertNamedItem(InsertNode, NULL, Item));
 }
 
 
@@ -328,7 +328,7 @@ Prev=Curr;
 Curr=ListGetNext(Prev);
 }
 
-return(InsertItemIntoList(Prev,Item));
+return(ListInsertItem(Prev,Item));
 }
 
 

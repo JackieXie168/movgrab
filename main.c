@@ -76,7 +76,7 @@ char *ptr, *Token=NULL;
 int Port;
 int RetVal=FALSE;
 
-if (!StrLen(Path)) return;
+if (!StrLen(Path)) return(FALSE);
 
 Type=MovType;
 NextPath=CopyStr(NextPath,Path);
@@ -387,7 +387,7 @@ fprintf(stdout,"\nFeel free to email me and tell me if you've used this software
 
 fprintf(stdout,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
 
-fprintf(stdout,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', 'nibbles', Omair Eshkenazi, Matthias B, Ashish Disawal, Timo Juhani Lindfors and others.\n");
+fprintf(stdout,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', 'nibbles', Omair Eshkenazi, Matthias B, Ashish Disawal, Timo Juhani Lindfors, Abhisek Sanyal and others.\n");
 fprintf(stdout,"\nSpecial thanks to:\n");
 fprintf(stdout,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
 fprintf(stdout,"	Robert Crowley (http://tools.99k.org/) For all sorts of bug reports and advice.\n");
@@ -513,7 +513,7 @@ ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
 if (Flags & FLAG_PRINT_USAGE) PrintUsage();
 else if (! (Flags & FLAG_STDIN))
 {
-if (ListSize(DownloadQueue)==0) PrintUsage();
+	if (ListSize(DownloadQueue)==0) PrintUsage();
 }
 
 

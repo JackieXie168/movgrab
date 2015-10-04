@@ -72,7 +72,7 @@ return(len / 2);
 /* This function turns our process into a demon */
 int demonize()
 {
-int result, i;
+int result, i=0;
 
 result=fork();
 if (result != 0) exit(0);
@@ -90,7 +90,7 @@ umask(0);
 /* closed files that we need! Alternatively, the user may have used shell redirection */
 /* to send output for a file, and I'm sure they don't want us to close that file */
 
-for (i=0; i < 3; i++)
+//for (i=0; i < 3; i++)
 {
 	if (isatty(i)) 
 	{
@@ -375,17 +375,33 @@ return(GetDateStrFromSecs(DateFormat, Now, TimeZone));
 }
 
 
-time_t DateStrToSecs(char *DateFormat, char *Str)
+time_t DateStrToSecs(char *DateFormat, char *Str, char *TimeZone)
 {
 time_t Secs=0;
 struct tm TMS;
+char *Tempstr=NULL;
+int val;
 
 if (StrLen(DateFormat)==0) return(0);
 if (StrLen(Str)==0) return(0);
+
+if (StrLen(TimeZone))
+{
+	if (getenv("TZ")) Tempstr=CopyStr(Tempstr,getenv("TZ"));
+	setenv("TZ",TimeZone,TRUE);
+	tzset();
+}
+
 strptime(Str,DateFormat,&TMS);
 TMS.tm_isdst=-1;
 Secs=mktime(&TMS);
 
+if (StrLen(TimeZone))
+{
+	if (! Tempstr) unsetenv("TZ");
+	else setenv("TZ",Tempstr,TRUE);
+	tzset();
+}
 return(Secs);
 }
 
@@ -723,301 +739,6 @@ return(ptr);
 }
 
 
-void SetVar(ListNode *Vars, char *Name, char *Data)
-{
-ListNode *Node;
-char *Tempstr=NULL;
-
-Tempstr=CopyStr(Tempstr,Name);
-//strlwr(Tempstr);
-Node=ListFindNamedItem(Vars,Tempstr);
-if (Node) Node->Item=(void *) CopyStr((char *) Node->Item,Data);
-else ListAddNamedItem(Vars,Tempstr,CopyStr(NULL,Data));
-
-DestroyString(Tempstr);
-}
-
-char *GetVar(ListNode *Vars, char *Name)
-{
-ListNode *Node;
-char *Tempstr=NULL;
-
-Tempstr=CopyStr(Tempstr,Name);
-//strlwr(Tempstr);
-Node=ListFindNamedItem(Vars,Tempstr);
-DestroyString(Tempstr);
-if (Node) return((char *) Node->Item);
-return(NULL);
-}
-
-
-void UnsetVar(ListNode *Vars,char *Name)
-{
-ListNode *Curr;
-char *Str=NULL;
-char *Tempstr=NULL;
-
-if (Vars) return;
-Tempstr=CopyStr(Tempstr,Name);
-strlwr(Tempstr);
-Curr=ListFindNamedItem(Vars,Tempstr);
-if (Curr)
-{
-    Str=ListDeleteNode(Curr);
-    DestroyString(Str);
-}
-DestroyString(Tempstr);
-}
-
-
-void ClearVars(ListNode *Vars)
-{
-ListNode *Curr;
-char *Str;
-
-if (! Vars) return;
-Curr=ListGetNext(Vars);
-while (Curr)
-{
-    Str=ListDeleteNode(Curr);
-    DestroyString(Str);
-Curr=ListGetNext(Curr);
-}
-
-
-}
-
-
-
-void CopyVars(ListNode *Dest, ListNode *Source)
-{
-ListNode *Curr;
-char *Str;
-
-if (! Dest) return;
-if (! Source) return;
-Curr=ListGetNext(Source);
-while (Curr)
-{
-SetVar(Dest,Curr->Tag,Curr->Item);
-Curr=ListGetNext(Curr);
-}
-
-}
-
-
-
-char *SubstituteVarsInString(char *Buffer, char *Fmt, ListNode *Vars, int Flags)
-{
-char *ReturnStr=NULL, *FmtPtr, *VarName=NULL, *Tempstr=NULL;
-int count, VarIsPointer=FALSE;
-ListNode *Curr;
-int len=0, i;
-
-ReturnStr=CopyStr(Buffer,"");
-
-if (! Fmt) return(ReturnStr);
-
-
-FmtPtr=Fmt;
-while (*FmtPtr !=0)
-{
-	switch (*FmtPtr)
-	{
-
-		case '\\':
-			FmtPtr++;
-			switch (*FmtPtr)
-			{
-			   case 't':
-				ReturnStr=AddCharToStr(ReturnStr,' ');
-				len=StrLen(ReturnStr);
-				while ((len % 4) !=0)
-				{
-				ReturnStr=AddCharToStr(ReturnStr,' ');
-				len++;
-				}
-			   break;
-
-			   case 'r':
-				ReturnStr=AddCharToStr(ReturnStr,'\r');
-				len++;
-			   break;
-
-			   case 'n':
-				ReturnStr=AddCharToStr(ReturnStr,'\n');
-				len++;
-			   break;
-
-			   default:
-				ReturnStr=AddCharToStr(ReturnStr,*FmtPtr);
-				len++;
-			}
-		break;
-
-		case '$':
-  			FmtPtr++;
-			if (*FmtPtr=='$')
-			{
-				 VarIsPointer=TRUE;
-				 FmtPtr++;
-			}
-			if (*FmtPtr=='(') FmtPtr++;
-			for (count=0; (*(FmtPtr+count) !=0) && (*(FmtPtr+count) !=')'); count++);
-			if (count > 0) 
-			{
-				VarName=CopyStrLen(VarName,FmtPtr,count); 
-				if (! (Flags & SUBS_CASE_VARNAMES)) strlwr(VarName);
-   				Curr=ListFindNamedItem(Vars,VarName);
-				if (Curr && (StrLen(Curr->Item) > 0))
-				{
-					if (Flags & SUBS_QUOTE_VARS) ReturnStr=CatStr(ReturnStr,"'");
-					if (Flags & SUBS_STRIP_VARS_WHITESPACE) 
-					{
-						Tempstr=CopyStr(Tempstr,(char *) Curr->Item);
-						StripTrailingWhitespace(Tempstr);
-						StripLeadingWhitespace(Tempstr);
-				    	ReturnStr=CatStr(ReturnStr,Tempstr);
-					}
-				    else ReturnStr=CatStr(ReturnStr,(char *) Curr->Item);
-				   if (Flags & SUBS_QUOTE_VARS) ReturnStr=CatStr(ReturnStr,"'");
-				   len=StrLen(ReturnStr);
-				}
-				FmtPtr+=count;
-			}
- 		break;
-
-		case '"':
-			FmtPtr++;
-			while (*FmtPtr && (*FmtPtr !='"')) 
-			{
-			 	ReturnStr=AddCharToStr(ReturnStr,*FmtPtr);
-				len++;
-				FmtPtr++;
-			}
-			break;
- 
-		default:
-			 ReturnStr=AddCharToStr(ReturnStr,*FmtPtr);
-			 len++;
-	}
-
-FmtPtr++;
-}
-
-
-DestroyString(Tempstr);
-DestroyString(VarName);
-return(ReturnStr);
-}
-
-
-
-
-
-void ExtractVarsReadVar(char **Fmt, char **Msg, ListNode *Vars)
-{
-char *FmtPtr, *MsgPtr;
-char *VarName=NULL;
-int len=0;
-ListNode *Node;
-
-FmtPtr=*Fmt;
-
-  if (*FmtPtr=='(') FmtPtr++;
-	while (*FmtPtr != ')')
-	{
-		VarName=AddCharToBuffer(VarName,len,*FmtPtr);
-		len++;
-		FmtPtr++;
-	}
-  if (*FmtPtr==')') FmtPtr++;
-
-MsgPtr=*Msg;
-while ((*MsgPtr !=0) && (*MsgPtr != *FmtPtr))
-{
- if (*MsgPtr=='"')
- {
-		do 
-		{
-			MsgPtr++;
-		} while ((*MsgPtr != '"') && (*MsgPtr != 0));
- }
- MsgPtr++;
-}
-
-Node=ListFindNamedItem(Vars,VarName);
-
-if (Node) Node->Item=(void *) CopyStrLen((char *) Node->Item, *Msg, MsgPtr-*Msg);
-else Node=ListAddNamedItem(Vars,VarName,CopyStrLen(NULL, *Msg, MsgPtr-*Msg));
-
-*Fmt=FmtPtr;
-*Msg=MsgPtr;
-
-DestroyString(VarName);
-}
-
-char *ExtractVarsGetLiteralString(char *Buffer, char *InStr)
-{
-char *RetStr, *ptr;
-
-RetStr=Buffer;
-
-ptr=InStr;
-while ((*ptr !=0) && (*ptr !='$') && (*ptr !='?') && (*ptr !='*')) ptr++;
-
-RetStr=CopyStrLen(Buffer,InStr,ptr-InStr);
-return(RetStr);
-}
-
-int ExtractVarsFromString(char *Data, char *FormatStr, ListNode *Vars)
-{
-char *FmtPtr, *MsgPtr, *Token=NULL;
-int Match=TRUE, len;
-
-FmtPtr=FormatStr;
-MsgPtr=Data;
-
-while ( (*FmtPtr !=0) && (Match))
-{
-   switch (*FmtPtr)
-   {
-      case '?':
-        FmtPtr++;
-        MsgPtr++;
-      break;
-
-      case '*':
-        FmtPtr++;
-	Token=ExtractVarsGetLiteralString(Token,FmtPtr);
-	len=StrLen(Token);
-        while (
-                (*MsgPtr !=0) && 
-                (strncmp(MsgPtr,Token,len) !=0)
-              ) MsgPtr++;
-
-      break;
-
-      case '$':
-        FmtPtr++;
-        ExtractVarsReadVar(&FmtPtr, &MsgPtr, Vars);
-      break;
-
-      default:
-      if (*FmtPtr != *MsgPtr)
-      {
-	      Match=FALSE;
-      }
-        FmtPtr++;
-        MsgPtr++;
-      break;
-   }
-
-}
-DestroyString(Token);
-
-return(Match);
-}
 
 
 

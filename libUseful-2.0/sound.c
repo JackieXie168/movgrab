@@ -25,15 +25,21 @@ char Format[4];
 
 typedef struct
 {
-char ID[4];
-uint32_t size;
+char RIFF[4];
+uint32_t FileSize;
+char Format[4];
+char Block[4];
+uint32_t ChunkSize;
 uint16_t AudioFormat;
 uint16_t Channels;
 uint32_t SampleRate;
 uint32_t ByteRate;
 uint16_t BlockAlign;
 uint16_t BitsPerSample;
+char DataHeader[4];
+uint32_t DataSize;
 } WAVHeader;
+
 
 typedef struct
 {
@@ -47,6 +53,21 @@ typedef enum {VOL_MASTER,VOL_PCM,VOL_CD,VOL_MIC,VOL_LINE1,VOL_VIDEO,VOL_PHONEIN,
 
 
 #define SAMPLE_SIGNED 1
+
+TAudioInfo *AudioInfoCreate(unsigned int Format, unsigned int Channels, unsigned int SampleRate, unsigned int SampleSize, unsigned int DataSize)
+{
+TAudioInfo *AI;
+
+AI=(TAudioInfo *) calloc(1,sizeof(TAudioInfo));
+
+AI->Format=Format;
+AI->Channels=Channels;
+AI->SampleRate=SampleRate;
+AI->SampleSize=SampleSize;
+AI->DataSize=DataSize;
+
+return(AI);
+}
 
 
 /*  ------------------------ SOUND FILE FORMATS --------------- */
@@ -66,7 +87,7 @@ STREAMReadBytes(S,(char *) &Data,sizeof(WAVData));
 
 AudioInfo->Channels=Wav.Channels;
 AudioInfo->SampleRate=Wav.SampleRate;
-AudioInfo->DataSize=0xFFFFFFFF;
+AudioInfo->DataSize=Wav.DataSize;
 if (Wav.BitsPerSample==16)
 {
 	AudioInfo->SampleSize=2;
@@ -80,6 +101,30 @@ else
 
 return(AudioInfo);
 }
+
+
+void SoundWriteWAVHeader(STREAM *S, TAudioInfo *AI)
+{
+  WAVHeader WavHead;
+
+  strcpy(WavHead.RIFF,"RIFF");
+  strcpy(WavHead.Format,"WAVE");
+  strcpy(WavHead.Block,"fmt ");
+  WavHead.FileSize=AI->DataSize+44;
+  WavHead.AudioFormat=1;
+  WavHead.Channels=AI->Channels;
+  WavHead.SampleRate=AI->SampleRate;
+  WavHead.BlockAlign=4;
+  WavHead.ByteRate=WavHead.SampleRate * WavHead.BlockAlign;
+  WavHead.BitsPerSample=AI->SampleSize * 8;
+  WavHead.ChunkSize=WavHead.BitsPerSample;
+  strcpy(WavHead.DataHeader,"data");
+  WavHead.DataSize=AI->DataSize;
+
+
+  STREAMWriteBytes(S,(char *) &WavHead,sizeof(WAVHeader));
+}
+
 
 
 TAudioInfo *SoundReadAU(STREAM *S)
@@ -416,7 +461,7 @@ int ESDPlaySoundFile(char *SoundFilePath, int Vol)
 {
 int result, fd;
 
-if (StrLen(SoundFilePath) < 1) return;
+if (StrLen(SoundFilePath) < 1) return(FALSE);
 #ifdef HAVE_LIBESD
 
 fd=ESDGetConnection();

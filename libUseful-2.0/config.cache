@@ -25,6 +25,7 @@ ac_cv_func_EVP_rc5_32_12_16_cbc=${ac_cv_func_EVP_rc5_32_12_16_cbc=no}
 ac_cv_func_OpenSSL_add_all_algorithms=${ac_cv_func_OpenSSL_add_all_algorithms=no}
 ac_cv_func_SSL_library_init=${ac_cv_func_SSL_library_init=yes}
 ac_cv_header_stdc=${ac_cv_header_stdc=yes}
+ac_cv_header_sys_soundcard_h=${ac_cv_header_sys_soundcard_h=yes}
 ac_cv_lib_crypto_EVP_CIPHER_CTX_init=${ac_cv_lib_crypto_EVP_CIPHER_CTX_init=yes}
 ac_cv_lib_ssl_SSL_library_init=${ac_cv_lib_ssl_SSL_library_init=yes}
 ac_cv_lib_z_deflate=${ac_cv_lib_z_deflate=yes}

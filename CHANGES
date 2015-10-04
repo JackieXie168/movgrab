@@ -1,3 +1,7 @@
+Version 1.1.12
+	Big thank you to Abhisek Sanyal for submitting a patch that fixed broken youtube!
+	Thanks to 'nibbles' for a bunch of bugfixes that let movgrab compile under OSX
+
 Version 1.1.11
 	Fixes for various sites
 

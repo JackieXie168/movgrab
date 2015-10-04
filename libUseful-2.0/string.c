@@ -299,6 +299,14 @@ for (count=0; count < len; count++) str[count]=tolower(str[count]);
 return(str);
 }
 
+char *strupr(char *str)
+{
+int count, len;
+len=StrLen(str);
+for (count=0; count < len; count++) str[count]=toupper(str[count]);
+return(str);
+}
+
 char *strrep(char *str, char oldchar, char newchar)
 {
 int count, len;

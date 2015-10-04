@@ -24,6 +24,7 @@
 #include "GeneralFunctions.h"
 #include "file.h"
 #include "socket.h"
-
+#include "Vars.h"
+#include "libsettings.h"
 
 #endif

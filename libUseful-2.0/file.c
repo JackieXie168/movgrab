@@ -100,6 +100,7 @@ STREAM *STREAMSelect(ListNode *Streams)
  while (Curr)
  {
    S=(STREAM *) Curr->Item;
+	 STREAMPump(S,FALSE);
    if (S->InEnd > S->InStart) return(S);
    FD_SET(S->in_fd,&SelectSet);
    if (S->in_fd > highfd) highfd=S->in_fd;
@@ -468,7 +469,9 @@ Mode = Flags & ~(O_LOCK|O_TRUNC);
 
 if (strcmp(FilePath,"-")==0)
 {
-return(STREAMFromDualFD(0,1));
+Stream=STREAMFromDualFD(0,1);
+Stream->Path=CopyStr(Stream->Path,FilePath);
+return(Stream);
 }
 
 fd=open(FilePath, Mode, 0600);
@@ -515,14 +518,20 @@ STREAM *STREAMClose(STREAM *S)
 {
 int len;
 
-if (! S) return;
+if (! S) return(NULL);
 len=S->OutEnd - S->OutStart; 
 
 STREAMReadThroughProcessors(S, NULL, 0);
 STREAMPump(S,1);
 
+if ( 
+		(StrLen(S->Path)==0) ||
+	 (strcmp(S->Path,"-") !=0)
+	)
+{
 if ((S->out_fd != -1) && (S->out_fd != S->in_fd)) close(S->out_fd);
 if (S->in_fd != -1) close(S->in_fd);
+}
 
 ListDestroy(S->Values,(LIST_ITEM_DESTROY_FUNC)DestroyString);
 ListDestroy(S->ProcessingModules,DataProcessorDestroy);

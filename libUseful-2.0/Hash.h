@@ -26,6 +26,7 @@ HASH_FINISH Finish;
 };
 
 THash *HashInit(char *Type);
+void DestroyHash(THash *Hash);
 char *EncodeBase64(char *Return, char *Text, int len);
 char *DecodeBase64(char *Return, int *len, char *Text);
 int HashBytes(char **Return, char *Type, char *text, int len, int Encoding);

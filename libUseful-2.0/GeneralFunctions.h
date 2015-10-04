@@ -30,7 +30,7 @@ void SetTimeout(int timeout);
 int CreateLockFile(char *FilePath,int Timeout);
 char *GetDateStr(char *Format, char *Timezone);
 char *GetDateStrFromSecs(char *Format, time_t Secs, char *Timezone);
-time_t DateStrToSecs(char *Format, char *Str);
+time_t DateStrToSecs(char *Format, char *Str, char *Timezone);
 double EvaluateMathStr(char *String);
 int MakeDirPath(char *Path, int DirMask);
 

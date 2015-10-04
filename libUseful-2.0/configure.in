@@ -47,6 +47,9 @@ fi
 
 AC_ARG_ENABLE(oss, [  --enable-oss       use Open Sound System], cf_use_oss=$enableval )
 
+dnl Always use oss if available
+cf_use_oss=yes
+
 if test "$cf_use_oss" = "yes"
 then
 AC_CHECK_HEADER(sys/soundcard.h,AC_DEFINE([HAVE_OSS]),cf_have_oss=no,)

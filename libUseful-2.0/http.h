@@ -22,7 +22,6 @@
 #define HTTP_VER1_0 1
 #define HTTP_DEBUG 2
 #define HTTP_CHUNKED 4
-#define HTTP_HEADERS_SENT 8
 #define HTTP_NOCOMPRESS 16
 #define HTTP_NOREDIRECT 32
 #define HTTP_TRY_HTTPS 64
@@ -33,7 +32,12 @@
 #define HTTP_SSL_REWRITE 2048
 #define HTTP_GZIP 8192
 #define HTTP_DEFLATE 16384
+#define HTTP_NODECODE 32768
 
+
+#define HTTP_HEADERS_SENT 1
+#define HTTP_CLIENTDATA_SENT 2
+#define HTTP_HEADERS_READ 4
 
 typedef struct
 {
@@ -56,6 +60,7 @@ char *Doc;
 char *Destination;
 char *ResponseCode;
 int Flags;
+int State;
 char *RedirectPath;
 char *PreviousRedirect;
 char *ContentType;
