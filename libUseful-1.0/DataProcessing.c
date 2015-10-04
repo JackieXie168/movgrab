@@ -619,7 +619,7 @@ result=inflateInit(&ZData->z_in);
 
 ZData->z_out.avail_in=0;
 ZData->z_out.avail_out=0;
-deflateInit(&ZData->z_out,5);
+deflateInit(&ZData->z_out,CompressionLevel);
 
 
 ProcMod->Data=(void *) ZData;

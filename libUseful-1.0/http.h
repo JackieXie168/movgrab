@@ -86,8 +86,8 @@ STREAM *HTTPTransact(HTTPInfoStruct *Info);
 HTTPInfoStruct *HTTPInfoFromURL(char *Method, char *URL);
 STREAM *HTTPMethod(char *Method, char *URL, char *Logon, char *Password);
 STREAM *HTTPGet(char *URL, char *Logon, char *Password);
+STREAM *HTTPPost(char *URL, char *Logon, char *Password, char *ContentType, char *Content);
 int HTTPReadBytes(STREAM *Con, char **Buffer);
-
 void HTTPCopyToSTREAM(STREAM *Con, STREAM *S);
 int HTTPDownload(char *URL, char *Login, char *Password, STREAM *S);
 void HTTPSetUserAgent(char *AgentName);

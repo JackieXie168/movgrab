@@ -20,6 +20,31 @@ RetStr=SetStrLen(Return,StrLen(Text) *2);
 return(RetStr);
 }
 
+
+
+char *EncodeHash(char *Buffer, char *Digest, int len, int Encoding)
+{
+char *Tempstr=NULL, *RetStr=NULL;
+int i;
+
+RetStr=SetStrLen(Buffer,128);
+if (Encoding==ENCODE_BASE64) to64frombits(RetStr,Digest,len);
+else
+{
+	for (i=0; i < len; i++)
+	{
+	Tempstr=FormatStr(Tempstr,"%02x",Digest[i] & 255);
+	RetStr=CatStr(RetStr,Tempstr);
+	}
+}
+
+DestroyString(Tempstr);
+return(RetStr);
+}
+
+
+
+
 #include "crc32.h"
 
 void HashUpdateCRC(THash *Hash, char *Data, int Len)
@@ -30,27 +55,12 @@ crc32Update((unsigned long *) &Hash->Ctx, Data, Len);
 
 void HashFinishCRC(THash *Hash, int Encoding, char **HashStr)
 {
-int count;
-char *Tempstr=NULL;
-int i;
+unsigned long crc;
 
 crc32Finish((unsigned long *) Hash->Ctx);
+crc=htonl((unsigned long *) Hash->Ctx);
 
-if (Encoding== ENCODE_BASE64)
-{
-	*HashStr=SetStrLen(*HashStr,128);
-	to64frombits(*HashStr,(unsigned long *) Hash->Ctx,sizeof(unsigned long));
-}
-else
-{
-	for (i=0; i < sizeof(unsigned long); i++)
-	{
-	Tempstr=FormatStr(Tempstr,"%02x",Tempstr[i]);
-	*HashStr=CatStr(*HashStr,Tempstr);
-	}
-}
-
-DestroyString(Tempstr);
+*HashStr=EncodeHash(*HashStr, (char *) &crc, sizeof(unsigned long), Encoding);
 }
 
 
@@ -80,20 +90,7 @@ int i;
 
 DigestBuff=(char *) calloc(1,MD5LEN+1);
 MD5Final(DigestBuff, (MD5_CTX *) Hash->Ctx);
-
-if (Encoding==ENCODE_BASE64)
-{
-	*HashStr=SetStrLen(*HashStr,42);
-	to64frombits(*HashStr,DigestBuff,16);
-}
-else
-{
-	for (i=0; i < MD5LEN; i++)
-	{
-	Tempstr=FormatStr(Tempstr,"%02x",DigestBuff[i] & 255);
-	*HashStr=CatStr(*HashStr,Tempstr);
-	}
-}
+*HashStr=EncodeHash(*HashStr, DigestBuff, MD5LEN, Encoding);
 
 DestroyString(DigestBuff);
 DestroyString(Tempstr);
@@ -115,7 +112,12 @@ THash *Hash;
 
 Hash=(THash *) calloc(1,sizeof(THash));
 if (strcasecmp(Type,"md5")==0) HashInitMD5(Hash);
-if (strcasecmp(Type,"crc32")==0) HashInitCRC(Hash);
+else if (strcasecmp(Type,"crc32")==0) HashInitCRC(Hash);
+else 
+{
+free(Hash);
+Hash=NULL;
+}
 
 return(Hash);
 }

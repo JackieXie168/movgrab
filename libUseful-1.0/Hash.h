@@ -15,14 +15,14 @@ extern "C" {
 typedef struct t_hash THash;
 
 typedef void (*HASH_UPDATE)(THash *Hash, char *Data, int DataLen);
-typedef char *(* HASH_FINISH)(THash *Hash, int Encoding);
+typedef void (*HASH_FINISH)(THash *Hash, int Encoding, char **RetStr);
 
 struct t_hash
 {
 int Type;
 void *Ctx;
-HASH_UPDATE *Update;
-HASH_FINISH *Finish;
+HASH_UPDATE Update;
+HASH_FINISH Finish;
 };
 
 THash *HashInit(char *Type);

@@ -255,7 +255,10 @@ switch (*ptr)
 		case '+':
 		case '\'':
 		case ':':
+		case ';':
 		case '/':
+		case '\r':
+		case '\n':
 		Token=FormatStr(Token,"%%%02X",*ptr); 
 		RetStr=CatStr(RetStr,Token);
 		olen+=StrLen(Token);
@@ -270,7 +273,6 @@ switch (*ptr)
 
 }
 
-RetStr[olen]='\0';
 DestroyString(Token);
 return(RetStr);
 }
@@ -860,6 +862,7 @@ switch (RCode)
 	}
 
 	if (! (HTTPInfo->Flags & HTTP_NOREDIRECT)) result=HTTP_REDIRECT;
+	else result=HTTP_OKAY;
 	}
 	break;
 
@@ -960,6 +963,7 @@ while (1)
 		}
 		HTTPReadHeaders(Info->S,Info);
 		result=HTTPProcessResponse(Info);
+	  STREAMSetValue(Info->S,"HTTP:URL",Info->Doc);
 		if (Info->Flags & HTTP_CHUNKED) HTTPAddChunkedProcessor(Info->S);
 
 		if (Info->Flags & HTTP_GZIP) 
@@ -1052,6 +1056,7 @@ if (StrLen(dptr))
 
 			Info->PostData=CopyStr(Info->PostData,ptr);
 			Info->PostContentLength=StrLen(ptr);
+
 		}
 	}
 	}
@@ -1089,6 +1094,28 @@ return(S);
 STREAM *HTTPGet(char *URL, char *Logon, char *Password)
 {
 return(HTTPMethod("GET", URL, Logon, Password));
+}
+
+
+STREAM *HTTPPost(char *URL, char *Logon, char *Password, char *ContentType, char *Content)
+{
+HTTPInfoStruct *Info;
+STREAM *S;
+
+
+Info=HTTPInfoFromURL("POST", URL);
+Info->PostContentType=CopyStr(Info->PostContentType,ContentType);
+Info->PostData=CopyStr(Info->PostData,Content);
+Info->PostContentLength=StrLen(Content);
+if (StrLen(Logon) || StrLen(Password))
+{
+  if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+  HTTPAuthSet(Info->Authorization,Logon, Password, HTTP_AUTH_BASIC);
+}
+S=HTTPTransact(Info);
+
+HTTPInfoDestroy(Info);
+return(S);
 }
 
 

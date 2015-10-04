@@ -9,7 +9,6 @@ AC_LANG_C
 AC_PROG_MAKE_SET 
 AC_HEADER_STDC 
 
-
 cf_have_libssl=no
 cf_have_libcrypto=no
 cf_have_libz=no
@@ -35,7 +34,7 @@ AC_ARG_ENABLE(oss, [  --enable-oss       use Open Sound System], cf_use_oss=$ena
 
 if test "$cf_use_oss" = "yes"
 then
-AC_CHECK_HEADER(sys/soundcard.h,cf_have_oss=yes,,)
+AC_CHECK_HEADER(sys/soundcard.h,AC_DEFINE([HAVE_OSS]),cf_have_oss=no,)
 fi
 
 
@@ -48,7 +47,7 @@ echo "*************  RESULTS **************"
 echo "Secure Sockets Support:		$cf_have_libssl" 
 echo "Cryptography Support:		$cf_have_libcrypto" 
 echo "Zlib compression Support:	$cf_have_libz" 
-echo "OSS Support:			$cf_have_liboss" 
+echo "OSS Support:			$cf_have_oss" 
 echo "Esound Support:			$cf_have_libesd" 
 echo "*************************************"
 echo

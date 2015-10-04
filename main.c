@@ -22,7 +22,7 @@
 
 
 //This is doable thorugh autoconf, but I'm sick of fighting with it
-#define Version "1.0.12"
+#define Version "1.0.13"
 
 #include "libUseful-1.0/libUseful.h"
 #include <string.h>
@@ -36,9 +36,9 @@ char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://
 char *TestLinks[]={"","","http://www.youtube.com/watch?v=oP59tQf_njc","http://www.metacafe.com/watch/6063075/how_to_use_chopsticks/","http://www.dailymotion.com/video/x5790e_hubblecast-16-galaxies-gone-wild_tech","http://www.break.com/index/ninja-cat.html","http://www.ehow.com/video_6819748_creamy-thyme-scrambled-eggs-recipe.html","http://vimeo.com/channels/knowyourmeme","http://www.almostkilled.com/videos/Funny_TV_Ads/Crash_Testing_Video_Clip","http://www.5min.com/Video/Learn-About-Chocolate-516948033","http://www.vbox7.com/play:1417ad5a","http://blip.tv/file/4855647/","http://www.ted.com/talks/janine_benyus_shares_nature_s_designs.html","http://www.myvideo.de/watch/8045043#featuredvideo1","http://www.clipshack.com/Clip.aspx?key=F9F949CE15A12B50","http://www.mytopclip.com/videos/32501/flip-over-card-trick-revealed","http://www.redbalcony.com/?vid=28156","http://www.mobango.com/media_details/struck_in_tsunami/%21tKpzdHIo5E%3D/","http://webcast.berkeley.edu/event_details.php?seriesid=457d7be1-0c22-4366-a287-691948ee8f37&p=1&ipp=15&category=","http://oyc.yale.edu/economics/game-theory/contents/sessions/session-1-introduction-five-first-lessons","http://www.sdnhm.org/webcasts/lectures/scottsampson.html","broken","http://www.princeton.edu/WebMedia/flash/lectures/20100428_publect_taibbi_tett.shtml","http://www.uctv.tv/search-details.aspx?showID=20888","http://www.reuters.com/news/video/story?videoId=193471398&videoChannel=4","http://www.clipfish.de/musikvideos/video/3527775/daft-punk-derezzed/","http://www.liveleak.com/view?i=a7b_1299633723","http://www.academicearth.org/lectures/interaction-with-physical-environment","http://gs147.photobucket.com/groups/r299/QM25Y4IJEP/?action=view&current=BlackSwan1.mp4","http://www.vidoevo.com/yvideo.php?i=NXhxdEU0cWuRpZktqUGc&j-majik-wickaman-feat-dee-freer-in-pieces-drum-bass-mix","http://www.videosfacebook.net/sueper-best-dance-songs-2-aaaa-1","http://english.aljazeera.net/programmes/countingthecost/2011/02/2011219142816937101.html","http://www.mefeedia.com/video/36135458","http://www.myvido1.com/QWxgGMihFZEl1aOJlTy0UP_bob-marley-don-039t-worry-be-happy","http://www.iviewtube.com/v/152128/insane-hail-storm-oklahoma-city","http://www.washingtonpost.com/business/on-leadership-modern-day-machiavellis-/2011/02/18/ABYgckH_video.html","http://www.cbsnews.com/video/watch/?id=7357739n","http://www.france24.com/en/20110219-beyond-business-cybercriminality-iphone-mobile-security","http://www.euronews.net/2011/06/01/who-says-mobile-phones-may-cause-brian-cancer/","http://www.metatube.com/en/videos/cid2/Funny-Videos/53210/Rail-Jump-Fail/","http://www.motionfeeds.com/10401/helsinki-travel-guide.html","http://www.izlese.org/hot-girl-hot-cars-911-turbo-vs-mercedes-s550-vs-rally-car.html",NULL};
 
 
-typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,TYPE_VIDEOSFACEBOOK,TYPE_ALJAZEERA,TYPE_MEFEEDIA,TYPE_MYVIDO1,TYPE_IVIEWTUBE,TYPE_WASHINGTONPOST,TYPE_CBSNEWS,TYPE_FRANCE24,TYPE_EURONEWS,TYPE_METATUBE,TYPE_MOTIONFEEDS,TYPE_IZLESE, 
+typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_VBOX7,TYPE_BLIPTV,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,TYPE_VIDEOSFACEBOOK,TYPE_ALJAZEERA,TYPE_MEFEEDIA,TYPE_MYVIDO1,TYPE_IVIEWTUBE,TYPE_WASHINGTONPOST,TYPE_CBSNEWS,TYPE_FRANCE24,TYPE_EURONEWS,TYPE_METATUBE,TYPE_MOTIONFEEDS,TYPE_IZLESE, 
 /*Following ones are not real types, but used by internal processes */
-TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2,TYPE_BERKELEY_STAGE2, TYPE_CLIPSHACK_STAGE2, TYPE_CLIPSHACK_STAGE3, TYPE_VIDEOEMO_STAGE2,TYPE_MYVIDO1_STAGE2, TYPE_REFERENCE, TYPE_WASHINGTONPOST_JSON, TYPE_WASHINGTONPOST_STAGE2}TDT;
+TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2,TYPE_BERKELEY_STAGE2, TYPE_CLIPSHACK_STAGE2, TYPE_CLIPSHACK_STAGE3, TYPE_VIDEOEMO_STAGE2,TYPE_MYVIDO1_STAGE2, TYPE_REFERENCE, TYPE_WASHINGTONPOST_JSON, TYPE_WASHINGTONPOST_STAGE2, TYPE_BLIPTV_STAGE2, TYPE_BLIPTV_STAGE3}TDT;
 
 #define FLAG_QUIET 1
 #define FLAG_BACKGROUND 2
@@ -52,16 +52,19 @@ TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2
 #define FLAG_TEST  256
 #define FLAG_STDIN 512
 #define FLAG_POST  1024
-#define FLAG_DL_RETRY  2048
 #define FLAG_TEST_SITES 4096
 #define FLAG_STREAM 8192
 #define FLAG_STREAMCACHE 16384
+
+#define DL_POST 1
+#define DL_NOREDIRECT 2
+#define DL_RETRY 4
 
 #define EXTRACT_DEQUOTE  1
 #define EXTRACT_WITHIN_QUOTES 2
 #define EXTRACT_NOSPACES 4
 #define EXTRACT_INCLUDE_START 8
-#define EXTRACT_GUESS_TYPE 16
+#define EXTRACT_GUESSTYPE 16
 
 
 int Flags=0;
@@ -100,6 +103,24 @@ return(result);
 }
 
 
+char *ItemCodeFromFileExtension(char *RetBuf, char *Default, char *Path)
+{
+char *Tempstr=NULL, *RetStr=NULL, *ptr;
+
+Tempstr=CopyStr(Tempstr,Path);
+ptr=strrchr(Tempstr,'?');
+if (ptr) *ptr='\0';
+ptr=strrchr(Tempstr,'.');
+if (ptr)
+{
+ptr++;
+RetStr=MCopyStr(RetBuf,"item:",ptr,NULL);
+}
+else RetStr=MCopyStr(RetBuf,Default);
+
+DestroyString(Tempstr);
+return(RetStr);
+}
 
 
 //This function Extracts Text from a line that's found between two specified
@@ -152,20 +173,9 @@ int GTF=0;
 
 		//Do this without disturbing ptr, as we must return ptr
 		ptr2=ItemName;
-		if (Flags & EXTRACT_GUESS_TYPE)
+		if (Flags & EXTRACT_GUESSTYPE) 
 		{
-			Token=CopyStr(Token,Item);
-			ptr2=strrchr(Token,'?');
-			if (ptr2) *ptr2=0;
-			ptr2=strrchr(Token,'.');
-			if (ptr2) 
-			{
-					ptr2++;
-					Token=MCopyStr(Token,"item:",ptr2,NULL);
-					ptr2=Token;
-			}
-			else ptr2=ItemName;
-			
+			Token=ItemCodeFromFileExtension(Token, ItemName, Item);
 		}
 
 		SetVar(Vars,ptr2,Item);
@@ -306,14 +316,14 @@ return(S);
 
 //---- Functions relating to connecting to hosts and downloading webpages ----
 
-STREAM *ConnectAndSendHeaders(char *Server, char *Doc, int Port, int Post, int BytesRange)
+STREAM *ConnectAndSendHeaders(char *Server, char *Doc, int Port, int DLFlags, int BytesRange)
 {
 STREAM *Con;
 char *Tempstr=NULL, *Method=NULL;
 HTTPInfoStruct *Info;
 static char *LastPage=NULL;
 
-if (Post) 
+if (DLFlags & DL_POST) 
 {
 Method=CopyStr(Method,"POST");
 }
@@ -324,7 +334,7 @@ if (Port==0) Port=80;
 Tempstr=MCopyStr(Tempstr,"http://",Server,"/",Doc,NULL);;
 //Info=HTTPInfoCreate(Server, Port, "","", Method, Tempstr, "",0);
 Info=HTTPInfoFromURL(Method, Tempstr);
-
+if (DLFlags & DL_NOREDIRECT) Info->Flags |=HTTP_NOREDIRECT;
 if (Flags & FLAG_HTTPS) Info->Flags |= HTTP_SSL|HTTP_SSL_REWRITE;
 if (Flags & FLAG_DEBUG3) Info->Flags |= HTTP_DEBUG;
 
@@ -417,8 +427,8 @@ char *Tempstr=NULL, *ptr;
 
 for (i=0; i < 20; i++)
 {
-Con=ConnectAndSendHeaders(Server, Doc, Port, DLFlags & FLAG_POST,BytesRead);
-if (! (DLFlags & FLAG_DL_RETRY))  break;
+Con=ConnectAndSendHeaders(Server, Doc, Port, DLFlags,BytesRead);
+if (! (DLFlags & DL_RETRY))  break;
 
 if (Con)
 {
@@ -1216,13 +1226,23 @@ break;
 
 case TYPE_VIDEOEMO_STAGE2:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
- 	RetVal=DownloadItem(Tempstr, Title,Post|FLAG_DL_RETRY);
+ 	RetVal=DownloadItem(Tempstr, Title,Post|DL_RETRY);
+break;
+
+case TYPE_BLIPTV:
+ 		Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+  	RetVal=DownloadPage(Tempstr,TYPE_BLIPTV_STAGE2, Title,0);
+break;
+
+case TYPE_BLIPTV_STAGE2:
+ 		Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+  	RetVal=DownloadPage(Tempstr,TYPE_BLIPTV_STAGE3, Title,0);
 break;
 
 
+case TYPE_BLIPTV_STAGE3:
 case TYPE_ALMOST_KILLED:
 case TYPE_FIVE_MIN:
-case TYPE_BLIP_TV:
 case TYPE_GENERIC:
 case TYPE_MYTOPCLIP:
 case TYPE_REDBALCONY:
@@ -1561,14 +1581,33 @@ case TYPE_METACAFE_FINAL:
 break;
 
 
-case TYPE_BLIP_TV:
-#define BLIP_TV_ITEM "player.setPrimaryMediaUrl(\""
-#define BLIP_TV_ITEM1 "<meta property=\"og:video\""
-#define BLIP_TV_ITEM2 "content=\""
-	ptr=strstr(Tempstr,BLIP_TV_ITEM1);
+case TYPE_BLIPTV:
+#define BLIPTV_ITEM "player.setPrimaryMediaUrl(\""
+#define BLIPTV_ITEM1 "<meta property=\"og:video\""
+#define BLIPTV_ITEM2 "content=\""
+	ptr=strstr(Tempstr,BLIPTV_ITEM1);
 	if (ptr)
 	{
-		GenericExtractFromLine(Tempstr, "item:flv",BLIP_TV_ITEM2,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "ID",BLIPTV_ITEM2,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	}
+break;
+
+case TYPE_BLIPTV_STAGE2:
+	if (!MediaCount)
+	{
+	Tempstr=CopyStr(Tempstr,STREAMGetValue(S,"HTTP:URL"));
+	GenericExtractFromLine(Tempstr, "ID","file=","&",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	MediaCount++;
+	}
+break;
+
+case TYPE_BLIPTV_STAGE3:
+#define BLIPTV_S3_ITEM "<media:content url=\""
+
+	ptr=strstr(Tempstr,BLIPTV_S3_ITEM);
+	if (ptr)
+	{
+	GenericExtractFromLine(Tempstr, "item:flv",BLIPTV_S3_ITEM,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 	}
 break;
 
@@ -1628,16 +1667,26 @@ case TYPE_BREAK_COM:
 #define BREAK_EXTRA "flashVars.icon = \""
 #define BREAK_WMV "+sGlobalContentFilePath+'/'+sGlobalFileName+'.wmv"
 #define BREAK_FLV "+sGlobalContentFilePath+'/'+sGlobalFileName+'.flv"
+#define BREAK_HD "sGlobalFileNameHD='"
+#define BREAK_HDD "sGlobalFileNameHDD='"
 #define BREAK_TITLE "id=\"vid_title\" content=\""
 
 
 	ptr=strstr(Tempstr,BREAK_ITEM);
 	if (ptr)
 	{
+		//'sGlobalFileName' needs .flv appended to be the true path
 		GenericExtractFromLine(Tempstr, "item:flv",BREAK_ITEM,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		ptr=GetVar(Vars,"item:flv");
 		if (ptr) ptr=CatStr(ptr,".flv");
 	}
+
+	ptr=strstr(Tempstr,BREAK_HD);
+	if (ptr) GenericExtractFromLine(Tempstr, "item:mp4:medq",BREAK_HD,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+
+	ptr=strstr(Tempstr,BREAK_HDD);
+	if (ptr) GenericExtractFromLine(Tempstr, "item:mp4:highq",BREAK_HDD,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+
 
 	ptr=strstr(Tempstr,BREAK_EXTRA);
 	if (ptr)
@@ -1657,8 +1706,8 @@ break;
 
 
 case TYPE_EHOW:
-#define EHOW_ITEM "flashvars=&quot;id="
-#define EHOW_ITEM_END "&"
+#define EHOW_ITEM "data-video-id=\""
+#define EHOW_ITEM_END "\""
 #define EHOW_TITLE "<h1 class=\"Heading1a\">"
 #define EHOW_TITLE_END "</h1>"
 #define EHOW_ITEM2 "showPlayer({"
@@ -1755,7 +1804,7 @@ case TYPE_ALMOST_KILLED:
 	ptr=strstr(Tempstr,AK_ITEM);
 	if (ptr)
 	{
-		GenericExtractFromLine(Tempstr, "item:flv",AK_ITEM,"&",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "item:flv",AK_ITEM,"&",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 	}
 
 break;
@@ -1923,14 +1972,11 @@ break;
 
 case TYPE_REDBALCONY:
 #define REDBALCONY_ITEM_START "send_mobile_content?vid="
-#define REDBALCONY_ITEM_END ".flv"
+#define REDBALCONY_ITEM_END "\'"
 
 if (strstr(Tempstr,REDBALCONY_ITEM_START))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",REDBALCONY_ITEM_START,REDBALCONY_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		Token=CopyStr(Token,GetVar(Vars,"item:flv"));
-		Token=CatStr(Token,".flv");
-		SetVar(Vars,"item:flv",Token);
+		GenericExtractFromLine(Tempstr, "item:flv",REDBALCONY_ITEM_START,REDBALCONY_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 }
 
 
@@ -1972,7 +2018,7 @@ case TYPE_IVIEWTUBE:
 
 if (strstr(Tempstr,IVIEWTUBE_ITEM_START))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",IVIEWTUBE_ITEM_START,IVIEWTUBE_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "item:flv",IVIEWTUBE_ITEM_START,IVIEWTUBE_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 }
 
 
@@ -1994,7 +2040,7 @@ case TYPE_MOBANGO:
 
 if (strstr(Tempstr,MOBANGO_ITEM_START))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",MOBANGO_ITEM_START,MOBANGO_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "item:flv",MOBANGO_ITEM_START,MOBANGO_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 }
 
 
@@ -2016,17 +2062,23 @@ break;
 case TYPE_IZLESE:
 if (strstr(Tempstr,IZLESE_ITEM_START) && strstr(Tempstr,IZLESE_ITEM_END))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",IZLESE_ITEM_START,IZLESE_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-ptr=GetVar(Vars,"item:flv");
+		GenericExtractFromLine(Tempstr, "tmp",IZLESE_ITEM_START,IZLESE_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+ptr=GetVar(Vars,"tmp");
+if (ptr)
+{
 //put 'http' back on
 Tempstr=MCopyStr(Tempstr,"http",ptr,NULL);
+}
 
 if (strstr(ptr,"youtube"))
 {
-		SetVar(Vars,"item:flv","");
 		SetVar(Vars,"item:reference",Tempstr);
 }
-else SetVar(Vars,"item:flv",Tempstr);
+else 
+{
+	Token=ItemCodeFromFileExtension(Token, "item:flv", ptr);
+	SetVar(Vars,Token,Tempstr);
+}
 
 }
 
@@ -2077,7 +2129,7 @@ case TYPE_CLIPSHACK_STAGE3:
 #define CLIPSHACK_STAGE3_END "</location>"
 if (strstr(Tempstr,CLIPSHACK_STAGE3_START))
 {
-		GenericExtractFromLine(Tempstr, "item:flv",CLIPSHACK_STAGE3_START,CLIPSHACK_STAGE3_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "item:flv",CLIPSHACK_STAGE3_START,CLIPSHACK_STAGE3_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES|EXTRACT_GUESSTYPE);
 }
 break;
 
@@ -2136,7 +2188,7 @@ case TYPE_PHOTOBUCKET:
 	ptr=strstr(Tempstr,PHOTOBUCKET_START);
 	if (ptr)
 	{
-		GenericExtractFromLine(Tempstr, "item:mp4",PHOTOBUCKET_START,PHOTOBUCKET_END,Vars, EXTRACT_DEQUOTE);
+		GenericExtractFromLine(Tempstr, "item:mp4",PHOTOBUCKET_START,PHOTOBUCKET_END,Vars, EXTRACT_DEQUOTE| EXTRACT_GUESSTYPE);
 	}
 break;
 
@@ -2146,7 +2198,7 @@ case TYPE_CLIPFISH_DE:
 	ptr=strstr(Tempstr,CLIPFISH_ITEM_START);
 	if (ptr)
 	{
-		GenericExtractFromLine(Tempstr, "item:flv",CLIPFISH_ITEM_START,"&",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "item:flv",CLIPFISH_ITEM_START,"&",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES|EXTRACT_GUESSTYPE);
 	}
 break;
 
@@ -2156,7 +2208,7 @@ case TYPE_LIVELEAK:
 ptr=strstr(Tempstr,LIVELEAK_ITEM_START);
 if (ptr)
 {
-	GenericExtractFromLine(Tempstr, "item:flv",LIVELEAK_ITEM_START,LIVELEAK_ITEM_END,Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+	GenericExtractFromLine(Tempstr, "item:flv",LIVELEAK_ITEM_START,LIVELEAK_ITEM_END,Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES | EXTRACT_GUESSTYPE);
 }
 
 if (strstr(Tempstr,GENERIC_TITLE_START))
@@ -2210,7 +2262,7 @@ break;
 case TYPE_VIDEOSFACEBOOK:
 	if (strstr(Tempstr,VIDEOSFACEBOOK_ITEM_START))
 	{
-		GenericExtractFromLine(Tempstr, "item:flv",VIDEOSFACEBOOK_ITEM_START,VIDEOSFACEBOOK_ITEM_END,Vars,EXTRACT_DEQUOTE);
+		GenericExtractFromLine(Tempstr, "item:flv",VIDEOSFACEBOOK_ITEM_START,VIDEOSFACEBOOK_ITEM_END,Vars,EXTRACT_DEQUOTE|EXTRACT_GUESSTYPE);
 	}
 
 	if (strstr(Tempstr,VIDEOSFACEBOOK_TITLE_START))
@@ -2285,7 +2337,6 @@ break;
 
 
 case TYPE_CBSNEWS:
-
 ExtractCBSNews(Vars, Tempstr);
 if (strstr(Tempstr,GENERIC_TITLE_START))
 {
@@ -2303,12 +2354,12 @@ case TYPE_FRANCE24:
 
 if (strstr(Tempstr,FRANCE24_ITEM_START) )
 {
-		GenericExtractFromLine(Tempstr, "item:flv",FRANCE24_ITEM_START,FRANCE24_ITEM_END,Vars,0);
+		GenericExtractFromLine(Tempstr, "item:flv",FRANCE24_ITEM_START,FRANCE24_ITEM_END,Vars,EXTRACT_GUESSTYPE);
 }
 
 if (strstr(Tempstr,FRANCE24_ITEM2_START) )
 {
-		GenericExtractFromLine(Tempstr, "item:flv",FRANCE24_ITEM2_START,FRANCE24_ITEM2_END,Vars,0);
+		GenericExtractFromLine(Tempstr, "item:flv",FRANCE24_ITEM2_START,FRANCE24_ITEM2_END,Vars,EXTRACT_GUESSTYPE);
 }
 
 
@@ -2327,6 +2378,8 @@ case TYPE_EURONEWS:
 
 if (strstr(Tempstr,EURONEWS_ITEM_START) )
 {
+		//don't try using 'guesstype' here, as we stick .flv on later, and need
+		//to be able to find 'ID', not 'item:guessed'
 		GenericExtractFromLine(Tempstr, "ID",EURONEWS_ITEM_START,EURONEWS_ITEM_END,Vars,0);
 }
 
@@ -2346,7 +2399,7 @@ case TYPE_METATUBE:
 
 if (strstr(Tempstr,METATUBE_ITEM_START) )
 {
-		GenericExtractFromLine(Tempstr, "item:flv",METATUBE_ITEM_START,METATUBE_ITEM_END,Vars,0);
+		GenericExtractFromLine(Tempstr, "item:flv",METATUBE_ITEM_START,METATUBE_ITEM_END,Vars,EXTRACT_GUESSTYPE);
 }
 
 
@@ -2415,6 +2468,7 @@ if (strstr(Tempstr,YOUTUBE_REFERENCE2))
 }
 
 
+//This goes searching for urls starting with 'http://' and ending with likely media file extensions
 for (i=0; FileTypes[i] !=NULL; i++)
 {
 	if (strstr(Tempstr,FileTypes[i]))
@@ -2484,7 +2538,7 @@ return(RetVal);
 }
 
 
-int DownloadPage(char *Path, int Type, char *Title, int Post)
+int DownloadPage(char *Path, int Type, char *Title, int DLFlags)
 {
 char *ptr, *Server=NULL, *Doc=NULL, *Args=NULL;
 char *Tempstr=NULL, *Token=NULL;
@@ -2497,11 +2551,11 @@ ptr=HTTPParseURL(Path,&Tempstr,&Server,&Port,NULL,NULL);
 Doc=CopyStr(Doc,ptr);
 if (Port==0) Port=DefaultPort;
 
-S=ConnectAndSendHeaders(Server, Doc, Port, Post,0);
+S=ConnectAndSendHeaders(Server, Doc, Port, DLFlags,0);
 
 if (S)
 {
-  if (ExtractItemInfo(S, Type, Server, Port, Title, Post)) RetVal=TRUE;
+  if (ExtractItemInfo(S, Type, Server, Port, Title, DLFlags)) RetVal=TRUE;
 }
 else if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: failed to Connect to %s\n",Server);
 
@@ -2762,7 +2816,7 @@ else if (strstr(Server,"liveleak"))
 }
 else if (strstr(Server,"blip.tv"))
 {
- Type=TYPE_BLIP_TV;
+ Type=TYPE_BLIPTV;
 }
 else if (strstr(Server,"vimeo.com"))
 {

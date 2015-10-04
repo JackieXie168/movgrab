@@ -518,7 +518,6 @@ else esd_format |= ESD_BITS8;
 
 fd=esd_play_stream(esd_format, Info->SampleRate, NULL, "testing");
 
-printf("ESDP: %d %d fd=%d\n",esd_format,Info->SampleRate,fd);
 
 #endif
 

@@ -3314,7 +3314,6 @@ _ACEOF
 fi
 
 
-
 cf_have_libssl=no
 cf_have_libcrypto=no
 cf_have_libz=no
@@ -3842,7 +3841,12 @@ echo "${ECHO_T}$ac_cv_header_sys_soundcard_h" >&6; }
 
 fi
 if test $ac_cv_header_sys_soundcard_h = yes; then
-  cf_have_oss=yes
+  cat >>confdefs.h <<\_ACEOF
+#define HAVE_OSS 1
+_ACEOF
+
+else
+  cf_have_oss=no
 fi
 
 
@@ -3944,6 +3948,7 @@ echo "*************  RESULTS **************"
 echo "Secure Sockets Support:		$cf_have_libssl"
 echo "Cryptography Support:		$cf_have_libcrypto"
 echo "Zlib compression Support:	$cf_have_libz"
+echo "OSS Support:			$cf_have_oss"
 echo "Esound Support:			$cf_have_libesd"
 echo "*************************************"
 echo
