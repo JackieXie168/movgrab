@@ -22,14 +22,14 @@
 
 
 //This is doable thorugh autoconf, but I'm sick of fighting with it
-#define Version "1.0.14"
+#define Version "1.0.16"
 
 #include "libUseful-2.0/libUseful.h"
 #include <string.h>
 #include <glob.h>
 
 
-char *FileTypes[]={".flv",".mp3",".mp4",".mov",".wma",".m4a",".m4v",".wmv",".avi",".3gp",NULL};
+char *FileTypes[]={".flv",".mp3",".mp4",".mov",".wma",".m4a",".m4v",".wmv",".webm",".avi",".3gp",NULL};
 char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","almostkilled","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","berkeley","yale","sdnhm","uchannel","princeton","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv",NULL};
 char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.vbox7.com","www.blip.tv","www.ted.com","www.myvideo.de","www.clipshack.com","www.mytopclip.com","www.redbalcony.com","www.mobango.com","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","Reuters: http://www.reuters.com/","clipfish.de","Liveleak: http://www.liveleak.com","Academic Earth: http://www.academicearth.org","Photobucket: http://www.photobucket.com","VideoEmo: http://www.vidoevo.com/","Videos Facebook: http://www.videosfacebook.net","Aljazeera: english.aljazeera.net","mefeedia.com","myvido1.com","iViewTube: www.iviewtube.com","Washington Post: www.washingtonpost.com","CBS News: www.cbsnews.com","France24: www.france24.com","Euronews: www.euronews.net","www.metatube.com","www.motionfeeds.com","www.escapistmagazine.com","www.guardian.co.uk","www.redorbit.com","www.scivee.tv","www.izlese.org","University of California Television: http://www.uctv.tv/",NULL};
 
@@ -221,12 +221,14 @@ if (!ptr) ptr=".flv";
 
 if (ContentType)
 {
-if (strcmp(ContentType,"audio/mp3")==0) ptr=".mp3";
-else if (strcmp(ContentType,"audio/mpeg")==0) ptr=".mp3";
-else if (strcmp(ContentType,"video/x-flv")==0) ptr=".flv";
-else if (strcmp(ContentType,"video/flv")==0) ptr=".flv";
-else if (strcmp(ContentType,"video/mp4")==0) ptr=".mp4";
-else if (strcmp(ContentType,"video/3gpp")==0) ptr=".3gp";
+if (strcasecmp(ContentType,"audio/mp3")==0) ptr=".mp3";
+else if (strcasecmp(ContentType,"audio/mpeg")==0) ptr=".mp3";
+else if (strcasecmp(ContentType,"video/x-flv")==0) ptr=".flv";
+else if (strcasecmp(ContentType,"video/flv")==0) ptr=".flv";
+else if (strcasecmp(ContentType,"video/mp4")==0) ptr=".mp4";
+else if (strcasecmp(ContentType,"video/3gpp")==0) ptr=".3gp";
+else if (strcasecmp(ContentType,"audio/webm")==0) ptr=".webm";
+else if (strcasecmp(ContentType,"video/webm")==0) ptr=".webm";
 }
 
 return(ptr);
@@ -769,7 +771,8 @@ else if (Type==TYPE_DAILYMOTION)
 		//	HTTPMethod("POST",Tempstr,"","");
 
 		Tempstr=HTTPQuote(Tempstr,Doc);
-		NextPath=FormatStr(NextPath,"http://%s:%d/family_filter?urlback=/%s&%s",Server,Port,Tempstr,"form_name=dm_pageitem_familyfilter&accept=I+am+over+18+-+set+Family+Filter+OFF");
+		//NextPath=FormatStr(NextPath,"http://%s:%d/family_filter?urlback=/%s&%s",Server,Port,Tempstr,"form_name=dm_pageitem_familyfilter&accept=I+am+over+18+-+set+Family+Filter+OFF");
+		NextPath=FormatStr(NextPath,"http://%s:%d/family_filter?urlback=/%s&enable=false",Server,Port,Tempstr);
    Post=FLAG_POST;
 	}
 	else NextPath=CopyStr(NextPath,Path);
@@ -961,67 +964,98 @@ DestroyString(Token);
 return(RetStr);
 }
 
+
+void YouTubeFormatGetData(char *Data, char **URL, char **Code)
+{
+char *Name=NULL, *Value=NULL, *ptr;
+
+ptr=GetNameValuePair(Data,"&","=",&Name,&Value);
+while (ptr)
+{
+ if (StrLen(Name))
+ {
+	if (strcmp(Name,"url")==0) *URL=HTTPUnQuote(*URL,Value);
+	if (strcmp(Name,"itag")==0) *Code=CopyStr(*Code,Value);
+ }
+
+ptr=GetNameValuePair(ptr,"&","=",&Name,&Value);
+}
+
+DestroyString(Name);
+DestroyString(Value);
+}
+
+
 void DecodeYouTubeFormats(char *Formats, ListNode *Vars)
 {
-char *UnQuoted=NULL, *Token=NULL, *Tempstr=NULL, *ptr;
+char *Token=NULL, *Tempstr=NULL, *TypeCode=NULL, *URL=NULL, *ptr;
 
-			UnQuoted=DeQuoteStr(UnQuoted, Formats);
-			ptr=GetToken(UnQuoted,"|",&Token,0);
-			while (ptr)
-			{
-				switch (atoi(Token))
-				{
-						case 5:
-						ptr=GenericExtractFromLine(ptr, "item:flv:400x240","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+ptr=GetToken(Formats,",",&Token,0);
+while (ptr)
+{
+	YouTubeFormatGetData(Token, &URL, &TypeCode);
+	switch (atoi(TypeCode))
+	{
+			case 5:
+			SetVar(Vars,"item:flv:400x240",URL);
+			break;
 
-						case 13:
-						ptr=GenericExtractFromLine(ptr, "item:3gp","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 13:
+			SetVar(Vars,"item:3gp",URL);
+			break;
 
-						case 17:
-						ptr=GenericExtractFromLine(ptr, "item:3gp","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 17:
+			SetVar(Vars,"item:3gp",URL);
+			break;
 
-						case 18:
-						ptr=GenericExtractFromLine(ptr, "item:mp4:480x360","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 18:
+			SetVar(Vars,"item:mp4:480x360",URL);
+			break;
 
-						case 22:
-						ptr=GenericExtractFromLine(ptr, "item:mp4:1280x720","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 22:
+			SetVar(Vars,"item:mp4:1280x720",URL);
+			break;
 
-						case 34:
-						ptr=GenericExtractFromLine(ptr, "item:flv-h264:640x360","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 34:
+			SetVar(Vars,"item:flv-h264:640x360",URL);
+			break;
 
-						case 35:
-						ptr=GenericExtractFromLine(ptr, "item:flv-h264:854x480","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 35:
+			SetVar(Vars,"item:flv-h264:845x480",URL);
+			break;
 
-						case 37:
-						ptr=GenericExtractFromLine(ptr, "item:mp4:1920x1080","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 37:
+			SetVar(Vars,"item:mp4:1920x1080",URL);
+			break;
 
-						case 38:
-						ptr=GenericExtractFromLine(ptr, "item:mp4:4096x3072","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 38:
+			SetVar(Vars,"item:mp4:4096x3072",URL);
+			break;
 
-						case 43:
-						ptr=GenericExtractFromLine(ptr, "item:vp8:854x480","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-						break;
+			case 43:
+			SetVar(Vars,"item:webm:640x360",URL);
+			break;
 
-						default:
-						//	if (! Flags & FLAG_QUIET)
-							if (StrLen(ptr)) fprintf(stderr,"Unknown youtube format [%s]\n",ptr);
-						break;
-				}
-			ptr=GetToken(ptr,"|",&Token,0);
-			}
+			case 44:
+			SetVar(Vars,"item:webm:845x480",URL);
+			break;
 
-DestroyString(UnQuoted);
-DestroyString(Tempstr);
+			case 45:
+			SetVar(Vars,"item:webm:1280x720",URL);
+			break;
+
+			default:
+			//	if (! Flags & FLAG_QUIET)
+			if (StrLen(ptr)) fprintf(stderr,"Unknown youtube format [%s]\n",Token);
+			break;
+		}
+ptr=GetToken(ptr,",",&Token,0);
+}
+
+DestroyString(TypeCode);
+DestroyString(URL);
 DestroyString(Token);
+DestroyString(Tempstr);
 }
 
 
@@ -1567,7 +1601,7 @@ case TYPE_YOUTUBE:
 //#define YOUTUBE_PTR "new SWFObject(\"/player2.swf?"
 
 //#define YOUTUBE_PTR "var swfArgs = {"
-#define YOUTUBE_DIV "fmt_url_map="
+#define YOUTUBE_DIV "url_encoded_fmt_stream_map="
 #define YOUTUBE_TITLE "&title="
 
 	if (strstr(Tempstr,YOUTUBE_TITLE))
@@ -1582,6 +1616,7 @@ case TYPE_YOUTUBE:
 		{
 			GenericExtractFromLine(Tempstr, "yt:url_fmt",YOUTUBE_DIV, "&", Vars,EXTRACT_DEQUOTE);
 			Tempstr=CopyStr(Tempstr,GetVar(Vars,"yt:url_fmt"));
+
 			DecodeYouTubeFormats(Tempstr,Vars);
 		}
 	}
@@ -3079,7 +3114,7 @@ STREAMSetTimeout(StdIn,0);
 DownloadQueue=ListCreate();
 Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);
-FormatPreference=CopyStr(FormatPreference,"mp4,flv,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
+FormatPreference=CopyStr(FormatPreference,"mp4,flv,webm,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
 
 ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
 
