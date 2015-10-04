@@ -1,5 +1,5 @@
 CC = gcc
-VERSION = 1.0.9
+VERSION = 1.0.10
 CFLAGS = -g -O2
 LIBS = -lz -lcrypto -lssl -lz 
 INSTALL=/bin/install -c
