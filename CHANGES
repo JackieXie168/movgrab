@@ -1,3 +1,7 @@
+Version 1.2.1
+	Fixes for many sites.
+	Added 'sshtunnel' proxy type
+
 Version 1.2.0
 	Removed 'Clipshack' (Dead Site)
 	Removed '5 min' (better dead than AOL)

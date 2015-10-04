@@ -12,6 +12,6 @@ Tempstr=CopyStr(Tempstr,URL);
 ptr=strrchr(Tempstr,'?');
 if (ptr) *ptr='\0';
 ptr=strrchr(Tempstr,'.');
-
+if (ptr) ptr++;
 return(ptr);
 }

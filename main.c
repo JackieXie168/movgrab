@@ -38,7 +38,7 @@ ListNode *DownloadQueue=NULL;
 STREAM *StdIn=NULL;
 char *Username=NULL, *Password=NULL;
 int STREAMTimeout=30;
-int Type=TYPE_NONE, DefaultPort=80;
+int Type=TYPE_NONE;
 
 int CheckForKeyboardInput()
 {
@@ -79,22 +79,18 @@ if (!StrLen(Path)) return(FALSE);
 
 Type=MovType;
 NextPath=CopyStr(NextPath,Path);
-ptr=HTTPParseURL(Path,&Proto,&Server,&Port,NULL,NULL);
-Doc=CopyStr(Doc,ptr);
+ParseURL(Path,&Proto,&Server,&Tempstr,NULL,NULL,&Doc,NULL);
+Port=atoi(Tempstr);
+
 if (strcasecmp(Proto,"https")==0) 
 {
-	if (SSLAvailable)
-	{
-		Flags |= FLAG_HTTPS;
-		DefaultPort=443;
-	}
+	if (SSLAvailable) Flags |= FLAG_HTTPS;
 	else
 	{
 		printf("SSL NOT COMPILED IN! Switching from 'https' to 'http'\n");
 		NextPath=MCopyStr(NextPath,"http://",Server,"/",ptr);
 	}
 }
-if (Port==0) Port=DefaultPort;
 
 if (Type==TYPE_NONE) 
 {
@@ -271,7 +267,8 @@ fprintf(stdout,"'-Pp'		Percent download to launch player at (default 25%)\n");
 fprintf(stdout,"'-a'		Authentication info in Username:Password format.\n");
 fprintf(stdout,"'-q'		QUIET. No progress/informative output.\n");
 fprintf(stdout,"'-b'		Background. Fork into background and nohup\n");
-fprintf(stdout,"'-p'		address of HTTP proxy server in URL format.\n");
+fprintf(stdout,"'-p'		address of http/https/sstunnel proxy server in URL format.\n");
+fprintf(stdout,"'-proxy'		address of http/https/sstunnel proxy server in URL format.\n");
 fprintf(stdout,"'-w'		Wait for addresses to be entered on stdin.\n");
 fprintf(stdout,"'-st'		Connection inactivity timeout in seconds. Set high for sites that 'throttle'\n");
 fprintf(stdout,"'-t'		specifies website type.\n");
@@ -299,9 +296,10 @@ fprintf(stdout,"\nDownload types are:\n");
 for (i=1; DownloadTypes[i] !=NULL; i++) fprintf(stdout,"%-20s %s\n",DownloadTypes[i],DownloadNames[i]);
 
 fprintf(stdout,"\nIf a website is not in the list, try 'movgrab -t generic <url>'\n");
+fprintf(stdout,"\nMovgrab can also be used to stream from internet radio and pipe it into a player. E.g.'\n		movgrab -o - -q -proxy ssltunnel://guest:s3cr3t@sshserver:1022 http://schizoid.in/schizoid-psy.pls | mpg123 -\n");
 fprintf(stdout,"\nFeel free to email me and tell me if you've used this software!\n");
 
-fprintf(stdout,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', 'nibbles', 'deeice', Omair Eshkenazi, Matthias B, Ashish Disawal, Timo Juhani Lindfors, Abhisek Sanyal and others.\n");
+fprintf(stdout,"\nThanks for bug reports go to: Philip Pi, Mark Gamar, Rich Kcsa, 'Rampant Badger', 'nibbles', 'deeice', Omair Eshkenazi, Matthias B, Ashish Disawal, Timo Juhani Lindfors, Abhisek Sanyal and others.\n");
 fprintf(stdout,"\nSpecial thanks to:\n");
 fprintf(stdout,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
 fprintf(stdout,"	Robert Crowley (http://oldcoder.org/) For all sorts of bug reports and advice.\n");
@@ -331,10 +329,8 @@ CmdLine=argv[0];
 
 for (i=1; i < argc; i++)
 {
-	if (strcmp(argv[i],"-p")==0)
-	{
-		HTTPSetProxy(argv[++i]);
-	}
+	if (strcmp(argv[i],"-p")==0) Proxy=CopyStr(Proxy,argv[++i]);
+	else if (strcmp(argv[i],"-proxy")==0) Proxy=CopyStr(Proxy,argv[++i]);
 	else if (strcmp(argv[i],"-a")==0)
 	{
 			ptr=GetToken(argv[++i],":",&Username,0);
@@ -346,11 +342,15 @@ for (i=1; i < argc; i++)
 	}
 	else if (strcmp(argv[i],"-o")==0)
 	{
-		AddOutputFile(argv[++i], TRUE);
+		i++;
+		AddOutputFile(argv[i], TRUE);
+		if (strcmp(argv[i],"-")==0) Flags |= FLAG_STDOUT;
 	}
 	else if (strcmp(argv[i],"+o")==0)
 	{
-		AddOutputFile(argv[++i], FALSE);
+		i++;
+		AddOutputFile(argv[i], FALSE);
+		if (strcmp(argv[i],"-")==0) Flags |= FLAG_STDOUT;
 	}
 	else if (strcmp(argv[i],"-n")==0)
 	{
@@ -404,6 +404,60 @@ if (DebugLevel==2) Flags |= FLAG_DEBUG2;
 if (DebugLevel > 2) Flags |= FLAG_DEBUG3;
 }
 
+void CheckSettings()
+{
+char *Token=NULL, *ptr;
+char *ProxyTypes[]={"http","https","sshtunnel",NULL};
+int i;
+
+if ((! isatty(1)) && (! (Flags & FLAG_STDOUT)))
+{
+fprintf(stderr,"\nWARNING: Stdout does not seem to be a terminal, so it could be a pipe to another program.	But you've not used '-o -' or '+o -' to redirect output into a pipe. Hence output will be written to a file. If you're piping into a player app, and there's no sound/video, then you need to add '-o -'\n\n");
+}
+
+if (StrLen(Proxy))
+{
+	ptr=GetToken(Proxy,":",&Token,0);
+	if (MatchTokenFromList(Token,ProxyTypes,0)==-1)
+	{
+		 fprintf(stderr,"\nWARNING: Unknown proxy type '%s'. Probably won't work. Known types are: ",Proxy);
+		for (i=0; ProxyTypes[i] != NULL; i++) fprintf(stderr," %s,",ProxyTypes[i]);
+		fprintf(stderr,"\n\n");
+	}
+}
+
+DestroyString(Token);
+}
+
+
+void ParseEnvironmentVariables()
+{
+char *Tempstr=NULL;
+
+Tempstr=CopyStr(Tempstr,getenv("http_proxy"));
+if (StrLen(Tempstr)) 
+{
+	if (
+			(strncasecmp(Tempstr,"http:",5) !=0) &&
+			(strncasecmp(Tempstr,"https:",6) !=0)
+		) Proxy=MCopyStr(Proxy,"http:",Tempstr,NULL);
+	else Proxy=CopyStr(Proxy,Tempstr);
+}
+else
+{
+	Tempstr=CopyStr(Tempstr,getenv("ssh_tunnel"));
+	if (StrLen(Tempstr)) 
+	{
+		if (strncasecmp(Tempstr,"sshtunnel:",10)==0) Proxy=CopyStr(Proxy,Tempstr);
+		else if (strncasecmp(Tempstr,"ssh:",4)==0) Proxy=MCopyStr(Proxy,"sshtunnel:",Tempstr+4,NULL);
+		else Proxy=MCopyStr(Proxy,"sshtunnel:",Tempstr,NULL);
+	}
+}
+
+DestroyString(Tempstr);
+}
+
+
 
 main(int argc, char *argv[])
 {
@@ -415,17 +469,17 @@ int result;
 HTTPSetFlags(HTTP_NOCOMPRESS);
 StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,0);
-
-Tempstr=CopyStr(Tempstr,getenv("http_proxy"));
-if (StrLen(Tempstr)) HTTPSetProxy(Tempstr);
+ParseEnvironmentVariables();
 
 DownloadQueue=ListCreate();
 Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);
-FormatPreference=CopyStr(FormatPreference,"mp4,flv,webm,m4v,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
+FormatPreference=CopyStr(FormatPreference,"mp4,flv,webm,m4v,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma,stream");
 AddOutputFile("", TRUE);
 
 ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
+CheckSettings();
+
 
 if (Flags & FLAG_PRINT_USAGE) PrintUsage();
 else if (Flags & FLAG_PRINT_VERSION) PrintVersion();

@@ -8,25 +8,22 @@ All the HTTP stuff is in here
 */ 
 
 
-
+char *Proxy=NULL;
 extern int STREAMTimeout;
 
-STREAM *ConnectAndSendHeaders(char *Server, char *Doc, int Port, int Flags, double BytesRange)
+STREAM *ConnectAndSendHeaders(char *URL, int Flags, double BytesRange)
 {
 STREAM *Con;
 char *Tempstr=NULL, *Method=NULL;
 HTTPInfoStruct *Info;
 static char *LastPage=NULL;
 
+if (StrLen(Proxy)) HTTPSetProxy(Proxy);
+
 if (Flags & FLAG_POST) Method=CopyStr(Method,"POST");
 else Method=CopyStr(Method,"GET");
 
-if (Port==0) Port=80;
-
-//Tempstr=MCopyStr(Tempstr,"http://",Server,"/",Doc,NULL);;
-Tempstr=FormatStr(Tempstr,"http://%s:%d/%s",Server,Port,Doc);
-
-Info=HTTPInfoFromURL(Method, Tempstr);
+Info=HTTPInfoFromURL(Method, URL);
 //if (DLFlags & DL_NOREDIRECT) Info->Flags |=HTTP_NOREDIRECT;
 if (Flags & FLAG_HTTPS) Info->Flags |= HTTP_SSL|HTTP_SSL_REWRITE;
 if (Flags & FLAG_DEBUG3) Info->Flags |= HTTP_DEBUG;
@@ -44,8 +41,8 @@ if (BytesRange > 0)
 Con=HTTPTransact(Info);
 if ((! Con) && (! (Flags & FLAG_QUIET))) 
 {
-	if (StrLen(Info->ResponseCode)) fprintf(stderr,"ERROR: Server %s item '%s' not retrieved\nResponseCode: %s\n",Server, Doc,Info->ResponseCode);
-	else fprintf(stderr,"ERROR: Connection failed to %s can't get file=%s \n",Server, Doc);
+	if (StrLen(Info->ResponseCode)) fprintf(stderr,"ERROR: Server %s item '%s' not retrieved\nResponseCode: %s\n",Info->Host, Info->Doc,Info->ResponseCode);
+	else fprintf(stderr,"ERROR: Connection failed to %s can't get file=%s \n",Info->Host, Info->Doc);
 }
 DestroyString(Tempstr);
 DestroyString(Method);
@@ -55,7 +52,7 @@ return(Con);
 
 
 
-STREAM *ConnectAndRetryUntilDownload(char *Server, char *Doc, int Port, int Flags, double BytesRead)
+STREAM *ConnectAndRetryUntilDownload(char *URL, int Flags, double BytesRead)
 {
 STREAM *Con;
 int i;
@@ -64,13 +61,12 @@ char *Tempstr=NULL, *ptr;
 
 for (i=0; i < 20; i++)
 {
-Con=ConnectAndSendHeaders(Server, Doc, Port, Flags, BytesRead);
+Con=ConnectAndSendHeaders(URL, Flags, BytesRead);
 
 if (! (Flags & FLAG_RETRY_DOWNLOAD)) break;
 
 if (Con)
 {
-
 Tempstr=CopyStr(Tempstr,STREAMGetValue(Con,"HTTP:Content-Type"));
 if (Flags & FLAG_DEBUG) fprintf(stderr,"ContentType: %s\n",Tempstr);
 
@@ -144,8 +140,7 @@ int DownloadItem(char *URL, char *Title, char *Format, int Flags)
 {
 STREAM *Con=NULL, *S=NULL;
 char *Tempstr=NULL, *Token=NULL, *ptr;
-char *Server=NULL, *Doc=NULL, *ContentType=NULL;
-int Port, val;
+char *ContentType=NULL;
 int RetVal=FALSE;
 char *Extn=NULL;
 double DocSize=0, BytesRead=0;
@@ -159,19 +154,14 @@ if (Flags & FLAG_TEST)
 
 if (Flags & FLAG_DEBUG) fprintf(stderr,"Next URL: %s\n",URL);
 
-ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
-if (Port==0) Port=DefaultPort;
-Doc=CopyStr(Doc,ptr);
-
 if (! (Flags & FLAG_TEST_SITES)) OpenOutputFiles(Title,URL,&BytesRead);
 
-if (! Con) Con=ConnectAndRetryUntilDownload(Server, Doc, Port, Flags, BytesRead);
+if (! Con) Con=ConnectAndRetryUntilDownload(URL, Flags, BytesRead);
 if (Con)
 {
 	//Some sites throttle excessively
 	STREAMSetTimeout(Con,STREAMTimeout);
-	ptr=strrchr(Doc,'?');
-	if (ptr) *ptr='\0';
+
 
 	Token=CopyStr(Token,STREAMGetValue(Con,"HTTP:Content-Range"));
 	if (StrLen(Token))
@@ -186,17 +176,19 @@ if (Con)
 		if (StrLen(Token)) DocSize=strtod(Token,NULL);
 	}
 
+	if (Flags & FLAG_TEST_SITES) RetVal=TRUE;
+	else
+	{
+		RetVal=TransferItem(Con,Title, URL, Format, DocSize, DocSize, &BytesRead,TRUE);
 
+		Tempstr=CopyStr(Tempstr,URL);
+		ptr=strrchr(Tempstr,'?');
+		if (ptr) *ptr='\0';
 
-		if (Flags & FLAG_TEST_SITES) RetVal=TRUE;
-		else
-		{
-			RetVal=TransferItem(Con,Title, URL, Format, DocSize, DocSize, &BytesRead,TRUE);
-
-			Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Format, Doc));
-			CloseOutputFiles(Extn);
-		}
-		STREAMClose(Con);
+		Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Format, Tempstr));
+		CloseOutputFiles(Extn);
+	}
+	STREAMClose(Con);
 }
 
 
@@ -204,39 +196,28 @@ DestroyString(ContentType);
 DestroyString(Tempstr);
 DestroyString(Extn);
 DestroyString(Token);
-DestroyString(Server);
-DestroyString(Doc);
 
 return(RetVal);
 }
 
 
 
-int DownloadPage(char *Path, int Type, char *Title, int DLFlags)
+int DownloadPage(char *URL, int Type, char *Title, int DLFlags)
 {
-char *ptr, *Server=NULL, *Doc=NULL, *Args=NULL;
+char *ptr, *Args=NULL;
 char *Tempstr=NULL, *Token=NULL;
 int Port;
 STREAM *S;
 int RetVal=FALSE;
 
-if (Flags & (FLAG_DEBUG)) fprintf(stderr,"Next URL: %s\n",Path);
-ptr=HTTPParseURL(Path,&Tempstr,&Server,&Port,NULL,NULL);
-Doc=CopyStr(Doc,ptr);
-if (Port==0) Port=DefaultPort;
+if (Flags & (FLAG_DEBUG)) fprintf(stderr,"Next URL: %s\n",URL);
+S=ConnectAndSendHeaders(URL, Flags, 0);
 
-S=ConnectAndSendHeaders(Server, Doc, Port, Flags, 0);
-
-if (S)
-{
-  if (ExtractItemInfo(S, Type, Path, Server, Port, Title, DLFlags)) RetVal=TRUE;
-}
-else if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: failed to Connect to %s\n",Server);
+if (S) if (ExtractItemInfo(S, Type, URL, Title, DLFlags)) RetVal=TRUE;
+else if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: failed to Connect to %s\n",URL);
 
 DestroyString(Tempstr);
 DestroyString(Token);
-DestroyString(Server);
-DestroyString(Doc);
 
 return(RetVal);
 }

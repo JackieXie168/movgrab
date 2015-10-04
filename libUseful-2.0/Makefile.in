@@ -4,7 +4,7 @@ CFLAGS = @CFLAGS@
 LIBS = @LIBS@
 FLAGS=$(CFLAGS) -fPIC @DEFS@ 
 prefix=@prefix@
-OBJ=string.o list.o socket.o unix_socket.o file.o tar.o FileSystem.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o MathExpr.o Time.o Markup.o SpawnPrograms.o PatternMatch.o
+OBJ=string.o list.o socket.o unix_socket.o file.o tar.o FileSystem.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o MathExpr.o Time.o Markup.o SpawnPrograms.o PatternMatch.o ParseURL.o ConnectionChain.o
 
 
 all: $(OBJ)
@@ -57,6 +57,9 @@ Time.o: Time.h Time.c
 Markup.o: Markup.h Markup.c
 	$(CC) $(FLAGS) -c Markup.c
 
+ParseURL.o: ParseURL.h ParseURL.c
+	$(CC) $(FLAGS) -c ParseURL.c
+
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
 
@@ -77,6 +80,9 @@ Hash.o: Hash.h Hash.c
 
 Compression.o: Compression.h Compression.c
 	$(CC) $(FLAGS) -c Compression.c
+
+ConnectionChain.o: ConnectionChain.h ConnectionChain.c
+	$(CC) $(FLAGS) -c ConnectionChain.c
 
 ConnectManager.o: ConnectManager.h ConnectManager.c
 	$(CC) $(FLAGS) -c ConnectManager.c

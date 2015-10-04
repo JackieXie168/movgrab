@@ -1,6 +1,7 @@
 #include "http.h"
 #include "DataProcessing.h"
 #include "Hash.h"
+#include "ParseURL.h"
 
 ListNode *Cookies=NULL;
 int g_Flags=0;
@@ -318,9 +319,68 @@ Info->ServerHeaders=ListCreate();
 Info->CustomSendHeaders=ListCreate();
 //SetVar(Info->CustomSendHeaders,"Accept","*/*");
 
-ptr=LibUsefulGetValue("HTTP:Proxy");
-if (StrLen(ptr)) Info->Proxy=CopyStr(Info->Proxy,ptr);
 if (g_Flags) Info->Flags=g_Flags;
+
+ptr=LibUsefulGetValue("HTTP:Proxy");
+if (StrLen(ptr)) 
+{
+	Info->Proxy=CopyStr(Info->Proxy,ptr);
+	strlwr(Info->Proxy);
+	if (strncmp(Info->Proxy,"http:",5)==0) Info->Flags |= HTTP_PROXY;
+	else if (strncmp(Info->Proxy,"https:",6)==0) Info->Flags |= HTTP_PROXY;
+	else Info->Flags=HTTP_TUNNEL;
+}
+
+return(Info);
+}
+
+char *HTTPInfoToURL(char *RetBuff, HTTPInfoStruct *Info)
+{
+char *p_proto;
+char *Doc=NULL, *RetStr=NULL;
+
+if (Info->Flags & HTTP_SSL) p_proto="https";
+else p_proto="http";
+
+Doc=HTTPQuoteChars(Doc,Info->Doc," ");
+RetStr=FormatStr(RetBuff,"%s://%s:%d%s",p_proto,Info->Host,Info->Port,Info->Doc);
+
+DestroyString(Doc);
+return(RetStr);
+}
+
+
+HTTPInfoStruct *HTTPInfoFromURL(char *Method, char *URL)
+{
+HTTPInfoStruct *Info;
+char *Proto=NULL, *User=NULL, *Pass=NULL, *Token=NULL;
+char *ptr=NULL;
+int Port=0;
+
+
+Info=HTTPInfoCreate("", 0, "", "", Method, "", "",0);
+if (strcasecmp(Method,"POST")==0) ParseURL(URL, &Proto, &Info->Host, &Token, &User, &Pass,&Info->Doc,&Info->PostData);
+else ParseURL(URL, &Proto, &Info->Host, &Token, &User, &Pass,&Info->Doc, NULL);
+Info->Port=atoi(Token);
+
+if (StrLen(User) || StrLen(Pass))
+{
+	Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	HTTPAuthSet(Info->Authorization,User, Pass, HTTP_AUTH_BASIC);
+}
+
+if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
+
+if (StrLen(Info->PostData))
+{
+	Info->PostContentType=CopyStr(Info->PostContentType,"application/x-www-form-urlencoded");
+	Info->PostContentLength=StrLen(Info->PostData);
+}
+
+DestroyString(User);
+DestroyString(Pass);
+DestroyString(Token);
+DestroyString(Proto);
 
 return(Info);
 }
@@ -609,7 +669,6 @@ void HTTPSendHeaders(STREAM *S, HTTPInfoStruct *Info)
 char *SendStr=NULL, *Tempstr=NULL, *ptr;
 ListNode *Curr;
 int count;
-char *Doc=NULL;
 int i;
 static int AuthCounter=0;
 
@@ -617,43 +676,36 @@ STREAMClearDataProcessors(S);
 SendStr=CopyStr(SendStr,Info->Method);
 SendStr=CatStr(SendStr," ");
 
-//Doc=HTTPQuoteChars(Doc,Info->Doc," :");
-Doc=HTTPQuoteChars(Doc,Info->Doc," ");
-if (StrLen(Info->Proxy)) SendStr=MCatStr(SendStr,"http://",Info->Host,Doc,NULL);
-else SendStr=CatStr(SendStr,Doc);
+if (Info->Flags & HTTP_PROXY) Tempstr=HTTPInfoToURL(Tempstr, Info);
+else Tempstr=HTTPQuoteChars(Tempstr,Info->Doc," ");
+SendStr=CatStr(SendStr,Tempstr);
 
 if (Info->Flags & HTTP_VER1_0) SendStr=CatStr(SendStr," HTTP/1.0\r\n");
-else
-{
-SendStr=MCatStr(SendStr," HTTP/1.1\r\n","Host: ",Info->Host,"\r\n",NULL);
-}
+else SendStr=MCatStr(SendStr," HTTP/1.1\r\n","Host: ",Info->Host,"\r\n",NULL);
 
 if (StrLen(Info->PostContentType) >0)
 {
-Tempstr=FormatStr(Tempstr,"Content-type: %s\r\n",Info->PostContentType);
-SendStr=CatStr(SendStr,Tempstr);
+	Tempstr=FormatStr(Tempstr,"Content-type: %s\r\n",Info->PostContentType);
+	SendStr=CatStr(SendStr,Tempstr);
 }
 
 if (Info->PostContentLength > 0) 
 {
-Tempstr=FormatStr(Tempstr,"Content-Length: %d\r\n",Info->PostContentLength);
-SendStr=CatStr(SendStr,Tempstr);
+	Tempstr=FormatStr(Tempstr,"Content-Length: %d\r\n",Info->PostContentLength);
+	SendStr=CatStr(SendStr,Tempstr);
 }
 
 if (StrLen(Info->Destination))
 {
-Tempstr=FormatStr(Tempstr,"Destination: %s\r\n",Info->Destination);
-SendStr=CatStr(SendStr,Tempstr);
+	Tempstr=FormatStr(Tempstr,"Destination: %s\r\n",Info->Destination);
+	SendStr=CatStr(SendStr,Tempstr);
 }
 
 /* If we have authorisation details then send them */
-if  (Info->Authorization) SendStr=HTTPHeadersAppendAuth(SendStr, "Authorization", Info, Info->Authorization);
-if  (Info->ProxyAuthorization) SendStr=HTTPHeadersAppendAuth(SendStr, "Proxy-Authorization", Info, Info->ProxyAuthorization);
+if (Info->Authorization) SendStr=HTTPHeadersAppendAuth(SendStr, "Authorization", Info, Info->Authorization);
+if (Info->ProxyAuthorization) SendStr=HTTPHeadersAppendAuth(SendStr, "Proxy-Authorization", Info, Info->ProxyAuthorization);
 
-if (Info->Flags & HTTP_NOCACHE)
-{
-SendStr=CatStr(SendStr,"Pragma: no-cache\r\nCache-control: no-cache\r\n");
-}
+if (Info->Flags & HTTP_NOCACHE) SendStr=CatStr(SendStr,"Pragma: no-cache\r\nCache-control: no-cache\r\n");
 
 
 if (Info->Depth > 0)
@@ -724,8 +776,9 @@ Curr=ListGetNext(Curr);
 if (! (Info->Flags & HTTP_NOCOOKIES))
 {
 SendStr=AppendCookies(SendStr,Cookies);
-SendStr=CatStr(SendStr,"\r\n");
 }
+
+SendStr=CatStr(SendStr,"\r\n");
 
 Info->State |= HTTP_HEADERS_SENT;
 if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HTTPSEND: ------\n%s------\n\n",SendStr);
@@ -733,68 +786,7 @@ STREAMWriteLine(SendStr,S);
 STREAMFlush(S);
 
 DestroyString(Tempstr);
-DestroyString(Doc);
 DestroyString(SendStr);
-}
-
-char *HTTPParseURL(char *URL, char **Proto, char **Host, int *Port, char **Login, char **Password)
-{
-char *ptr, *p_port, *dptr;
-char *Token=NULL, *AuthCred=NULL;
-
-//if no port given
-*Port=0;
-
-ptr=URL;
-
-//if url starts with http or https skip past that
-if (strncmp(ptr,"http:",5)==0) ptr+=5;
-if (strncmp(ptr,"https:",6)==0) ptr+=6;
-
-//if they asked to know what the protocol is, then we can tell if one was
-//supplied by whether we've 'skipped' past it (so ptr != URL) and can thus
-//clip it out
-if (Proto) 
-{
-	if (! ptr || (ptr==URL)) *Proto=CopyStr(*Proto,"http:");
-	else *Proto=CopyStrLen(*Proto,URL,ptr-URL-1);
-}
-
-while (*ptr=='/') ptr++;
-
-dptr=GetToken(ptr,"/",&Token,0);
-
-if (StrLen(Token))
-{
-	if (strchr(Token,'@')) 
-	{
-		ptr=GetToken(Token,"@",&AuthCred,0);
-		memmove(Token,ptr,StrLen(ptr)+1);
-	}
-
-	p_port=strchr(Token,':');
-	if (p_port)
-	{
-		*p_port='\0';
-		p_port++;
-		*Port=atoi(p_port);
-	}
-	*Host=CopyStr(*Host,Token);
-}
-
-if (StrLen(AuthCred))
-{
-	if (Login)
-	{
-		ptr=GetToken(AuthCred,":",Login,0);
-		if (Password) ptr=GetToken(ptr,":",Password,0);
-	}
-
-}
-
-DestroyString(Token);
-DestroyString(AuthCred);
-return(dptr);
 }
 
 
@@ -834,7 +826,7 @@ int HTTPProcessResponse(HTTPInfoStruct *HTTPInfo)
 {
 char *ptr, *login_ptr, *pass_ptr;
 int result=HTTP_ERROR;
-char *Tempstr=NULL;
+char *Proto=NULL, *PortStr=NULL;
 int RCode;
 
 if (HTTPInfo->ResponseCode)
@@ -867,22 +859,13 @@ switch (RCode)
 	else
 	{
 	HTTPInfo->PreviousRedirect=CopyStr(HTTPInfo->PreviousRedirect,HTTPInfo->RedirectPath);
-	ptr=HTTPParseURL(HTTPInfo->RedirectPath, &Tempstr, &HTTPInfo->Host, &HTTPInfo->Port,NULL,NULL);
+	ParseURL(HTTPInfo->RedirectPath, &Proto, &HTTPInfo->Host, &PortStr,NULL, NULL,&HTTPInfo->Doc,NULL);
+	HTTPInfo->Port=atoi(PortStr);
 
 	//if HTTP_SSL_REWRITE is set, then all redirects get forced to https
-	if (HTTPInfo->Flags & HTTP_SSL_REWRITE) Tempstr=CopyStr(Tempstr,"https");
-	if (strcmp(Tempstr,"https")==0) 
-	{
-		HTTPInfo->Flags |= HTTP_SSL;
-		//if (HTTPInfo->Port==0) HTTPInfo->Port=443;
-	}
-	else 
-	{
-		HTTPInfo->Flags &= ~HTTP_SSL;
-		//if (HTTPInfo->Port==0) HTTPInfo->Port=80;
-	}
-
-	HTTPInfo->Doc=MCopyStr(HTTPInfo->Doc,"/",ptr,NULL);
+	if (HTTPInfo->Flags & HTTP_SSL_REWRITE) Proto=CopyStr(Proto,"https");
+	if (strcmp(Proto,"https")==0) HTTPInfo->Flags |= HTTP_SSL;
+	else HTTPInfo->Flags &= ~HTTP_SSL;
 
 	//303 Redirects must be get!
 	if (RCode==303) 
@@ -915,38 +898,33 @@ switch (RCode)
 }
 }
 
-DestroyString(Tempstr);
+DestroyString(Proto);
+DestroyString(PortStr);
 
 return(result);
 }
 
 STREAM *HTTPSetupConnection(HTTPInfoStruct *Info, int ForceHTTPS)
 {
-char *Proto=NULL, *Host=NULL;
+char *Proto=NULL, *Host=NULL, *Token=NULL;
 int Port=0, Flags=0;
 STREAM *S;
 
 S=STREAMCreate();
 
-if (StrLen(Info->Proxy))
+if (Info->Flags & HTTP_PROXY)
 {
 	if (! Info->ProxyAuthorization) 
 	{
 		Info->ProxyAuthorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
 	}
-	HTTPParseURL(Info->Proxy, &Proto, &Host, &Port, &Info->ProxyAuthorization->Logon, &Info->ProxyAuthorization->Password);
+	ParseURL(Info->Proxy, &Proto, &Host, &Token, &Info->ProxyAuthorization->Logon, &Info->ProxyAuthorization->Password,NULL,NULL);
+	Port=atoi(Token);
+	
 	
 	if (ForceHTTPS) Proto=CopyStr(Proto,"https");
 
-	if (strcasecmp(Proto,"https")==0)
-	{
-		Flags |= CONNECT_SSL; 
-		if (Port==0) Port=443;
-	}
-	else 
-	{
-		if (Port==0) Port=80;
-	}
+	if (strcasecmp(Proto,"https")==0) Flags |= CONNECT_SSL; 
 }
 else
 {
@@ -966,9 +944,7 @@ else
 	}
 }
 
-S->Path=MCopyStr(S->Path,Proto,"://",Host,Info->Doc,NULL);
-
-
+if (Info->Flags & HTTP_TUNNEL) STREAMAddConnectionHop(S,Info->Proxy);
 if (STREAMConnectToHost(S,Host,Port,Flags))
 {
 	HTTPSendHeaders(S,Info);
@@ -981,6 +957,7 @@ else
 
 Info->S=S;
 
+DestroyString(Token);
 DestroyString(Proto);
 DestroyString(Host);
 
@@ -1100,62 +1077,6 @@ while (1)
 return(Info->S);
 }
 
-HTTPInfoStruct *HTTPInfoFromURL(char *Method, char *URL)
-{
-HTTPInfoStruct *Info;
-char *Proto=NULL, *User=NULL, *Pass=NULL;
-char *ptr=NULL, *dptr, *p_port;
-int Port=0;
-
-
-Info=HTTPInfoCreate("", 0, "", "", Method, "", "",0);
-dptr=HTTPParseURL(URL, &Proto, &Info->Host, &Info->Port, &User, &Pass);
-if (StrLen(User) || StrLen(Pass))
-{
-	Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
-	HTTPAuthSet(Info->Authorization,User, Pass, HTTP_AUTH_BASIC);
-}
-
-/*
-if (Info->Port==0)
-{
-	if (strcmp(Proto,"https")==0) Info->Port=443;
-	else Info->Port=80;
-}
-*/
-
-if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
-
-Info->Doc=MCopyStr(Info->Doc,"/",dptr,NULL);
-if (StrLen(dptr))
-{
-	if (strcasecmp(Method,"POST")==0)
-	{
-	ptr=strchr(Info->Doc,'?');
-	if (ptr) 
-	{
-		*ptr='\0';
-		ptr++;
-	  if (StrLen(ptr)) 
-		{
-			Info->PostContentType=CopyStr(Info->PostContentType,"application/x-www-form-urlencoded");
-
-			Info->PostData=CopyStr(Info->PostData,ptr);
-			Info->PostContentLength=StrLen(ptr);
-
-		}
-	}
-	}
-	else 
-	{
-		ptr="";
-	}
-}
-
-
-DestroyString(Proto);
-return(Info);
-}
 
 
 STREAM *HTTPMethod(char *Method, char *URL, char *Logon, char *Password)

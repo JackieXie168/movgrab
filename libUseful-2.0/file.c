@@ -461,6 +461,7 @@ return(Stream);
 
 STREAM *STREAMClose(STREAM *S)
 {
+ListNode *Curr;
 int len;
 
 if (! S) return(NULL);
@@ -477,6 +478,14 @@ if (
 if ((S->out_fd != -1) && (S->out_fd != S->in_fd)) close(S->out_fd);
 if (S->in_fd != -1) close(S->in_fd);
 }
+
+Curr=ListGetNext(S->Values);
+while (Curr)
+{
+if (strncmp(Curr->Tag,"HelperPID",9)==0) kill(atoi(Curr->Item),SIGKILL);
+Curr=ListGetNext(Curr);
+}
+
 
 ListDestroy(S->Values,(LIST_ITEM_DESTROY_FUNC)DestroyString);
 ListDestroy(S->ProcessingModules,DataProcessorDestroy);

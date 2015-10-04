@@ -9,12 +9,6 @@
 #define CONNECT_HTTP_PROXY 4
 #define CONNECT_SOCKS_PROXY 8
 
-#define CONNECT_HOP_TCP 1
-#define CONNECT_HOP_HTTP_PROXY 2
-#define CONNECT_HOP_SSH 3
-#define CONNECT_HOP_SHELL_CMD 4
-#define CONNECT_HOP_TELNET 5
-
 #define SOCK_CONNECTED 1
 #define SOCK_CONNECTING -1
 
@@ -75,10 +69,6 @@ char *IPStrToHostName(char *);
 char *IPtoStr(unsigned long);
 unsigned long StrtoIP(char *);
 int IsIPAddress(char *);
-
-
-int STREAMAddConnectionHop(STREAM *S, char *Value);
-void STREAMAddConnectionHopList(STREAM *S, char *HopList);
 
 int SSLAvailable();
 

@@ -35,7 +35,7 @@ int DownloadStream(char *URL, char *Title, ListNode *Items, int Flags)
 STREAM *Con=NULL, *S=NULL;
 ListNode *Curr;
 char *Tempstr=NULL, *ptr;
-char *Server=NULL, *Doc=NULL;
+char *Token=NULL;
 int Port;
 double len=0, ApproxDocSize=0, BytesRead=0;
 
@@ -60,11 +60,7 @@ double len=0, ApproxDocSize=0, BytesRead=0;
 			Tempstr=MCatStr(Tempstr,"/",(char *) Curr->Item,NULL);
 		}
 
-		ptr=HTTPParseURL(Tempstr,NULL,&Server,&Port,NULL,NULL);
-		if (Port==0) Port=DefaultPort;
-		Doc=CopyStr(Doc,ptr);
-
-		Con=ConnectAndRetryUntilDownload(Server, Doc, Port, 0, 0);
+		Con=ConnectAndRetryUntilDownload(Tempstr, 0, 0);
 		if (Con)
 		{
 			ptr=STREAMGetValue(Con,"HTTP:content-length");
@@ -78,8 +74,7 @@ double len=0, ApproxDocSize=0, BytesRead=0;
 	CloseOutputFiles();
 
 DestroyString(Tempstr);
-DestroyString(Server);
-DestroyString(Doc);
+DestroyString(Token);
 
 return(TRUE);
 }
@@ -120,6 +115,8 @@ int M3UStreamInfo(STREAM *S, char *Title, char *URL, char *FirstLine, int Flags)
 	while (Tempstr)
 	{
 	StripTrailingWhitespace(Tempstr);
+  if (Flags & (FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"%s\n",Tempstr);
+
 	if (strncmp("#EXT-X-STREAM-INF",Tempstr,StrLen("#EXT-X-STREAM-INF"))==0) M3UParseStreamInfo(Tempstr, &Resolution, &Bandwidth);
 	else if (*Tempstr != '#') 
 	{
@@ -133,13 +130,19 @@ int M3UStreamInfo(STREAM *S, char *Title, char *URL, char *FirstLine, int Flags)
 		else Doc=CopyStr(Doc,Tempstr);
 
 		ptr=FileTypeFromURL(Doc);
-		if ((strcasecmp(ptr,".m3u8")==0) || (strcasecmp(ptr,".m3u")==0)) SetVar(Vars,"ID",Doc);
-		else
+		if (strcmp(ptr,"m3u8")==0) ptr="stream";
+		if (StrLen(Resolution)) 
 		{
-			if (StrLen(Resolution)) Tempstr=MCopyStr(Tempstr,"item:",ptr,":",Resolution,NULL);
-			else if (StrLen(Bandwidth)) Tempstr=MCopyStr(Tempstr,"item:",ptr,":",Bandwidth,NULL);
-			SetVar(Vars,Tempstr,Doc);
+			if (StrLen(ptr)) Tempstr=MCopyStr(Tempstr,"item:",ptr,":",Resolution,NULL);
+			else Tempstr=MCopyStr(Tempstr,"item:stream:",Resolution,NULL);
 		}
+		else if (StrLen(Bandwidth)) 
+		{
+			if (StrLen(ptr)) Tempstr=MCopyStr(Tempstr,"item:",ptr,":",Bandwidth,NULL);
+			else Tempstr=MCopyStr(Tempstr,"item:stream:",Bandwidth,NULL);
+		}
+		else Tempstr=CopyStr(Tempstr,"ID");
+		SetVar(Vars,Tempstr,Doc);
 	}
 	Tempstr=STREAMReadLine(Tempstr,S);
 	}
@@ -161,7 +164,7 @@ int M3UStreamInfo(STREAM *S, char *Title, char *URL, char *FirstLine, int Flags)
 
 int DownloadM3U(char *URL, char *Title, int Flags)
 {
-char *Tempstr=NULL, *Server=NULL, *Doc=NULL, *ID=NULL, *ptr;
+char *Tempstr=NULL, *ID=NULL, *Doc=NULL, *ptr;
 int Port=0, BytesRead=0, len=0, count=0;
 int RetVal=FALSE;
 ListNode *Items, *Curr;
@@ -172,11 +175,7 @@ if (Flags & FLAG_DEBUG) fprintf(stderr,"M3U STREAM: %s\n",URL);
 
 
 Items=ListCreate();
-ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
-if (Port==0) Port=DefaultPort;
-Doc=CopyStr(Doc,ptr);
-
-Con=ConnectAndRetryUntilDownload(Server, Doc, Port, 0, 0);
+Con=ConnectAndRetryUntilDownload(URL, 0, 0);
 if (Con)
 {
 Tempstr=STREAMReadLine(Tempstr,Con);
@@ -185,6 +184,7 @@ while (Tempstr)
 StripTrailingWhitespace(Tempstr);
 StripLeadingWhitespace(Tempstr);
 
+if (Flags & (FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"%s\n",Tempstr);
 if (StrLen(Tempstr))
 {
 	if (strncmp("#EXT-X-STREAM-INF",Tempstr,StrLen("#EXT-X-STREAM-INF"))==0)
@@ -210,14 +210,14 @@ if (StrLen(Tempstr))
 Tempstr=STREAMReadLine(Tempstr,Con);
 }
 
+STREAMClose(Con);
 if (M3UType == M3U_PLAYLIST) RetVal=DownloadStream(URL, Title, Items, Flags);
 }
 
 ListDestroy(Items,DestroyString);
-DestroyString(ID);
 DestroyString(Tempstr);
-DestroyString(Server);
 DestroyString(Doc);
+DestroyString(ID);
 
 
 return(RetVal);
@@ -226,19 +226,16 @@ return(RetVal);
 
 int DownloadPLS(char *URL, char *Title, int Flags)
 {
-char *Tempstr=NULL, *Server=NULL, *Token=NULL, *Doc=NULL, *ptr;
+char *Tempstr=NULL, *Token=NULL, *ptr;
 int Port=0, len=0;
 STREAM *Con=NULL;
 int RetVal=FALSE;
 ListNode *Items;
 
 if (Flags & FLAG_DEBUG) fprintf(stderr,"PLS STREAM: %s\n",URL);
-ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
-if (Port==0) Port=DefaultPort;
-Doc=CopyStr(Doc,ptr);
 
 Items=ListCreate();
-Con=ConnectAndRetryUntilDownload(Server, Doc, Port, 0, 0);
+Con=ConnectAndRetryUntilDownload(URL, 0, 0);
 if (Con)
 {
 Tempstr=STREAMReadLine(Tempstr,Con);
@@ -247,6 +244,7 @@ while (Tempstr)
 StripTrailingWhitespace(Tempstr);
 StripLeadingWhitespace(Tempstr);
 
+  if (Flags & (FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"%s\n",Tempstr);
 if (StrLen(Tempstr))
 {
 	ptr=GetToken(Tempstr,"=",&Token,0);
@@ -256,14 +254,14 @@ if (StrLen(Tempstr))
 Tempstr=STREAMReadLine(Tempstr,Con);
 }
 
+//Close the Connection and Download the next stage
+STREAMClose(Con);
+
 RetVal=DownloadStream(URL, Title, Items, Flags);
 }
 	
 ListDestroy(Items,DestroyString);
 DestroyString(Tempstr);
-DestroyString(Server);
-DestroyString(Doc);
-
 
 return(RetVal);
 }
@@ -271,19 +269,16 @@ return(RetVal);
 
 int DownloadASX(char *URL, char *Title, int Flags)
 {
-char *Tempstr=NULL, *Server=NULL, *Token=NULL, *Doc=NULL, *ptr;
+char *Tempstr=NULL, *Token=NULL, *ptr;
 int Port=0, len=0;
 int RetVal=FALSE;
 STREAM *Con=NULL;
 ListNode *Items;
 
 if (Flags & FLAG_DEBUG) fprintf(stderr,"ASX STREAM: %s\n",URL);
-ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
-if (Port==0) Port=DefaultPort;
-Doc=CopyStr(Doc,ptr);
 
 Items=ListCreate();
-Con=ConnectAndRetryUntilDownload(Server, Doc, Port, 0, 0);
+Con=ConnectAndRetryUntilDownload(URL, 0, 0);
 if (Con)
 {
 Tempstr=STREAMReadLine(Tempstr,Con);
@@ -292,26 +287,27 @@ while (Tempstr)
 StripTrailingWhitespace(Tempstr);
 StripLeadingWhitespace(Tempstr);
 
-if (StrLen(Tempstr) && (strncasecmp(Tempstr,"<Ref href",9)==0))
-{
+  if (Flags & (FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"%s\n",Tempstr);
+	if (StrLen(Tempstr) && (strncasecmp(Tempstr,"<Ref href",9)==0))
+	{
 		ptr=GetToken(Tempstr,"=",&Token,0);
 		while (isspace(*ptr)) ptr++;
 		if (*ptr=='"') ptr++;
 		ptr=GetToken(ptr,"\"",&Token,0);
 
 		ListAddItem(Items,CopyStr(NULL,Token));
-}
+	}
 
 Tempstr=STREAMReadLine(Tempstr,Con);
 }
+
+STREAMClose(Con);
 
 RetVal=DownloadStream(URL, Title, Items, Flags);
 }
 	
 ListDestroy(Items,DestroyString);
 DestroyString(Tempstr);
-DestroyString(Server);
-DestroyString(Doc);
 
 
 return(RetVal);

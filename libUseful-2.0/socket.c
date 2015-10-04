@@ -11,7 +11,7 @@
 
 #endif
 
-char *HopTypes[]={"none","direct","http_proxy","ssh","shell","telnet",NULL};
+#include "ConnectionChain.h"
 
 
 int IsSockConnected(int sock)
@@ -406,63 +406,13 @@ return(result);
 }
 
 
-int DoHTTPProxyTunnel(STREAM *S, char *Host, int Port, int Flags)
-{
-char *Tempstr=NULL, *Token=NULL, *ptr=NULL;
-int result=FALSE;
-
-	if (Flags & CONNECT_SSL) Tempstr=FormatStr(Tempstr,"CONNECT https://%s:%d HTTP/1.1\r\n\r\n",Host,Port);
-	else Tempstr=FormatStr(Tempstr,"CONNECT http://%s:%d HTTP/1.1\r\n\r\n",Host,Port);
-	STREAMWriteLine(Tempstr,S);
-	STREAMFlush(S);
-	
-	Tempstr=STREAMReadLine(Tempstr,S);
-	StripTrailingWhitespace(Tempstr);
-
-	ptr=GetToken(Tempstr," ",&Token,0);
-	ptr=GetToken(ptr," ",&Token,0);
-
-	if (*Token==2) result=TRUE;
-	while (StrLen(Tempstr))
-	{
-		Tempstr=STREAMReadLine(Tempstr,S);
-		StripTrailingWhitespace(Tempstr);
-	}
-
-DestroyString(Tempstr);
-DestroyString(Token);
-
-return(result);
-}
-
 
 int STREAMDoPostConnect(STREAM *S, int Flags)
 {
 int result=TRUE;
 char *ptr;
-
-//if (Flags & CONNECT_SOCKS_PROXY) result=DoSocksProxyTunnel(S);
-if (Flags & CONNECT_SSL) DoSSLClientNegotiation(S, Flags);
-
-ptr=GetRemoteIP(S->in_fd);
-if (ptr) STREAMSetValue(S,"PeerIP",ptr);
-
-return(result);
-}
-
-
-
-int STREAMInternalConnect(STREAM *S, char *Host, int Port,int Flags)
-{
-int val, result=FALSE;
 struct timeval tv;
 
-if (Flags & CONNECT_NONBLOCK) S->Flags |= SF_NONBLOCK;
-val=Flags;
-if (S->Timeout > 0) val |= CONNECT_NONBLOCK;
-
-S->in_fd=ConnectToHost(Host,Port,val);
-S->out_fd=S->in_fd;
 
 if ((S->in_fd > -1) && (S->Timeout > 0) )
 {
@@ -484,296 +434,26 @@ result=TRUE;
 STREAMSetFlushType(S,FLUSH_LINE,0);
 }
 
+//if (Flags & CONNECT_SOCKS_PROXY) result=DoSocksProxyTunnel(S);
+if (Flags & CONNECT_SSL) DoSSLClientNegotiation(S, Flags);
+
+ptr=GetRemoteIP(S->in_fd);
+if (ptr) STREAMSetValue(S,"PeerIP",ptr);
+
 return(result);
 }
 
 
-
-int SendPublicKeyToRemote(STREAM *S, char *KeyFile, char *LocalPath)
-{
-char *Tempstr=NULL, *RetStr=NULL, *Line=NULL;
-STREAM *LocalFile;
-
-
-Tempstr=FormatStr(Tempstr,"rm -f %s ; touch %s; chmod 0600 %s\n",KeyFile,KeyFile,KeyFile);
-STREAMWriteLine(Tempstr,S);
-LocalFile=STREAMOpenFile(LocalPath,O_RDONLY);
-if (LocalFile)
-{
-Line=STREAMReadLine(Line,LocalFile);
-while (Line)
-{
-StripTrailingWhitespace(Line);
-Tempstr=FormatStr(Tempstr,"echo '%s' >> %s\n",Line,KeyFile);
-STREAMWriteLine(Tempstr,S);
-Line=STREAMReadLine(Line,LocalFile);
-}
-STREAMClose(LocalFile);
-}
-
-return(TRUE);
-}
-
-
-
-void ParseHostDetails(char *Data,char **Host,char **Port,char **User)
-{
-char *ptr=NULL;
-
-ptr=strrchr(Data,'@');
-if (ptr)
-{
- *User=CopyStrLen(*User,Data,ptr-Data);
-ptr++;
-}
-else ptr=Data;
-
-ptr=GetToken(ptr,":",Host,0);
-if (StrLen(ptr)) *Port=CopyStr(*Port,ptr);
-}
-
-
-void ParseConnectDetails(char *Str, char **Type, char **Host, char **Port, char **User, char **Pass, char **InitDir)
-{
-char *ptr, *ptr2, *Token=NULL, *Tmp=NULL;
-
-ptr=GetToken(Str," ",&Token,0);
-while (ptr)
-{
-if (strcmp(Token,"-password")==0)
-{
-ptr=GetToken(ptr," ",Pass,0);
-}
-else if (strcmp(Token,"-keyfile")==0)
-{
-ptr=GetToken(ptr," ",&Token,0);
-
-*Pass=MCopyStr(*Pass,"keyfile:",Token,NULL);
-}
-else
-{
-ptr2=GetToken(Token,":",Type,0);
-while (*ptr2=='/') ptr2++;
-ptr2=GetToken(ptr2,"/",&Tmp,0);
-
-ParseHostDetails(Tmp,Host,Port,User);
-
-//Now we break Tmp up into host, port and path
-
-if (StrLen(ptr2)) *InitDir=MCopyStr(*InitDir,"/",ptr2,NULL);
-}
-
-ptr=GetToken(ptr," ",&Token,0);
-}
-
-DestroyString(Token);
-DestroyString(Tmp);
-}
-
-
-
-void ParseConnectHop(char *Line, int *Type,  char **Host, char **User, char **Password, char **KeyFile, int *Port)
-{
-char *ptr, *ptr2, *TypeStr=NULL, *Token=NULL, *Trash=NULL;
-int result;
-
-ParseConnectDetails(Line, &TypeStr, Host, &Token, User, Password, &Trash);
-*Type=MatchTokenFromList(TypeStr,HopTypes,0);
-if (StrLen(Token)) *Port=atoi(Token);
-
-if (StrLen(*Password) && (strncmp(*Password,"keyfile:",8)==0) )
-{
-	*KeyFile=CopyStr(*KeyFile,(*Password)+8);
-	*Password=CopyStr(*Password,"");
-}
-
-
-DestroyString(TypeStr);
-DestroyString(Token);
-DestroyString(Trash);
-}
-
-
-int STREAMProcessConnectHop(STREAM *S, char *Value, int LastHop)
-{
-int val, result=FALSE;
-char *Token=NULL, *Token2=NULL, *ptr;
-char *Tempstr=NULL;
-char *User=NULL, *Host=NULL,*Pass=NULL, *KeyFile=NULL;
-int Port=0;
-
-ParseConnectHop(Value, &val,  &Host, &User, &Pass, &KeyFile, &Port);
-switch (val)
-{
-	case CONNECT_HOP_TCP:
-		if (S->in_fd==-1)
-		{
-			if (STREAMInternalConnect(S,Host,Port,0)) result=TRUE;
-		}
-		break;
-
-	case CONNECT_HOP_HTTP_PROXY:
-		result=DoHTTPProxyTunnel(S, Host, Port, 0);
-		break;	
-
-	case CONNECT_HOP_SSH:
-//		if ((StrLen(KeyFile)==0) && (StrLen(Pass) > 0)) Tempstr=CopyStr(Tempstr,"ssh -2 -e none ");
-//		else 
-
-
-		Tempstr=CopyStr(Tempstr,"ssh -2 -T ");
-		//Tempstr=CopyStr(Tempstr,"ssh -2 ");
-		if (StrLen(KeyFile))
-		{
-
-		if (S->in_fd != -1)
-		{
-			Token=FormatStr(Token,".%d-%d",getpid(),time(NULL));
-			SendPublicKeyToRemote(S,Token,KeyFile);
-			KeyFile=CopyStr(KeyFile,Token);
-		}
-
-			Tempstr=CatStr(Tempstr,"-i ");
-			Tempstr=CatStr(Tempstr,KeyFile);
-			Tempstr=CatStr(Tempstr," ");
-
-		}
-
-		if (Port > 0)
-		{
-		Token=FormatStr(Token," -p %d ",Port);
-		Tempstr=CatStr(Tempstr,Token);
-		}
-
-		Token=FormatStr(Token,"%s@%s",User,Host);
-		Tempstr=CatStr(Tempstr,Token);
-
-		if (S->in_fd==-1) 
-		{
-			Tempstr=CatStr(Tempstr, " 2> /dev/null");
-			PseudoTTYSpawn(&S->in_fd,Tempstr);
-	
-			S->out_fd=S->in_fd;
-
-
-			if (S->in_fd > -1)
-			{
-				result=TRUE;
-				STREAMSetFlushType(S,FLUSH_LINE,0);
-			}
-		}
-		else 
-		{
-			if (StrLen(KeyFile))
-			{
-			Tempstr=CatStr(Tempstr," ; rm -f ");
-			Tempstr=CatStr(Tempstr,KeyFile);
-			}
-			Tempstr=CatStr(Tempstr,"; exit\n");
-			STREAMWriteLine(Tempstr,S);
-			result=TRUE;
-		}
-
-		if ((StrLen(KeyFile)==0) && (StrLen(Pass) > 0)) 
-		{
-			Token=CopyStr(Token,Pass);
-			Token=CatStr(Token,"\n");
-			for (val=0; val < 3; val++)
-			{
-			if (STREAMExpectAndReply(S,"assword:",Token)) break;
-			}
-		}
-		STREAMSetTimeout(S,1);
-		STREAMExpectSilence(S);
-		break;
-
-	case CONNECT_HOP_SHELL_CMD:
-		break;
-
-	case CONNECT_HOP_TELNET:
-		if (Port > 0)
-		{
-		Tempstr=FormatStr(Tempstr,"telnet -8 %s %d ",Host, Port);
-		}
-		else Tempstr=FormatStr(Tempstr,"telnet -8 %s ",Host);
-
-		if (S->in_fd==-1) 
-		{
-			PseudoTTYSpawn(& S->in_fd,Tempstr);
-		        S->out_fd=S->in_fd;
-			if (S->in_fd > -1)
-			{
-				result=TRUE;
-				STREAMSetFlushType(S,FLUSH_LINE,0);
-			}
-
-		}
-		else 
-		{
-			Tempstr=CatStr(Tempstr,";exit\n");
-			STREAMWriteLine(Tempstr,S);
-			result=TRUE;
-		}
-		if (StrLen(User) > 0) 
-		{
-			Tempstr=MCopyStr(Tempstr,User,"\n",NULL);
-			STREAMExpectAndReply(S,"ogin:",Tempstr);
-		}
-		if (StrLen(Pass) > 0) 
-		{
-			Tempstr=MCopyStr(Tempstr,Pass,"\n",NULL);
-			STREAMExpectAndReply(S,"assword:",Tempstr);
-		}
-		STREAMSetTimeout(S,2);
-		STREAMExpectSilence(S);
-		break;
-
-
-}
-
-DestroyString(Tempstr);
-DestroyString(Token);
-DestroyString(KeyFile);
-DestroyString(Host);
-DestroyString(User);
-DestroyString(Pass);
-
-STREAMSetTimeout(S,30);
-STREAMFlush(S);
-return(result);
-}
-
-
-/*
-int STREAMInternalLastHop(STREAM *S,char *DesiredHost,int DesiredPort, char *LastHop)
-{
-int result, Type,Port;
-char *Host=NULL, *User=NULL, *Pass=NULL, *KeyFile=NULL;
-
-ParseConnectHop(LastHop, &Type,  &Host, &User, &Pass, &KeyFile, &Port);
-switch (Type)
-{
-
-}
-result=STREAMProcessConnectHop(S, Tempstr, TRUE);
-
-DestroyString(Tempstr);
-DestroyString(Host);
-DestroyString(User);
-DestroyString(Pass);
-DestroyString(KeyFile);
-return(result);
-}
-*/
 
 int STREAMConnectToHost(STREAM *S, char *DesiredHost, int DesiredPort,int Flags)
 {
 ListNode *Curr;
 char *Token=NULL, *ptr;
 int result=FALSE;
-int HopNo=0;
+int HopNo=0, val;
 ListNode *LastHop=NULL;
 
+S->Path=FormatStr(S->Path,"tcp:%s:%d",DesiredHost,DesiredPort);
 //Find the last hop, used to decide what ssh command to use
 Curr=ListGetNext(S->Values);
 while (Curr)
@@ -790,17 +470,23 @@ while (Curr)
 ptr=GetToken(Curr->Tag,":",&Token,0);
 
 if (strcasecmp(Token,"ConnectHop")==0) result=STREAMProcessConnectHop(S, (char *) Curr->Item,Curr==LastHop);
-HopNo++;
 
+HopNo++;
 if (! result) break;
 Curr=ListGetNext(Curr);
 }
 
-if (StrLen(DesiredHost))
+//If we're not handling the connection through 'Connect hops' then
+//just connect to host
+if ((HopNo==0) && StrLen(DesiredHost))
 {
-//	if (LastHop) result=STREAMInternalLastHop(S,DesiredHost,DesiredPort,Flags);
-//	else
- result=STREAMInternalConnect(S,DesiredHost,DesiredPort,Flags);
+	if (Flags & CONNECT_NONBLOCK) S->Flags |= SF_NONBLOCK;
+	val=Flags;
+	if (S->Timeout > 0) val |= CONNECT_NONBLOCK;
+
+	S->in_fd=ConnectToHost(DesiredHost,DesiredPort,val);
+	S->out_fd=S->in_fd;
+	if (S->in_fd > -1) result=TRUE;
 }
 
 if (result==TRUE)
@@ -1155,7 +841,7 @@ STREAM *Stream;
 fd=OpenUDPSock(Port);
 if (fd <0) return(NULL);
 Stream=STREAMFromFD(fd);
-Stream->Path=FormatStr(Stream->Path,"none:%d",Port);
+Stream->Path=FormatStr(Stream->Path,"udp::%d",Port);
 Stream->Type=STREAM_TYPE_UDP;
 return(Stream);
 }
@@ -1175,37 +861,4 @@ for (count=0; count < len; count++)
  return(TRUE);
 }
 
-
-
-
-int STREAMAddConnectionHop(STREAM *S, char *Value)
-{
-char *Tempstr=NULL;
-char *ConnectType=NULL;
-int i;
-
-StripTrailingWhitespace(Value);
-StripLeadingWhitespace(Value);
-
-if (! S->Values) S->Values=ListCreate();
-Tempstr=FormatStr(Tempstr,"ConnectHop:%d",ListSize(S->Values));
-STREAMSetValue(S,Tempstr,Value);
-
-DestroyString(Tempstr);
-return(TRUE);
-}
-
-void STREAMAddConnectionHopList(STREAM *S, char *HopList)
-{
-char *Hop=NULL, *ptr;
-
-ptr=GetToken(HopList,",",&Hop,0);
-while (ptr)
-{
-STREAMAddConnectionHop(S,Hop);
-ptr=GetToken(ptr,",",&Hop,0);
-}
-
-DestroyString(Hop);
-}
 

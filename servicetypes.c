@@ -474,9 +474,9 @@ if (*Type==TYPE_YOUTUBE)
 
 	//hmm.. have we been given the http://www.youtube.com/v/ or https://www.youtube.com/embed/ format?
 
-	if (strncmp(Doc,"v/",2)==0) Token=CopyStr(Token,Doc+2);
-	else if (strncmp(Doc,"embed/",6)==0) Token=CopyStr(Token,Doc+6);
-	else if (strncmp(Doc,"watch?v=",8)==0) Token=CopyStr(Token,Doc+8);
+	if (strncmp(Doc,"/v/",3)==0) Token=CopyStr(Token,Doc+3);
+	else if (strncmp(Doc,"/embed/",7)==0) Token=CopyStr(Token,Doc+7);
+	else if (strncmp(Doc,"/watch?v=",9)==0) Token=CopyStr(Token,Doc+9);
 	else 
 	{
 		*Type=TYPE_YOUTUBE_PLAYLIST;
@@ -570,6 +570,7 @@ else if (*Type==TYPE_GOOGLE_URL)
 		ptr+=6;
  		ptr=GetToken(ptr,"&",&Token,NULL);
  		NextPath=HTTPUnQuote(NextPath,Token);
+		*Type==TYPE_REFERENCE;
 	}
 }
 else
@@ -675,18 +676,18 @@ case TYPE_REFERENCE:
 break;
 
 case TYPE_YOUTUBE:
-	Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
+		Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
   	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_YOUTUBE_PLAYLIST:
-	Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
+		Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
   	RetVal=DownloadPage(Tempstr,TYPE_YOUTUBE, Title, Flags);
 break;
 
 
 case TYPE_BREAK_COM:
-  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)?$(EXTRA)",Vars,0);
+		Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
   	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
@@ -706,21 +707,11 @@ break;
 
 
 case TYPE_METACAFE:
+#define METACAFE_OVER_18 "allowAdultContent=1&submit=Continue+-+I%27m+over+18"
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+ 	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
-
-case TYPE_METACAFE_JS_REDIR:
- Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
- 	RetVal=DownloadPage(Tempstr,TYPE_METACAFE,Title,Flags);
-break;
-
-
-case TYPE_METACAFE_FINAL:
- Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
-break;
 
 case TYPE_DAILYMOTION:
   Tempstr=SubstituteVarsInString(Tempstr,"http://www.dailymotion.com/services/oembed?url=$(ID)&format=xml",Vars,0);
@@ -958,22 +949,24 @@ DestroyString(Tempstr);
 
 // This is the main function that 'screen scrapes' a webpage looking for 
 // information that it can use to get a video
-int ExtractItemInfo(STREAM *S, int Type, char *URL, char *Server, int Port, char *Title, int Flags)
+int ExtractItemInfo(STREAM *S, int Type, char *URL, char *Title, int Flags)
 {
-char *Tempstr=NULL, *Token=NULL, *VarName=NULL;
+char *Tempstr=NULL, *Token=NULL, *VarName=NULL, *Server=NULL;
 ListNode *Vars=NULL;
 char *ptr, *ptr2;
-int MediaCount=0, i;
+int MediaCount=0, i, Port;
 int RetVal=FALSE, State=0;
 
 #define GENERIC_TITLE_START "<title>"
 #define GENERIC_TITLE_END "</title>"
 
-
+ParseURL(URL,NULL,&Server,&Token,NULL,NULL,NULL,NULL);
+Port=atoi(Token);
 
 Vars=ListCreate();
 SetVar(Vars,"Server",Server);
-if (Port==0) Port=DefaultPort;
+
+
 Tempstr=FormatStr(Tempstr,"%d",Port);
 SetVar(Vars,"Port",Tempstr);
 SetVar(Vars,"Title",Title);
@@ -994,11 +987,12 @@ case TYPE_YOUTUBE:
 
 //#define YOUTUBE_PTR "var swfArgs = {"
 #define YOUTUBE_DIV "url_encoded_fmt_stream_map="
-#define YOUTUBE_TITLE "&title="
+#define YOUTUBE_TITLE_START "&title="
+#define YOUTUBE_TITLE_END "&"
 
-	if (strstr(Tempstr,YOUTUBE_TITLE))
+	if (strstr(Tempstr,YOUTUBE_TITLE_START))
 	{
-		GenericExtractFromLine(Tempstr, "Title",YOUTUBE_TITLE, "&", Vars,EXTRACT_DEQUOTE);
+		GenericExtractFromLine(Tempstr, "Title",YOUTUBE_TITLE_START, YOUTUBE_TITLE_END, Vars,EXTRACT_DEQUOTE);
 	}
 
 
@@ -1033,62 +1027,19 @@ break;
 
 
 case TYPE_METACAFE:
-#define METACAFE_ITEM "var itemID = "
-#define METACAFE_ITEM2 "so.addParam(\"flashvars\", \'itemID="
-//#define METACAFE_ITEM_FINAL "<item "
-#define METACAFE_ITEM_FINAL ");"
-#define METACAFE_EXTRA "var LEID = "
-#define METACAFE_OVER_18 "allowAdultContent=1&submit=Continue+-+I%27m+over+18"
-#define METACAFE_JS_REDIR "<script type=\"text/javascript\">document.location = "
-
-	if (strncmp(Tempstr,METACAFE_JS_REDIR,StrLen(METACAFE_JS_REDIR))==0)
-	{
-		ptr=GetToken(Tempstr+StrLen(METACAFE_JS_REDIR),";</script>",&Token,0);
-		StripQuotes(Token);
-		SetVar(Vars,"item:flv",Token);
-//		GenericExtractFromLine(Tempstr, "item:flv",METACAFE_JS_REDIR,";</script>", Vars);
-		Type=TYPE_METACAFE_JS_REDIR;
-	}
-	else
-	{
+#define METACAFE_ITEM "&mediaData="
+#define METACAFE_MEDIA_URL ",\"mediaURL\":\""
 	if (strstr(Tempstr,GENERIC_TITLE_START))
 	{
 		GenericExtractFromLine(Tempstr, "Title",GENERIC_TITLE_START,GENERIC_TITLE_END, Vars,EXTRACT_DEQUOTE);
 	}
 
 
-#define METACAFE_MEDIA_URL "mediaURL"
-	if (
-				(strstr(Tempstr,METACAFE_MEDIA_URL))
-		)
-			
+	if (strstr(Tempstr,METACAFE_ITEM))
 	{
-		Token=ExtractMetacafeMediaURL(Token,Tempstr,METACAFE_MEDIA_URL,"&");
-		Tempstr=HTTPUnQuote(Tempstr,Token);
-
-		SetVar(Vars,"item:flv",Tempstr);
-	}
-
-#define METACAFE_MEDIA_URL2 "mediaURL%22%3A%22"
-	if (
-				(strstr(Tempstr,METACAFE_MEDIA_URL2))
-		)
-			
-	{
-		GenericExtractFromLine(Tempstr, "metacafe:mediaurl",METACAFE_MEDIA_URL2,"&", Vars, EXTRACT_DEQUOTE);
-
-		Token=ExtractMetacafeMediaURL(Token,Tempstr,METACAFE_MEDIA_URL2,"&");
-		Tempstr=HTTPUnQuote(Tempstr,Token);
-
-		SetVar(Vars,"item:flv",Tempstr);
-	}
-break;
-
-case TYPE_METACAFE_FINAL:
-	if (strstr(Tempstr," url="))
-	{
-		GenericExtractFromLine(Tempstr, "item:flv"," url=","\\S", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-	}
+		GenericExtractFromLine(Tempstr, "metacafe:mediaData",METACAFE_ITEM,"&", Vars, EXTRACT_DEQUOTE);
+		ptr=GetVar(Vars,"metacafe:mediaData");
+		GenericExtractFromLine(ptr, "item:mp4",METACAFE_MEDIA_URL,"\"", Vars, EXTRACT_DESLASHQUOTE|EXTRACT_GUESSTYPE);
 	}
 break;
 
@@ -1118,42 +1069,26 @@ break;
 
 
 case TYPE_BREAK_COM:
-#define BREAK_ITEM "sGlobalFileName='"
-#define BREAK_EXTRA "flashVars.icon = \""
-#define BREAK_WMV "+sGlobalContentFilePath+'/'+sGlobalFileName+'.wmv"
-#define BREAK_FLV "+sGlobalContentFilePath+'/'+sGlobalFileName+'.flv"
-#define BREAK_HD "sGlobalFileNameHD='"
-#define BREAK_HDD "sGlobalFileNameHDD='"
-#define BREAK_TITLE "id=\"vid_title\" content=\""
+#define BREAK_ITEM_START "videoPath: '"
+#define BREAK_EXTRA_START "icon: '"
+#define BREAK_END "'"
+#define BREAK_TITLE "sVidTitle: '"
 
 
-	ptr=strstr(Tempstr,BREAK_ITEM);
-	if (ptr)
+	ptr=strstr(Tempstr,BREAK_ITEM_START);
+	if (ptr) GenericExtractFromLine(Tempstr, "item:flv",BREAK_ITEM_START,BREAK_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+
+	ptr=strstr(Tempstr,BREAK_EXTRA_START);
+	if (ptr) 
 	{
-		//'sGlobalFileName' needs .flv appended to be the true path
-		GenericExtractFromLine(Tempstr, "item:flv",BREAK_ITEM,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "Extra",BREAK_EXTRA_START,BREAK_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		ptr=GetVar(Vars,"item:flv");
-		if (ptr) ptr=CatStr(ptr,".flv");
-	}
-
-	ptr=strstr(Tempstr,BREAK_HD);
-	if (ptr) GenericExtractFromLine(Tempstr, "item:mp4:medq",BREAK_HD,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-
-	ptr=strstr(Tempstr,BREAK_HDD);
-	if (ptr) GenericExtractFromLine(Tempstr, "item:mp4:highq",BREAK_HDD,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-
-
-	ptr=strstr(Tempstr,BREAK_EXTRA);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "Extra",BREAK_EXTRA,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		Tempstr=MCopyStr(Tempstr,ptr,"?",GetVar(Vars,"Extra"),NULL);
+		SetVar(Vars,"item:flv",Tempstr);
 	}
 	
 	ptr=strstr(Tempstr,BREAK_TITLE);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "Title",BREAK_TITLE,"\"",Vars,0);
-	}
+	if (ptr) GenericExtractFromLine(Tempstr, "Title",BREAK_TITLE,BREAK_END,Vars,0);
 
 
 break;

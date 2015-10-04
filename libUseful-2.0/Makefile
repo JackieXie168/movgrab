@@ -1,10 +1,10 @@
 CC = gcc
 VERSION = 0.0.1
 CFLAGS = -g -O2
-LIBS = -lz 
-FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_OSS=1 
+LIBS = -lcrypto -lssl -lz 
+FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1 -DHAVE_EVP_BF_CBC=1 -DHAVE_EVP_RC2_CBC=1 -DHAVE_EVP_RC4=1 -DHAVE_EVP_DES_CBC=1 -DHAVE_EVP_DESX_CBC=1 -DHAVE_EVP_CAST5_CBC=1 -DHAVE_EVP_IDEA_CBC=1 -DHAVE_EVP_AES_128_CBC=1 -DHAVE_EVP_AES_256_CBC=1 -DUSE_OPENSSL_ADD_ALL_ALGORITHMS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_OSS=1 
 prefix=/usr/local
-OBJ=string.o list.o socket.o unix_socket.o file.o tar.o FileSystem.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o MathExpr.o Time.o Markup.o SpawnPrograms.o PatternMatch.o
+OBJ=string.o list.o socket.o unix_socket.o file.o tar.o FileSystem.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o MathExpr.o Time.o Markup.o SpawnPrograms.o PatternMatch.o ParseURL.o ConnectionChain.o
 
 
 all: $(OBJ)
@@ -57,6 +57,9 @@ Time.o: Time.h Time.c
 Markup.o: Markup.h Markup.c
 	$(CC) $(FLAGS) -c Markup.c
 
+ParseURL.o: ParseURL.h ParseURL.c
+	$(CC) $(FLAGS) -c ParseURL.c
+
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
 
@@ -77,6 +80,9 @@ Hash.o: Hash.h Hash.c
 
 Compression.o: Compression.h Compression.c
 	$(CC) $(FLAGS) -c Compression.c
+
+ConnectionChain.o: ConnectionChain.h ConnectionChain.c
+	$(CC) $(FLAGS) -c ConnectionChain.c
 
 ConnectManager.o: ConnectManager.h ConnectManager.c
 	$(CC) $(FLAGS) -c ConnectManager.c

@@ -87,9 +87,6 @@ time_t Now;
 time(&Now);
 if (bytes_read==0) SpeedStart=Now;
 
-if (Now==SpeedStart)  return;
-if (Now==LastDisplay) return;
-
 if (CheckForKeyboardInput()) PrintName=TRUE;
 
 
@@ -100,8 +97,8 @@ if (! (Flags & FLAG_QUIET))
 if (PrintName) fprintf(stderr,"\nGetting: %s  Size: %s  Format: %s\n",Title,GetHumanReadableDataQty(DocSize,0), Format);
 }
 
-
-
+if ((Now != SpeedStart) && (Now != LastDisplay))
+{
 BpsStr=CopyStr(BpsStr,"");
 if (SpeedStart > 0)
 {
@@ -146,6 +143,7 @@ if (Now - SpeedStart > 5)
 	PrevBytesRead=bytes_read;
 }
 LastDisplay=Now;
+}
 
 DestroyString(HUDocSize);
 DestroyString(BpsStr);

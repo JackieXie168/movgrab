@@ -4,13 +4,13 @@
 #include "file.h"
 #include <sys/ioctl.h>
 
-int ForkWithContext()
+pid_t ForkWithContext()
 {
 char *ptr;
-int result;
+pid_t pid;
 
-result=fork();
-if (result==0)
+pid=fork();
+if (pid==0)
 {
 	ptr=LibUsefulGetValue("FORK:Dir");
 	if (StrLen(ptr)) chdir(ptr);
@@ -19,7 +19,7 @@ if (result==0)
 	ptr=LibUsefulGetValue("FORK:Group");
 	if (StrLen(ptr)) SwitchGroup(ptr);
 }
-return(result);
+return(pid);
 }
 
 
@@ -65,10 +65,11 @@ return(1);
 
 int ForkWithIO(int StdIn, int StdOut, int StdErr)
 {
-int result, fd;
+pid_t pid;
+int fd;
 
-result=ForkWithContext();
-if (result==0)
+pid=ForkWithContext();
+if (pid==0)
 {
 	if (StdIn > -1) 
 	{
@@ -116,22 +117,23 @@ else
 	close(fd);
 }
 
-return(result);
+return(pid);
 }
 
 
 
-int SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr)
+pid_t SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr)
 {
-int result, fd, i;
+pid_t pid;
+int fd, i;
 
-result=ForkWithIO(StdIn,StdOut,StdErr);
-if (result==0)
+pid=ForkWithIO(StdIn,StdOut,StdErr);
+if (pid==0)
 {
 SwitchProgram(CommandLine);
-_exit(result);
+_exit(pid);
 }
-else return(result);
+else return(pid);
 }
 
 
@@ -142,9 +144,9 @@ return(SpawnWithIO(ProgName, 0,1,2));
 
 
 /* This creates a child process that we can talk to using a couple of pipes*/
-int PipeSpawnFunction(int *infd,int  *outfd,int  *errfd, BASIC_FUNC Func, void *Data )
+pid_t PipeSpawnFunction(int *infd,int  *outfd,int  *errfd, BASIC_FUNC Func, void *Data )
 {
-int result;
+pid_t pid;
 int channel1[2], channel2[2], channel3[2], DevNull=-1;
 int count;
 
@@ -152,8 +154,8 @@ if (infd) pipe(channel1);
 if (outfd) pipe(channel2);
 if (errfd) pipe(channel3);
 
-result=ForkWithContext();
-if (result==0)
+pid=ForkWithContext();
+if (pid==0)
 {
 /* we are the child */
 if (infd) close(channel1[1]);
@@ -199,9 +201,9 @@ if (errfd)
 	*errfd=channel3[0];
 }
 
-return(result);
 }
 
+return(pid);
 }
 
 
@@ -211,7 +213,7 @@ return(execl("/bin/sh","/bin/sh","-c",(char *) Data,NULL));
 }
 
 
-int PipeSpawn(int *infd,int  *outfd,int  *errfd, char *Command)
+pid_t PipeSpawn(int *infd,int  *outfd,int  *errfd, char *Command)
 {
 return(PipeSpawnFunction(infd,outfd,errfd, BASIC_FUNC_EXEC_COMMAND, Command));
 }
@@ -219,16 +221,17 @@ return(PipeSpawnFunction(infd,outfd,errfd, BASIC_FUNC_EXEC_COMMAND, Command));
 
 
 
-int PseudoTTYSpawnFunction(int *ret_pty, BASIC_FUNC Func, void *Data)
+pid_t PseudoTTYSpawnFunction(int *ret_pty, BASIC_FUNC Func, void *Data)
 {
-int tty, pty, result, i;
+pid_t pid;
+int tty, pty, i;
 STREAM *S;
 char *Tempstr=NULL;
 
 if (GrabPseudoTTY(&pty,&tty))
 {
-result=ForkWithContext();
-if (result==0)
+pid=ForkWithContext();
+if (pid==0)
 {
 for (i=0; i < 4; i++) close(i);
 close(pty);
@@ -246,11 +249,11 @@ close(tty);
 }
 
 *ret_pty=pty;
-return(result);
+return(pid);
 }
 
 
-int PseudoTTYSpawn(int *pty, const char *Command)
+pid_t PseudoTTYSpawn(int *pty, const char *Command)
 {
 return(PseudoTTYSpawnFunction(pty, BASIC_FUNC_EXEC_COMMAND, (void *) Command));
 }
@@ -259,18 +262,26 @@ return(PseudoTTYSpawnFunction(pty, BASIC_FUNC_EXEC_COMMAND, (void *) Command));
 STREAM *STREAMSpawnCommand(const char *Command, int Type)
 {
 int to_fd, from_fd;
+pid_t pid;
 STREAM *S=NULL;
+char *Tempstr=NULL;
 
 if (Type==COMMS_BY_PIPE)
 {
-	if (! PipeSpawn(&to_fd, &from_fd, NULL, Command)) return(NULL);
+	pid=PipeSpawn(&to_fd, &from_fd, NULL, Command);
+	if (pid < 1) return(NULL);
 	S=STREAMFromDualFD(from_fd, to_fd);
 }
 else if (Type==COMMS_BY_PTY)
 {
-	PseudoTTYSpawn(&to_fd,Command);
+	pid=PseudoTTYSpawn(&to_fd,Command);
+	if (pid < 1) return(NULL);
 	S=STREAMFromFD(to_fd);
 }
 STREAMSetFlushType(S,FLUSH_LINE,0);
+
+Tempstr=FormatStr(Tempstr,"%d",pid);
+STREAMSetValue(S,"PeerPID",Tempstr);
+DestroyString(Tempstr);
 return(S);
 }
