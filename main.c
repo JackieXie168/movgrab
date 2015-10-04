@@ -306,60 +306,60 @@ void PrintUsage()
 {
 int i;
 
-fprintf(stderr,"\nMovgrab: version %s\n",Version);
-fprintf(stderr,"Author: Colum Paget\n");
-fprintf(stderr,"Email: colums.projects@gmail.com\n");
-fprintf(stderr,"Blogs: \n");
-fprintf(stderr,"	tech: http://idratherhack.blogspot.com \n");
-fprintf(stderr,"	rants: http://thesingularitysucks.blogspot.com \n");
-fprintf(stderr,"\n");
-fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-r] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-P] [-Pp] [-o <output file>] [+o <extra output file>] url\n");
-fprintf(stderr,"	movgrab -test-sites\n");
-fprintf(stderr,"\n'-v'		increases verbosity/debug level\n");
-fprintf(stderr,"'-v -v'		prints out all webpages encountered\n");
-fprintf(stderr,"'-v -v -v'	maximum debugging\n");
-fprintf(stderr,"'-T'		Test mode, don't do final download\n");
-fprintf(stderr,"'-P <program>'		Player program (e.g. \"mplayer\")\n");
-fprintf(stderr,"'-Pp'		Percent download to launch player at (default 25%)\n");
-fprintf(stderr,"'-a'		Authentication info in Username:Password format.\n");
-fprintf(stderr,"'-q'		QUIET. No progress/informative output.\n");
-fprintf(stderr,"'-b'		Background. Fork into background and nohup\n");
-fprintf(stderr,"'-p'		address of HTTP proxy server in URL format.\n");
-fprintf(stderr,"'-w'		Wait for addresses to be entered on stdin.\n");
-fprintf(stderr,"'-st'		Connection inactivity timeout in seconds. Set high for sites that 'throttle'\n");
-fprintf(stderr,"'-t'		specifies website type.\n");
-fprintf(stderr,"'-r'		Resume download (only works when writing a single file, not with +o).\n");
-fprintf(stderr,"'-f'		specifies preferred video/audio formats for sites that offer more than one\n");
-fprintf(stderr,"			example: flv:640x480,flv,mp4,mp3\n");
-fprintf(stderr,"			Use -T to get a list of formats the site offers\n");
-fprintf(stderr,"			Use * to mean 'any format' (the default)\n");
-fprintf(stderr,"			example: flv:640x480,mp4:640x480,*\n");
-fprintf(stderr,"'-o'		specifies output file ( '-' for stdout)\n");
-fprintf(stderr,"'+o'		add an output file to list of output files ( '-' for stdout)\n");
-fprintf(stderr,"'-x'		try to avoid 'family filter' on some sites\n");
-fprintf(stderr,"'-n'		For pages with multiple movies (not movie formats, but movies) specifes item selection for download. Argument has the form:\n");
-fprintf(stderr,"			-n all		Download all\n");
-fprintf(stderr,"			-n 2		Download 2nd item\n");
-fprintf(stderr,"			-n 2-5		Download 2nd to 5th item\n");
-fprintf(stderr,"			-n 2-		Download from 2nd item onwards\n");
-fprintf(stderr,"			-n -8		Download from 1st to 8th item\n");
-fprintf(stderr,"-test-sites		Test downloading from each supported website");
-fprintf(stderr,"\nThe '-t' argument is optional, Movgrab will try to guess the download type from the provided url.\n\n");
+fprintf(stdout,"\nMovgrab: version %s\n",Version);
+fprintf(stdout,"Author: Colum Paget\n");
+fprintf(stdout,"Email: colums.projects@gmail.com\n");
+fprintf(stdout,"Blogs: \n");
+fprintf(stdout,"	tech: http://idratherhack.blogspot.com \n");
+fprintf(stdout,"	rants: http://thesingularitysucks.blogspot.com \n");
+fprintf(stdout,"\n");
+fprintf(stdout,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-r] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-P] [-Pp] [-o <output file>] [+o <extra output file>] url\n");
+fprintf(stdout,"	movgrab -test-sites\n");
+fprintf(stdout,"\n'-v'		increases verbosity/debug level\n");
+fprintf(stdout,"'-v -v'		prints out all webpages encountered\n");
+fprintf(stdout,"'-v -v -v'	maximum debugging\n");
+fprintf(stdout,"'-T'		Test mode, don't do final download\n");
+fprintf(stdout,"'-P <program>'		Player program (e.g. \"mplayer\")\n");
+fprintf(stdout,"'-Pp'		Percent download to launch player at (default 25%)\n");
+fprintf(stdout,"'-a'		Authentication info in Username:Password format.\n");
+fprintf(stdout,"'-q'		QUIET. No progress/informative output.\n");
+fprintf(stdout,"'-b'		Background. Fork into background and nohup\n");
+fprintf(stdout,"'-p'		address of HTTP proxy server in URL format.\n");
+fprintf(stdout,"'-w'		Wait for addresses to be entered on stdin.\n");
+fprintf(stdout,"'-st'		Connection inactivity timeout in seconds. Set high for sites that 'throttle'\n");
+fprintf(stdout,"'-t'		specifies website type.\n");
+fprintf(stdout,"'-r'		Resume download (only works when writing a single file, not with +o).\n");
+fprintf(stdout,"'-f'		specifies preferred video/audio formats for sites that offer more than one\n");
+fprintf(stdout,"			example: flv:640x480,flv,mp4,mp3\n");
+fprintf(stdout,"			Use -T to get a list of formats the site offers\n");
+fprintf(stdout,"			Use * to mean 'any format' (the default)\n");
+fprintf(stdout,"			example: flv:640x480,mp4:640x480,*\n");
+fprintf(stdout,"'-o'		specifies output file ( '-' for stdout)\n");
+fprintf(stdout,"'+o'		add an output file to list of output files ( '-' for stdout)\n");
+fprintf(stdout,"'-x'		try to avoid 'family filter' on some sites\n");
+fprintf(stdout,"'-n'		For pages with multiple movies (not movie formats, but movies) specifes item selection for download. Argument has the form:\n");
+fprintf(stdout,"			-n all		Download all\n");
+fprintf(stdout,"			-n 2		Download 2nd item\n");
+fprintf(stdout,"			-n 2-5		Download 2nd to 5th item\n");
+fprintf(stdout,"			-n 2-		Download from 2nd item onwards\n");
+fprintf(stdout,"			-n -8		Download from 1st to 8th item\n");
+fprintf(stdout,"-test-sites		Test downloading from each supported website");
+fprintf(stdout,"\nThe '-t' argument is optional, Movgrab will try to guess the download type from the provided url.\n\n");
 
-fprintf(stderr,"The url should be that of the page that the movie would normally appear on. Movgrab examines the page for embed tags and other information that would normally cause the movie to play on that page.\n");
+fprintf(stdout,"The url should be that of the page that the movie would normally appear on. Movgrab examines the page for embed tags and other information that would normally cause the movie to play on that page.\n");
 
-fprintf(stderr,"\nDownload types are:\n");
-for (i=1; DownloadTypes[i] !=NULL; i++) fprintf(stderr,"%-20s %s\n",DownloadTypes[i],DownloadNames[i]);
+fprintf(stdout,"\nDownload types are:\n");
+for (i=1; DownloadTypes[i] !=NULL; i++) fprintf(stdout,"%-20s %s\n",DownloadTypes[i],DownloadNames[i]);
 
-fprintf(stderr,"\nIf a website is not in the list, try 'movgrab -t generic <url>'\n");
-fprintf(stderr,"\nFeel free to email me and tell me if you've used this software!\n");
+fprintf(stdout,"\nIf a website is not in the list, try 'movgrab -t generic <url>'\n");
+fprintf(stdout,"\nFeel free to email me and tell me if you've used this software!\n");
 
-fprintf(stderr,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
+fprintf(stdout,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
 
-fprintf(stderr,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', Ashish Disawal, Timo Juhani Lindfors and others.\n");
-fprintf(stderr,"\nSpecial thanks to:\n");
-fprintf(stderr,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
-fprintf(stderr,"	Robert Crowley (http://tools.99k.org/) For all sorts of bug reports and advice.\n");
+fprintf(stdout,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', Ashish Disawal, Timo Juhani Lindfors and others.\n");
+fprintf(stdout,"\nSpecial thanks to:\n");
+fprintf(stdout,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
+fprintf(stdout,"	Robert Crowley (http://tools.99k.org/) For all sorts of bug reports and advice.\n");
 }
 
 

@@ -51,8 +51,10 @@ int GTF=0;
 			Token=CopyStr(Token,Item);
 		}
 
-		if (Flags & EXTRACT_DEQUOTE) Item=HTTPUnQuote(Item,Token);
-		else Item=CopyStr(Item,Token);
+
+    if (Flags & EXTRACT_DEQUOTE) Item=HTTPUnQuote(Item,Token);
+    else if (Flags & EXTRACT_DESLASHQUOTE) Item=DeQuoteStr(Item,Token);
+    else Item=CopyStr(Item,Token);
 		StripLeadingWhitespace(Item);
 		StripTrailingWhitespace(Item);
 		StripQuotes(Item);

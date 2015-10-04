@@ -10,6 +10,7 @@
 #define EXTRACT_NOSPACES 4
 #define EXTRACT_INCLUDE_START 8
 #define EXTRACT_GUESSTYPE 16
+#define EXTRACT_DESLASHQUOTE 32
 
 
 //This function Extracts Text from a line that's found between two specified

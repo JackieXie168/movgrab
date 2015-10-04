@@ -2,7 +2,7 @@
 #ifndef MOVGRAB_COMMON
 #define MOVGRAB_COMMON
 //This is doable through autoconf, but I'm sick of fighting with it
-#define Version "1.1.5"
+#define Version "1.1.6"
 
 #include "libUseful-2.0/libUseful.h"
 #include <string.h>

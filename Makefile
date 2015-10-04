@@ -1,5 +1,5 @@
 CC = gcc
-VERSION = 1.1.5
+VERSION = 1.1.1
 CFLAGS = -g -O2
 LIBS = -lz 
 INSTALL=/bin/install -c

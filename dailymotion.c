@@ -1,68 +1,41 @@
 #include "dailymotion.h"
 
-char *GetDailyMotionFormat(char *Formats, char **Val)
+
+void DecodeDailyMotionFormats(char *Format, ListNode *Vars)
 {
-char *Token=NULL, *Fmt=NULL, *ptr;
-char *ptr2;
-
-	printf("DEC: %s\n",Formats);
-
-	*Val=CopyStr(*Val,"");
-	ptr=GetToken(Formats,",",&Fmt,0);
-
-	ptr2=GetToken(Fmt,":",&Token,GETTOKEN_QUOTES);
-	ptr2=GetToken(ptr2,":",&Token,GETTOKEN_QUOTES);
-	if (strncmp(Token,"http",4) ==0) *Val=DeQuoteStr(*Val,Token);
-
-DestroyString(Token);
-DestroyString(Fmt);
-
-return(ptr);
-}
-
-
-char *DecodeDailyMotionFormats(char *Formats, ListNode *Vars)
-{
-char *Token=NULL, *ptr;
-
-	ptr=GetDailyMotionFormat(Formats,&Token);
-	while (ptr)
+	if (strstr(Format,"FLV-320x240")) 
 	{
-	if (strstr(Token,"FLV-320x240")) 
-	{
-		SetVar(Vars,"item:flv:320x240",Token);
+		SetVar(Vars,"item:flv:320x240",Format);
 	}
-	else if (strstr(Token,"FLV-80x60")) 
+	else if (strstr(Format,"FLV-80x60")) 
 	{
-		SetVar(Vars,"item:flv:80x60",Token);
+		SetVar(Vars,"item:flv:80x60",Format);
 	}
-	else if (strstr(Token,"ON2-848x480"))
+	else if (strstr(Format,"ON2-848x480"))
 	{
-			SetVar(Vars,"item:on2:848x480",Token);
+			SetVar(Vars,"item:on2:848x480",Format);
 	}
-	else if (strstr(Token,"ON2-320x240")) 
+	else if (strstr(Format,"ON2-320x240")) 
 	{
-			SetVar(Vars,"item:on2:320x240",Token);
+			SetVar(Vars,"item:on2:320x240",Format);
 	}
-	else if (strstr(Token,"H264-848x480")) 
+	else if (strstr(Format,"H264-848x480")) 
 	{
-		SetVar(Vars,"item:mp4-h264:848x480",Token);
+		SetVar(Vars,"item:mp4-h264:848x480",Format);
 	}
-	else if (strstr(Token,"H264-512x384")) 
+	else if (strstr(Format,"H264-512x384")) 
 	{
-			SetVar(Vars,"item:mp4-h264:512x384",Token);
+			SetVar(Vars,"item:mp4-h264:512x384",Format);
 	}
-	else if (strstr(Token,"H264-1280x720")) 
+	else if (strstr(Format,"H264-320x240")) 
 	{
-			SetVar(Vars,"item:mp4-h264:1280x720",Token);
+			SetVar(Vars,"item:mp4-h264:320x240",Format);
 	}
-	else if (StrLen(Token)) fprintf(stderr,"Unknown DailyMotion Format: [%s]\n",Token);
+	else if (strstr(Format,"H264-1280x720")) 
+	{
+			SetVar(Vars,"item:mp4-h264:1280x720",Format);
+	}
+	else if (StrLen(Format)) fprintf(stderr,"Unknown DailyMotion Format: [%s]\n",Format);
 
-	ptr=GetDailyMotionFormat(ptr,&Token);
-	}
-
-DestroyString(Token);
-
-return(ptr);
 }
 

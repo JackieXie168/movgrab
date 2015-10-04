@@ -508,7 +508,6 @@ else if (Type==TYPE_DAILYMOTION)
 	{
 		Tempstr=HTTPQuote(Tempstr,Doc);
 		NextPath=FormatStr(NextPath,"http://%s:%d/family_filter?urlback=/%s&enable=false",Server,Port,Tempstr);
-   *Flags |= FLAG_POST;
 	}
 	else NextPath=CopyStr(NextPath,Path);
 }
@@ -618,11 +617,18 @@ case TYPE_METACAFE_FINAL:
 break;
 
 case TYPE_DAILYMOTION:
-	Flags &= ~FLAG_POST;
-// Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&allowFullScreen=true&allowScriptAccess=always&callback=player_proxy&lang=en&autoplay=1&uid=$(Extra)",Vars,0);
- Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
-  	RetVal=DownloadItem(GetVar(Vars,"ID"), Title, Fmt, Flags);
+  Tempstr=SubstituteVarsInString(Tempstr,"http://www.dailymotion.com/services/oembed?url=$(ID)&format=xml",Vars,0);
+  RetVal=DownloadPage(Tempstr,TYPE_DAILYMOTION_STAGE2,Title,Flags);
 break;
+
+case TYPE_DAILYMOTION_STAGE2:
+  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+  RetVal=DownloadPage(Tempstr,TYPE_DAILYMOTION_STAGE3,Title,Flags);
+break;
+
+case TYPE_DAILYMOTION_STAGE3:
+  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+    RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 
 case TYPE_MOBANGO:
  Tempstr=SubstituteVarsInString(Tempstr,"http://media.mobango.com/$(ID)",Vars,0);
@@ -1174,31 +1180,59 @@ case TYPE_FIVE_MIN:
 	}
 break;
 
-
 case TYPE_DAILYMOTION:
-#define DAILYMOTION_ITEM "addVariable(\"sequence\","
-#define DAILYMOTION_ITEM_END ")"
-#define DAILYMOTION_URL "\"sdURL\":\""
-#define DAILYMOTION_URL_END "\""
+#define DAILYMOTION_ITEM "oembed?url="
+#define DAILYMOTION_ITEM_END "&format=xml"
 #define DAILYMOTION_TITLE_START "<h1 class=\"dmco_title\"><span class=\"title\" title=\""
 #define DAILYMOTION_TITLE_END "\""
 
 
-	if (strstr(Tempstr,DAILYMOTION_TITLE_START))
-	{
-		GenericExtractFromLine(Tempstr, "Title",DAILYMOTION_TITLE_START,DAILYMOTION_TITLE_END,Vars,EXTRACT_DEQUOTE);
-	}
+  if (strstr(Tempstr,DAILYMOTION_TITLE_START))
+  {
+    GenericExtractFromLine(Tempstr, "Title",DAILYMOTION_TITLE_START,DAILYMOTION_TITLE_END,Vars,EXTRACT_DEQUOTE);
+  }
 
 
-	if (strstr(Tempstr,DAILYMOTION_ITEM))
-	{
-		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_ITEM,DAILYMOTION_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		Tempstr=CopyStr(Tempstr,GetVar(Vars,"DailyMotionItems"));
-	
-		GenericExtractFromLine(Tempstr, "ID",DAILYMOTION_URL,DAILYMOTION_URL_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		Tempstr=DeQuoteStr(Tempstr,GetVar(Vars,"ID"));
-		SetVar(Vars,"ID",Tempstr);
-	}
+  if (strstr(Tempstr,DAILYMOTION_ITEM))
+  {
+    GenericExtractFromLine(Tempstr, "ID",DAILYMOTION_ITEM,DAILYMOTION_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+  }
+break;
+
+
+case TYPE_DAILYMOTION_STAGE2:
+#define DAILYMOTION_S2_ITEM "iframe src=\""
+#define DAILYMOTION_S2_ITEM_END "\""
+
+  if (strstr(Tempstr,DAILYMOTION_S2_ITEM))
+  {
+    GenericExtractFromLine(Tempstr, "ID",DAILYMOTION_S2_ITEM,DAILYMOTION_S2_ITEM_END,Vars,EXTRACT_NOSPACES);
+  }
+break;
+
+case TYPE_DAILYMOTION_STAGE3:
+#define DAILYMOTION_S3_ITEM "stream_h264_url\":\""
+#define DAILYMOTION_S3_LD_ITEM "stream_h264_ld_url\":\""
+#define DAILYMOTION_S3_HD_ITEM "stream_h264_hd_url\":\""
+#define DAILYMOTION_S3_ITEM_END "\""
+
+  if (strstr(Tempstr,DAILYMOTION_S3_ITEM))
+  {
+    GenericExtractFromLine(Tempstr, "dailymotion:tmp",DAILYMOTION_S3_ITEM,DAILYMOTION_S3_ITEM_END,Vars,EXTRACT_NOSPACES| EXTRACT_DESLASHQUOTE);
+		DecodeDailyMotionFormats(GetVar(Vars,"dailymotion:tmp"), Vars);
+  }
+
+  if (strstr(Tempstr,DAILYMOTION_S3_LD_ITEM))
+  {
+    GenericExtractFromLine(Tempstr, "dailymotion:tmp",DAILYMOTION_S3_LD_ITEM,DAILYMOTION_S3_ITEM_END,Vars,EXTRACT_NOSPACES| EXTRACT_DESLASHQUOTE);
+		DecodeDailyMotionFormats(GetVar(Vars,"dailymotion:tmp"), Vars);
+  }
+
+  if (strstr(Tempstr,DAILYMOTION_S3_HD_ITEM))
+  {
+    GenericExtractFromLine(Tempstr, "dailymotion:tmp",DAILYMOTION_S3_HD_ITEM,DAILYMOTION_S3_ITEM_END,Vars,EXTRACT_NOSPACES| EXTRACT_DESLASHQUOTE);
+		DecodeDailyMotionFormats(GetVar(Vars,"dailymotion:tmp"), Vars);
+  }
 break;
 
 

@@ -787,8 +787,9 @@ unsigned char inchar;
 int result;
 
 result=STREAMReadBytes(S, &inchar,1);
-if (result < 1) return(result);
-else return((int) inchar);
+if (result < 0) return(result);
+if (result==0) return(STREAM_NODATA);
+return((int) inchar);
 }
 
 
@@ -848,12 +849,17 @@ Tempptr=CopyStr(Buffer,"");
 
 inchar=STREAMReadChar(S);
 
-while (inchar > 0)
+while (inchar != EOF)
 {
 	//if ((len % 100)== 0) Tempptr=realloc(Tempptr,(len/100 +1) *100 +2);
 	//*(Tempptr+len)=inchar;
+
+		if (inchar >= 0)
+		{
     	Tempptr=AddCharToBuffer(Tempptr,len,(char) inchar);
 			len++;
+		}
+		else if (inchar !=STREAM_NODATA) break;
 
     if (inchar==Term) break;
     inchar=STREAMReadChar(S);

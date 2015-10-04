@@ -4,6 +4,6 @@
 
 #include "common.h"
 
-char *DecodeDailyMotionFormats(char *Formats, ListNode *Vars);
+void DecodeDailyMotionFormats(char *Formats, ListNode *Vars);
 
 #endif
