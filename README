@@ -14,12 +14,14 @@ INSTALL:
 After unpacking the tar-ball:
 		tar -zxf movgrab-1.0.tar.gz
 
-running 'make' in the source directory should be all you have to do.
+Do the usual './configure; make; make install'
 		cd movgrab-1.0
+		./configure
 		make
+		make install
 
-then copy the resulting executable 'movgrab' to somewhere in your path
-		cp movgrab /usr/bin
+If you happen to use a pure https proxy (so NOT TLS upgrade) you might find that you can get it to work by saying 'configure --enable-ssl' and then using the '-p https://myproxy-address:port' argument of movgrab. Since I've been unable to find such a proxy for testing, I have no idea if this works.
+
 
 USAGE:
 Generally you need to get the url of the webpage that the video would normally appear on if it were playing in your browser. Here are some examples of what URLs might look like:

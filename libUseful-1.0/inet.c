@@ -19,7 +19,6 @@ while (Tempstr)
 StripTrailingWhitespace(Tempstr);
 StripLeadingWhitespace(Tempstr);
 
-printf("GOT: %d %s\n",StrLen(Tempstr),Tempstr);
 if (StrLen(Tempstr) >=MinLength)
 {
 	if (! StrLen(ExtractStr)) RetStr=CopyStr(RetStr,Tempstr);

@@ -1,12 +1,11 @@
-# Generated automatically from Makefile.in by configure.
-CC = gcc
-VERSION = 1.0.1
-CFLAGS = -g -O2
-LIBS = 
-FLAGS=$(CFLAGS)  -DSTDC_HEADERS=1 
-INSTALL=/bin/install -c
-prefix=/usr/local
-bindir=$(prefix)${exec_prefix}/bin
+CC = @CC@
+VERSION = @VERSION@
+CFLAGS = @CFLAGS@
+LIBS = @LIBS@
+FLAGS=$(CFLAGS) @DEFS@
+INSTALL=@INSTALL@
+prefix=@prefix@
+bindir=$(prefix)@bindir@
 
 all: 
 	@cd libUseful-1.0; $(MAKE)

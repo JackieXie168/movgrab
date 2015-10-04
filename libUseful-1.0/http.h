@@ -22,6 +22,9 @@
 #define HTTP_KEEPALIVE 128
 #define HTTP_DEBUG 256
 #define HTTP_PROXY 512
+#define HTTP_SSL 1024
+#define HTTP_SSL_REWRITE 2048
+#define HTTP_CIRCULAR_REDIRECTS 4096
 
 
 typedef struct
@@ -46,6 +49,7 @@ char *Destination;
 char *ResponseCode;
 int Flags;
 char *RedirectPath;
+char *PreviousRedirect;
 char *ContentType;
 char *Timestamp;
 int ContentLength;

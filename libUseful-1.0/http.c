@@ -33,6 +33,7 @@ DestroyString(Info->Method);
 DestroyString(Info->Doc);
 DestroyString(Info->Destination);
 DestroyString(Info->ResponseCode);
+DestroyString(Info->PreviousRedirect);
 DestroyString(Info->RedirectPath);
 DestroyString(Info->ContentType);
 DestroyString(Info->Timestamp);
@@ -598,10 +599,17 @@ char *HTTPParseURL(char *URL, char **Proto, char **Host, int *Port, char **Login
 char *ptr, *p_port;
 char *Token=NULL, *AuthCred=NULL;
 
+//if no port given
+*Port=0;
+
 ptr=URL;
 if (strncmp(ptr,"http:",5)==0) ptr+=5;
 if (strncmp(ptr,"https:",6)==0) ptr+=6;
-*Proto=CopyStrLen(*Proto,URL,ptr-URL);
+if (Proto) 
+{
+	if (! ptr || (ptr==URL)) *Proto=CopyStr(*Proto,"http:");
+	else *Proto=CopyStrLen(*Proto,URL,ptr-URL-1);
+}
 
 while (*ptr=='/') ptr++;
 
@@ -616,6 +624,7 @@ if (StrLen(Token))
 		ptr=GetToken(Token,"@",&AuthCred,0);
 		memmove(Token,ptr,StrLen(ptr)+1);
 	}
+
 p_port=strchr(Token,':');
 if (p_port)
 {
@@ -629,11 +638,11 @@ p_port++;
 
 if (StrLen(AuthCred))
 {
-if (Login)
-{
+	if (Login)
+	{
 		ptr=GetToken(AuthCred,":",Login,0);
 		if (Password) ptr=GetToken(ptr,":",Password,0);
-}
+	}
 
 }
 
@@ -701,7 +710,24 @@ switch (RCode)
 	case 302:
 	case 303:
 	case 307:
+	if (HTTPInfo->PreviousRedirect && (strcmp(HTTPInfo->RedirectPath,HTTPInfo->PreviousRedirect)==0)) result=HTTP_CIRCULAR_REDIRECTS;
+	else
+	{
+	HTTPInfo->PreviousRedirect=CopyStr(HTTPInfo->PreviousRedirect,HTTPInfo->RedirectPath);
 	ptr=HTTPParseURL(HTTPInfo->RedirectPath, &Tempstr, &HTTPInfo->Host, &HTTPInfo->Port,NULL,NULL);
+
+	//if HTTP_SSL_REWRITE is set, then all redirects get forced to https
+	if (HTTPInfo->Flags & HTTP_SSL_REWRITE) Tempstr=CopyStr(Tempstr,"https");
+	if (strcmp(Tempstr,"https")==0) 
+	{
+		HTTPInfo->Flags |= HTTP_SSL;
+		if (HTTPInfo->Port==0) HTTPInfo->Port=443;
+	}
+	else 
+	{
+		HTTPInfo->Flags &= ~HTTP_SSL;
+		if (HTTPInfo->Port==0) HTTPInfo->Port=80;
+	}
 
 	//Redirects must be get!
 	HTTPInfo->Method=CopyStr(HTTPInfo->Method,"GET");
@@ -710,6 +736,7 @@ switch (RCode)
 	HTTPInfo->PostContentType=CopyStr(HTTPInfo->PostContentType,"");
 	HTTPInfo->PostContentLength=0;
 	if (! (HTTPInfo->Flags & HTTP_NOREDIRECT)) result=HTTP_REDIRECT;
+	}
 	break;
 
 	//401 Means authenticate, so it's not a pure error
@@ -739,14 +766,26 @@ STREAM *HTTPConnect(HTTPInfoStruct *Info)
 {
 STREAM *S;
 char *Proto=NULL, *Host=NULL;
-int Port;
+int Port=80, Flags=0;
 
 S=STREAMCreate();
+Flags=Info->Flags;
+
 if (StrLen(Info->Proxy))
 {
-if (! Info->ProxyAuthorization) Info->ProxyAuthorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
-HTTPParseURL(Info->Proxy, &Proto, &Host, &Port, &Info->ProxyAuthorization->Logon, &Info->ProxyAuthorization->Password);
-printf("PARSE PROYX: %s %s\n",Info->ProxyAuthorization->Logon,Info->ProxyAuthorization->Password);
+	if (! Info->ProxyAuthorization) Info->ProxyAuthorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	HTTPParseURL(Info->Proxy, &Proto, &Host, &Port, &Info->ProxyAuthorization->Logon, &Info->ProxyAuthorization->Password);
+	
+	if (strcasecmp(Proto,"https")==0) 
+	{
+		Flags |= HTTP_SSL; 
+		if (Port==0) Port=443;
+	}
+	else 
+	{
+		Flags &= ~HTTP_SSL;
+		if (Port==0) Port=80;
+	}
 }
 else
 {
@@ -756,6 +795,7 @@ else
 
 if (STREAMConnectToHost(S,Host,Port,0))
 {
+	if (Flags & HTTP_SSL) DoSSLClientNegotiation(S,FALSE);
 	HTTPSendHeaders(S,Info);
 }
 else
@@ -798,6 +838,7 @@ while (1)
 		if (result == HTTP_OKAY) break;
 		if (result == HTTP_NOTFOUND) break;
 		if (result == HTTP_ERROR) break;
+		if (result == HTTP_CIRCULAR_REDIRECTS) break;
 
 
 		if (
@@ -845,11 +886,12 @@ STREAM *HTTPMethod(char *Method, char *URL, char *Logon, char *Password)
 HTTPInfoStruct *Info;
 char *Host=NULL, *Doc=NULL, *Proto=NULL, *ContentType=NULL;
 char *ptr=NULL, *dptr, *p_port;
-int Port=80;
+int Port=0;
 STREAM *S;
 
 
 dptr=HTTPParseURL(URL, &Proto, &Host, &Port, NULL, NULL);
+if (Port==0) Port=80;
 Doc=MCopyStr(Doc,"/",dptr,NULL);
 if (StrLen(dptr))
 {
@@ -873,6 +915,9 @@ if (StrLen(dptr))
 
 Info=HTTPInfoCreate(Host, Port, Logon, Password, Method, Doc, ContentType, StrLen(ptr));
 if (StrLen(ptr)) Info->PostData=CopyStr(Info->PostData,ptr);
+if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
+
+
 S=HTTPTransact(Info);
 
 DestroyString(ContentType);

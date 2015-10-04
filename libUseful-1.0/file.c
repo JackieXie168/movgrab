@@ -561,7 +561,9 @@ read_result=SSL_read((SSL *) S->Extra, tmpBuff, S->BuffSize-S->InEnd);
 }
 else
 #endif
+{
 read_result=read(S->in_fd, tmpBuff, S->BuffSize-S->InEnd);
+}
 
 if (read_result > 0) result=read_result;
 else
