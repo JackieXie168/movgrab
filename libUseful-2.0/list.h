@@ -1,11 +1,6 @@
 #ifndef LIB_USEFUL_LIST
 #define LIB_USEFUL_LIST
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define LIST_FLAG_DELETE 1
 
 typedef struct lnode
@@ -20,6 +15,11 @@ struct lnode *Prev;
 struct lnode *Next;
 } ListNode;
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void (*LIST_ITEM_DESTROY_FUNC)(void *);
 typedef void *(*LIST_ITEM_CLONE_FUNC)(void *);
 
@@ -29,7 +29,7 @@ void *AddItemToArray(void *Array,int size, void *Item);
 void *DeleteItemFromArray(void *Array,int size, int ItemNo);
 void ListDestroy(ListNode *, LIST_ITEM_DESTROY_FUNC);
 void ListClear(ListNode *, LIST_ITEM_DESTROY_FUNC);
-ListNode *ListAddItemt(ListNode *,void *);
+ListNode *ListAddItem(ListNode *,void *);
 ListNode *ListAddNamedItem(ListNode *, const char *Name, void *);
 ListNode *ListInsertItem(ListNode *,void *);
 ListNode *ListInsertNamedItem(ListNode *,const char *,void *);

@@ -320,6 +320,7 @@ THash *Hash=NULL;
 
 Hash=(THash *) calloc(1,sizeof(THash));
 if (strcasecmp(Type,"md5")==0) HashInitMD5(Hash);
+else if (strcasecmp(Type,"sha")==0) HashInitSHA1(Hash);
 else if (strcasecmp(Type,"sha1")==0) HashInitSHA1(Hash);
 else if (strcasecmp(Type,"sha256")==0) HashInitSHA256(Hash);
 else if (strcasecmp(Type,"sha512")==0) HashInitSHA512(Hash);
@@ -341,6 +342,34 @@ Hash=HashInit(Type);
 Hash->Update(Hash, text, len);
 return(Hash->Finish(Hash, Encoding, Return));
 }
+
+
+int HashFile(char **Return, char *Type, char *Path, int Encoding)
+{
+THash *Hash;
+STREAM *S;
+char *Tempstr=NULL;
+int result;
+
+S=STREAMOpenFile(Path,O_RDONLY);
+if (! S) return(FALSE);
+
+Hash=HashInit(Type);
+
+Tempstr=SetStrLen(Tempstr,4096);
+result=STREAMReadBytes(S,Tempstr,4096);
+while (result !=EOF)
+{
+Hash->Update(Hash, Tempstr, result);
+result=STREAMReadBytes(S,Tempstr,4096);
+}
+
+DestroyString(Tempstr);
+STREAMClose(S);
+
+return(Hash->Finish(Hash, Encoding, Return));
+}
+
 
 void DestroyHash(THash *Hash)
 {

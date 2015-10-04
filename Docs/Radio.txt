@@ -6,14 +6,15 @@ Media players like mplayer can generally handle such streams without any assista
 
 Using movgrab's "-o -" flag to stream the download to stdout, and then piping it into the player allows these problems to be overcome. So:
 
-movgrab -o - 'http://www.triplag.com/webradio/darkpsy/triplag-darkpsy-playlist.asx' | mplayer -
+movgrab -o - 'http://www.triplag.com/webradio/darkpsy/triplag-darkpsy-playlist.asx' | mplayer - -cache 1024
 
-
-Will get you your dark trance fix even if mplayer balks at the .asx file.
+Will get you your dark trance fix even if mplayer balks at the .asx file. Recent versions of mplayer require a -cache argument to stream from stdin. Even with this argument they complain about the cache emptying, but if you use a -cache it will eventually start to play. 
 
 Similarly mpg123 can be used thusly
 
 movgrab -o - 'http://www.triplag.com/webradio/darkpsy/triplag-darkpsy-playlist.asx' | mpg123 -
+
+For ogg-vorbis streams there's "ogg123" which comes as part of the vorbis distrobution.
 
 Of course, movgrab can also write the stream to a file, 
 

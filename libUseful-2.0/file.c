@@ -71,18 +71,13 @@ return(FALSE);
 }
 
 
-int STREAMCheckForBytes(STREAM *Stream)
-{
-  if (! Stream) return(0);
-  if (Stream->InEnd > Stream->InStart) return(1);
-  if (Stream->in_fd==-1) return(0);
-  return(FDCheckForBytes(Stream->in_fd));
-}
 
+/*STREAM Functions */
 
+/*Set non blocking IO on a stream*/
 void STREAMSetNonBlock(STREAM *S, int val)
 {
-int flags;
+int flags=0;
 
 	if (val) S->Flags |= SF_NONBLOCK;
   else S->Flags &= (~SF_NONBLOCK);
@@ -94,6 +89,46 @@ int flags;
 
   fcntl(S->in_fd, F_SETFL, flags);
 }
+
+
+/*Set timeout for select calls within STREAM*/
+void STREAMSetTimeout(STREAM *S, int val)
+{
+S->Timeout=val;
+}
+
+
+/*Set flush type for STREAM*/
+void STREAMSetFlushType(STREAM *S, int Type, int val)
+{
+if (Type==FLUSH_FULL) S->Flags &= ~(FLUSH_LINE | FLUSH_BLOCK);
+else S->Flags |= Type;
+S->BlockSize=val;
+}
+
+/* This reads chunks from a file and when if finds a newline it resets */
+/* the file pointer to that position */
+void STREAMResizeBuffer(STREAM *Stream, int size)
+{
+   Stream->InputBuff=(char *) realloc(Stream->InputBuff,size);
+   Stream->OutputBuff=(char *) realloc(Stream->OutputBuff,size);
+   Stream->BuffSize=size;
+   if (Stream->InStart > Stream->BuffSize) Stream->InStart=0;
+   if (Stream->InEnd > Stream->BuffSize) Stream->InEnd=0;
+   if (Stream->OutEnd > Stream->BuffSize) Stream->OutEnd=0;
+}
+
+
+
+
+int STREAMCheckForBytes(STREAM *S)
+{
+  if (! S) return(0);
+  if (S->InEnd > S->InStart) return(1);
+  if (S->in_fd==-1) return(0);
+  return(FDCheckForBytes(S->in_fd));
+}
+
 
 
 int STREAMCountWaitingBytes(STREAM *S)
@@ -124,7 +159,9 @@ STREAM *STREAMSelect(ListNode *Streams)
  while (Curr)
  {
    S=(STREAM *) Curr->Item;
-	 STREAMPump(S,FALSE);
+
+	//Pump any data in the stream
+	 STREAMFlush(S);
    if (S->InEnd > S->InStart) return(S);
    FD_SET(S->in_fd,&SelectSet);
    if (S->in_fd > highfd) highfd=S->in_fd;
@@ -212,106 +249,26 @@ else
   S->BytesWritten+=result;
 }
 
+
+//memmove any remaining data so that we add onto the end of it
+S->OutEnd -= count;
+if (S->OutEnd > 0) memmove(S->OutputBuff,S->OutputBuff+count, S->OutEnd);
+
+
 return(count);
 }
 
 
 
-/*A stream can have a series of 'processor modules' associated with it' */
-/*which do things to the data before it is read/written. This function  */
-/*pumps the data through the processor list, and eventually writes it out */
-int STREAMPump(STREAM *S, int Final)
+
+int STREAMFlush(STREAM *S)
 {
-TProcessingModule *Mod;
-ListNode *Curr;
-char *InBuff=NULL, *OutBuff=NULL;
-int len, olen, result=0;
-int AllDataWritten=FALSE;
-
-if (! S) return(-1);
-if (S->out_fd==-1) return(-1);
-
-len=S->OutEnd - S->OutStart;
-InBuff=SetStrLen(InBuff,len+1);
-memset(InBuff,0,len+1);
-memcpy(InBuff,S->OutputBuff + S->OutStart,len);
-
-//This looks strange.. but we have copied all the data
-//into the buffer that we pass to the DataProcessors
-S->OutEnd=0;
-S->OutStart=0;
-
-while (! AllDataWritten)
-{
-  AllDataWritten=TRUE;
-  if ((! Final) && (len==0)) break;
-  Curr=ListGetNext(S->ProcessingModules);
-  while (Curr)
-  {
-     Mod=(TProcessingModule *) Curr->Item;
-
-     if (len < (BUFSIZ / 2)) olen=BUFSIZ;
-     else
-     {
-        olen=len*2;
-        if (Final) AllDataWritten=FALSE;
-     }
-
-     OutBuff=SetStrLen(OutBuff,olen);
-		 result=0;
-
-     if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,len,OutBuff,olen);
-     else if (Mod->Write && ((len > 0) || Final)) result=Mod->Write(Mod,InBuff,len,OutBuff,olen);
-		
-		 len=0;			
-     while (result > 0)
-     {
-			if (Final) AllDataWritten=FALSE;
-			InBuff=SetStrLen(InBuff,len+result);
-			memcpy(InBuff+len,OutBuff,result);
-			len+=result;
-			if (result < olen) break;
-
-			if (Final) result=EOF;
-			else result=0;
-		   if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,0,OutBuff,olen);
-			else if (Mod->Write) result=Mod->Write(Mod,InBuff,0,OutBuff,olen);
-     }
-     Curr=ListGetNext(Curr);
-  }
-
-//Whatever happened above, InBuff should now contain the data to be written!
-if (len > 0)
-{
-        result=STREAMInternalFinalWriteBytes(S, InBuff, len);
-        if (result==0) result=STREAM_TIMEOUT;
-        if (result < 1)
-        {
-                S->Flags |= SF_WRITE_ERROR;
-                break;
-        }
-}
-len=0;
-}
-
-DestroyString(OutBuff);
-DestroyString(InBuff);
-
-return(result);
-}
-
-
-
-
-int  STREAMFlush(STREAM *S)
-{
-return(STREAMPump(S,0));
+	STREAMWriteBytes(S,NULL,0);
 }
 
 void STREAMClear(STREAM *S)
 {
- STREAMPump(S,0);
- S->OutStart=0;
+ STREAMFlush(S);
  S->InStart=0;
 }
 
@@ -323,8 +280,9 @@ int STREAMReadThroughProcessors(STREAM *S, char *Bytes, int InLen)
 {
 TProcessingModule *Mod;
 ListNode *Curr;
-char *InBuff=NULL, *OutBuff=NULL;
+char *InBuff=NULL, *OutputBuff=NULL;
 int len=0, olen=0;
+
 
 len=InLen;
 
@@ -337,33 +295,38 @@ memcpy(InBuff,Bytes ,len);
 Curr=ListGetNext(S->ProcessingModules);
 while (Curr)
 {
-Mod=(TProcessingModule *) Curr->Item;
-if (len==0) olen=1024;
-else olen=len * 8;
+	Mod=(TProcessingModule *) Curr->Item;
+	if (len==0) olen=1024;
+	else olen=len * 8;
 
-OutBuff=SetStrLen(OutBuff,olen);
+	OutputBuff=SetStrLen(OutputBuff,olen);
 
-len=Mod->Read(Mod,InBuff,len,OutBuff,olen);
+	if (Mod->Read) 
+	{
+	len=Mod->Read(Mod,InBuff,len,&OutputBuff,&olen,FALSE);
 
-if (len==-1)
-{
-    S->Flags |=SF_DATA_ERROR;
-    break;
-}
+	/*
+	if (len==-1)
+	{
+ 		S->State |=SS_DATA_ERROR;
+		break;
+	}
+	*/
 
-if (len==0) break;
-else
-{
-	InBuff=SetStrLen(InBuff,len);
-	memcpy(InBuff,OutBuff,len);
-}
+	if (len==EOF) break;	
+	if (len > 0)
+	{
+		InBuff=SetStrLen(InBuff,len);
+		memcpy(InBuff,OutputBuff,len);
+	}
+	}
 
-Curr=ListGetNext(Curr);
+	Curr=ListGetNext(Curr);
 }
 
 if (
-			(! (S->Flags & SF_DATA_ERROR)) &&
-			len
+			(! (S->State & SS_DATA_ERROR)) &&
+			(len > 0)
 		)
 {
 //Whatever happened above, InBuff should now contain the data to be written!
@@ -376,42 +339,16 @@ memcpy(S->InputBuff + S->InEnd, InBuff, len);
 S->InEnd+=len;
 }
 
-DestroyString(OutBuff);
+DestroyString(OutputBuff);
 DestroyString(InBuff);
 
 olen=S->InEnd - S->InStart;
 
-if ((olen==0) && (S->Flags & SF_DATA_ERROR)) return(STREAM_DATA_ERROR);
+if ((olen==0) && (S->State & SS_DATA_ERROR)) return(STREAM_DATA_ERROR);
 return(olen);
 }
 
 
-
-/* This reads chunks from a file and when if finds a newline it resets */
-/* the file pointer to that position */
-void STREAMResizeBuffer(STREAM *Stream, int size)
-{
-   Stream->InputBuff=(char *) realloc(Stream->InputBuff,size);
-   Stream->OutputBuff=(char *) realloc(Stream->OutputBuff,size);
-   Stream->BuffSize=size;
-   if (Stream->InStart > Stream->BuffSize) Stream->InStart=0;
-   if (Stream->InEnd > Stream->BuffSize) Stream->InEnd=0;
-   if (Stream->OutStart > Stream->BuffSize) Stream->OutStart=0;
-   if (Stream->OutEnd > Stream->BuffSize) Stream->OutEnd=0;
-}
-
-
-void STREAMSetTimeout(STREAM *Stream, int val)
-{
-Stream->Timeout=val;
-}
-
-
-void STREAMSetFlushType(STREAM *Stream, int Type, int val)
-{
-Stream->Flags|=Type;
-//Stream->FlushVal=val;
-}
 
 
 int STREAMLock(STREAM *S, int val)
@@ -434,6 +371,7 @@ STREAMResizeBuffer(S,4096);
 S->in_fd=-1;
 S->out_fd=-1;
 S->Timeout=30;
+S->Flags |= FLUSH_ALWAYS;
 
 return(S);
 }
@@ -464,27 +402,7 @@ return(Stream);
 }
 
 
-STREAM *STREAMSpawnCommand(char *Command, int Type)
-{
-int to_fd, from_fd;
-STREAM *S=NULL;
-
-if (Type==COMMS_BY_PIPE)
-{
-if (! PipeSpawn(&to_fd, &from_fd, NULL, Command)) return(NULL);
-S=STREAMFromDualFD(from_fd, to_fd);
-}
-else if (Type==COMMS_BY_PTY) 
-{
-PseudoTTYSpawn(&to_fd,Command);
-S=STREAMFromFD(to_fd);
-}
-STREAMSetFlushType(S,FLUSH_LINE,0);
-return(S);
-}
-
-
-STREAM *STREAMOpenFile(char *FilePath, int Flags)
+STREAM *STREAMOpenFile(const char *FilePath, int Flags)
 {
 int fd, Mode=FALSE;
 STREAM *Stream;
@@ -535,6 +453,8 @@ if (Flags & O_TRUNC) ftruncate(fd,0);
 Stream=STREAMFromFD(fd);
 Stream->Path=CopyStr(Stream->Path,FilePath);
 STREAMSetTimeout(Stream,0);
+STREAMSetFlushType(Stream,FLUSH_FULL,0);
+
 return(Stream);
 }
 
@@ -544,10 +464,10 @@ STREAM *STREAMClose(STREAM *S)
 int len;
 
 if (! S) return(NULL);
-len=S->OutEnd - S->OutStart; 
+len=S->OutEnd; 
 
 STREAMReadThroughProcessors(S, NULL, 0);
-STREAMPump(S,1);
+STREAMFlush(S);
 
 if ( 
 		(StrLen(S->Path)==0) ||
@@ -629,7 +549,7 @@ if (SSL_pending((SSL *) SSL_CTX) > 0) WaitForBytes=FALSE;
 
 
 
-if ((S->Timeout > 0) && WaitForBytes)
+if ((S->Timeout > 0) && (! (S->Flags & SF_NONBLOCK)) && WaitForBytes)
 {
    FD_ZERO(&selectset);
    FD_SET(S->in_fd, &selectset);
@@ -785,7 +705,7 @@ double STREAMSeek(STREAM *S, double offset, int whence)
 double pos;
 int wherefrom;
 
-if (S->OutEnd != S->OutStart)
+if (S->OutEnd > 0)
 {
 	STREAMFlush(S);
 } 
@@ -807,42 +727,132 @@ S->InEnd=0;
 #ifdef _LARGEFILE64_SOURCE
 pos=(double) lseek64(S->in_fd,(off64_t) pos, wherefrom);
 #else
-pos=(double) lseek(S->in_fd,(off_t) pos,wherefrom);
+pos=(double) lseek(S->in_fd,(off_t) pos, wherefrom);
 #endif
 
 
 return(pos);
 }
 
-
-
-int STREAMWriteBytes(STREAM *S, char *Buffer, int Bytes)
+/*A stream can have a series of 'processor modules' associated with it' */
+/*which do things to the data before it is read/written. This function  */
+/*pumps the data through the processor list, and eventually writes it out */
+int STREAMWriteBytes(STREAM *S,const char *Data, int DataLen)
 {
-int result=TRUE;
-int len;
-int written=0, remaining;
+TProcessingModule *Mod;
+ListNode *Curr;
+char *i_data, *ptr;
+char *TempBuff=NULL;
+int TempLen=BUFSIZ;
+int len, i_len, o_len, written=0, result=0;
+int AllDataWritten=FALSE, Flush=FALSE;
 
-if (S->Flags & SF_WRITE_ERROR) return(STREAM_CLOSED);
 
-while (written < Bytes)
+if (! S) return(STREAM_CLOSED);
+if (S->out_fd==-1) return(STREAM_CLOSED);
+if (S->State & SS_WRITE_ERROR) return(STREAM_CLOSED);
+
+if (DataLen==0) Flush=TRUE;
+
+i_data=Data;
+i_len=DataLen;
+
+//if there are no processing modules, then this will be untouched, and will be our output
+if (DataLen > TempLen) TempLen=DataLen;
+TempBuff=SetStrLen(TempBuff,TempLen);
+if (DataLen > 0) memcpy(TempBuff,Data,DataLen);
+o_len=DataLen;
+
+
+while (! AllDataWritten)
 {
-len=S->BuffSize - S->OutEnd;
+  AllDataWritten=TRUE;
 
-remaining=Bytes-written;
-if (remaining < len) len=remaining;
-memcpy(S->OutputBuff+S->OutEnd,Buffer+written,len);
-S->OutEnd+=len;
-written+=len;
+	//Go through processing modules feeding the data from the previous one into them
+  Curr=ListGetNext(S->ProcessingModules);
+  while (Curr)
+  {
+     Mod=(TProcessingModule *) Curr->Item;
 
-len=S->BuffSize - S->OutEnd;
-if (len < 1) STREAMPump(S,0);
+
+     	if (Mod->Write && ((i_len > 0) || Flush)) 
+			{	
+				o_len=Mod->Write(Mod,i_data,i_len,&TempBuff,&TempLen,Flush);
+		 		if (Flush && (o_len !=EOF)) AllDataWritten=FALSE;
+			}
+		 i_data=TempBuff;
+		 i_len=o_len;
+
+     Curr=ListGetNext(Curr);
+  }
+
+
+//Whatever happened above, o_data/o_len should hold data to be written
+ptr=TempBuff;
+
+while (o_len > 0)
+{
+	len=S->BuffSize - S->OutEnd;
+	if (len > o_len) len =o_len;
+
+	memcpy(S->OutputBuff+S->OutEnd,ptr,len);
+	ptr+=len;
+	o_len-=len;
+	S->OutEnd+=len;
+
+	//Buffer Full, Write some bytes!!!
+	if ((S->OutEnd >= S->BuffSize) || (S->BlockSize && (S->OutEnd > S->BlockSize)))
+	{
+		if (S->BlockSize) len=(S->OutEnd / S->BlockSize) * S->BlockSize;
+		else len=S->OutEnd;
+
+    if (len > 0) result=STREAMInternalFinalWriteBytes(S, S->OutputBuff, len);
+	  if (result==0) written=STREAM_TIMEOUT;
+    if (result < 1)
+    {
+         S->State |= SS_WRITE_ERROR;
+				 written=STREAM_CLOSED;
+         break;
+    }
+
+		written+=result;	
+	}
 }
+
+//Must do this to avoid sending data into the queue multiple times!
+i_len=0;
+
+}
+
+
+//if we are told to write zero bytes, that's a flush
+if ((S->OutEnd > 0) && ((DataLen==0) || (S->Flags & FLUSH_ALWAYS)))
+{
+	//if we are flushing blocks, then pad out to the blocksize
+	if (S->Flags & FLUSH_BLOCK) 
+	{
+		len=(S->OutEnd / S->BlockSize) * S->BlockSize;
+		if (S->OutEnd > len) len+=S->BlockSize;
+		memset(S->OutputBuff+S->OutEnd,0,len - S->OutEnd);
+		S->OutEnd=len;
+	}
+
+		result=STREAMInternalFinalWriteBytes(S, S->OutputBuff, S->OutEnd);
+		if (result < 0) written=result;
+	else written+=result;
+}
+
+
+DestroyString(TempBuff);
+
 
 return(written);
 }
 
 
-int STREAMWriteString(char *Buffer, STREAM *S)
+
+
+int STREAMWriteString(const char *Buffer, STREAM *S)
 {
 int result;
 
@@ -851,7 +861,7 @@ result=STREAMWriteBytes(S,Buffer,strlen(Buffer));
 return(result);
 }
 
-int STREAMWriteLine(char *Buffer, STREAM *S)
+int STREAMWriteLine(const char *Buffer, STREAM *S)
 {
 int result;
 
@@ -1020,7 +1030,7 @@ STREAMSeek(S,pos,SEEK_SET);
 
 
 
-char *STREAMGetValue(STREAM *S, char *Name)
+char *STREAMGetValue(STREAM *S, const char *Name)
 {
 ListNode *Curr;
 
@@ -1031,14 +1041,14 @@ return(NULL);
 }
 
 
-void STREAMSetValue(STREAM *S, char *Name, char *Value)
+void STREAMSetValue(STREAM *S, const char *Name, const char *Value)
 {
 
 if (! S->Values) S->Values=ListCreate();
 SetVar(S->Values,Name,Value);
 }
 
-void *STREAMGetItem(STREAM *S, char *Name)
+void *STREAMGetItem(STREAM *S, const char *Name)
 {
 ListNode *Curr;
 
@@ -1049,7 +1059,7 @@ return(NULL);
 }
 
 
-void STREAMSetItem(STREAM *S, char *Name, void *Value)
+void STREAMSetItem(STREAM *S, const char *Name, void *Value)
 {
 ListNode *Curr;
 

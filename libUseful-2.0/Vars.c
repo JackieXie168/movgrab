@@ -2,7 +2,7 @@
 #include "defines.h"
 #include "list.h"
 
-void SetVar(ListNode *Vars, char *Name, char *Data)
+void SetVar(ListNode *Vars, const char *Name, const char *Data)
 {
 ListNode *Node;
 char *Tempstr=NULL;
@@ -16,7 +16,7 @@ else ListAddNamedItem(Vars,Tempstr,CopyStr(NULL,Data));
 DestroyString(Tempstr);
 }
 
-char *GetVar(ListNode *Vars, char *Name)
+char *GetVar(ListNode *Vars, const char *Name)
 {
 ListNode *Node;
 char *Tempstr=NULL;
@@ -30,7 +30,7 @@ return(NULL);
 }
 
 
-void UnsetVar(ListNode *Vars,char *Name)
+void UnsetVar(ListNode *Vars,const char *Name)
 {
 ListNode *Curr;
 char *Str=NULL;
@@ -136,7 +136,7 @@ return(OutStr);
 
 
 
-char *SubstituteVarsInString(char *Buffer, char *Fmt, ListNode *Vars, int Flags)
+char *SubstituteVarsInString(char *Buffer, const char *Fmt, ListNode *Vars, int Flags)
 {
 char *ReturnStr=NULL, *FmtPtr, *VarName=NULL, *Tempstr=NULL;
 int count, VarIsPointer=FALSE;
@@ -282,7 +282,7 @@ RetStr=CopyStrLen(Buffer,InStr,ptr-InStr);
 return(RetStr);
 }
 
-int ExtractVarsFromString(char *Data, char *FormatStr, ListNode *Vars)
+int ExtractVarsFromString(char *Data, const char *FormatStr, ListNode *Vars)
 {
 char *FmtPtr, *MsgPtr, *Token=NULL;
 int Match=TRUE, len;

@@ -13,12 +13,19 @@
 #define TTYFLAG_CRLF_KEEP 128
 #define TTYFLAG_ISIG 256
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void HangUpLine(int tty);
 int OpenTTY(char *devname, int LineSpeed, int Flags);
 void InitTTY(int tty, int LineSpeed, int Flags);
 void ResetTTY(int tty);
 int GrabPseudoTTY(int *pty, int *tty);
-int PseudoTTYSpawnFunction(int *pty, BASIC_FUNC Func, void *Data);
-int PseudoTTYSpawn(int *pty, const char *Command);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif

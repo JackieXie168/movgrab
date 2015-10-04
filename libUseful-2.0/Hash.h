@@ -30,6 +30,7 @@ void DestroyHash(THash *Hash);
 char *EncodeBase64(char *Return, char *Text, int len);
 char *DecodeBase64(char *Return, int *len, char *Text);
 int HashBytes(char **Return, char *Type, char *text, int len, int Encoding);
+int HashFile(char **Return, char *Type, char *Path, int Encoding);
 int HMAC(char **Return, char *Algo, char *iKey, int iKeyLen, char *iText, int iTextLen);
 
 #ifdef __cplusplus

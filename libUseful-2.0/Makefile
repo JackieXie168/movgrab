@@ -1,10 +1,10 @@
 CC = gcc
 VERSION = 0.0.1
 CFLAGS = -g -O2
-LIBS = -lcrypto -lssl -lz 
-FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1 -DHAVE_EVP_BF_CBC=1 -DHAVE_EVP_RC2_CBC=1 -DHAVE_EVP_RC4=1 -DHAVE_EVP_DES_CBC=1 -DHAVE_EVP_DESX_CBC=1 -DHAVE_EVP_CAST5_CBC=1 -DHAVE_EVP_IDEA_CBC=1 -DHAVE_EVP_AES_128_CBC=1 -DHAVE_EVP_AES_256_CBC=1 -DUSE_OPENSSL_ADD_ALL_ALGORITHMS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_OSS=1 
+LIBS = -lz 
+FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_OSS=1 
 prefix=/usr/local
-OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o
+OBJ=string.o list.o socket.o unix_socket.o file.o tar.o FileSystem.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o MathExpr.o Time.o Markup.o SpawnPrograms.o PatternMatch.o
 
 
 all: $(OBJ)
@@ -30,6 +30,11 @@ pty.o: pty.h pty.c
 http.o: http.h http.c
 	$(CC) $(FLAGS) -c http.c
 
+file.o: file.h file.c
+	$(CC) $(FLAGS) -c file.c
+
+tar.o: tar.h tar.c
+	$(CC) $(FLAGS) -c tar.c
 
 Log.o: Log.h Log.c
 	$(CC) $(FLAGS) -c Log.c
@@ -37,8 +42,20 @@ Log.o: Log.h Log.c
 unix_socket.o: unix_socket.h unix_socket.c
 	$(CC) $(FLAGS) -c unix_socket.c
 
-file.o: file.h file.c
-	$(CC) $(FLAGS) -c file.c
+PatternMatch.o: PatternMatch.h PatternMatch.c
+	$(CC) $(FLAGS) -c PatternMatch.c
+
+FileSystem.o: FileSystem.h FileSystem.c
+	$(CC) $(FLAGS) -c FileSystem.c
+
+MathExpr.o: MathExpr.h MathExpr.c
+	$(CC) $(FLAGS) -c MathExpr.c
+
+Time.o: Time.h Time.c
+	$(CC) $(FLAGS) -c Time.c
+
+Markup.o: Markup.h Markup.c
+	$(CC) $(FLAGS) -c Markup.c
 
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
@@ -87,6 +104,9 @@ Vars.o: Vars.c Vars.h
 
 libsettings.o: libsettings.c libsettings.h
 	$(CC) $(FLAGS) -c libsettings.c
+
+SpawnPrograms.o: SpawnPrograms.c SpawnPrograms.h
+	$(CC) $(FLAGS) -c SpawnPrograms.c
 
 
 clean:

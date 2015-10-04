@@ -511,18 +511,26 @@ return(Curr);
 }
 
 
+//Item1 is before Item2!
 void ListSwapItems(ListNode *Item1, ListNode *Item2)
 {
-ListNode *I1Prev, *I2Prev;
+ListNode *Head, *Prev, *Next;
 
-I1Prev=Item1->Prev;
-if (I1Prev==Item2) I1Prev=I1Prev->Prev;
-I2Prev=Item2->Prev;
-ListUnthreadNode(Item1);
-ListUnthreadNode(Item2);
+if (! Item1) return;
+if (! Item2) return;
+Prev=Item1->Prev;
+Next=Item2->Next;
+Head=ListGetHead(Item1);
 
-ListThreadNode(I1Prev, Item2);
-ListThreadNode(I2Prev, Item1);
+if (Head->Next==Item1) Head->Next=Item2;
+if (Prev) Prev->Next=Item2;
+Item1->Prev=Item2;
+Item1->Next=Next;
+
+if (Next) Next->Prev=Item1;
+Item2->Prev=Prev;
+Item2->Next=Item1;
+
 }
 
 
@@ -540,14 +548,13 @@ while (! sorted)
   {
     if (Prev !=NULL)
     {
-       if ( (*LessThanFunc)(Data,Prev->Item,Curr->Item) )
+       if ( (*LessThanFunc)(Data,Curr->Item,Prev->Item) )
        {
          sorted=0;
          ListSwapItems(Prev,Curr);
        }
     }
-
-    Prev=Curr;
+		Prev=Curr;
     Curr=ListGetNext(Curr);
   }
 }

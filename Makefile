@@ -1,17 +1,17 @@
 CC = gcc
-VERSION = 1.1.15
+VERSION = 1.2.0
 CFLAGS = -g -O2
-LIBS = -lcrypto -lssl -lz 
+LIBS = -lz 
 INSTALL=/bin/install -c
 prefix=/usr/local
 bindir=$(prefix)${exec_prefix}/bin
 DESTDIR=
-FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1 
-OBJ=containerfiles.o outputfiles.o common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o
+FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 
+OBJ=containerfiles.o outputfiles.o common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o display.o
 
 all: $(OBJ)
 	@cd libUseful-2.0; $(MAKE)
-	$(CC) $(FLAGS) -o movgrab main.c libUseful-2.0/libUseful-2.0.a $(LIBS) $(OBJ)
+	$(CC) $(FLAGS) -o movgrab main.c $(LIBS) $(OBJ) libUseful-2.0/libUseful-2.0.a
 
 clean:
 	@rm -f movgrab *.o libUseful-2.0/*.o libUseful-2.0/*.a libUseful-2.0/*.so
@@ -42,6 +42,9 @@ servicetypes.o: servicetypes.c servicetypes.h
 
 download.o: download.c download.h
 	$(CC) $(FLAGS) -c download.c
+
+display.o: display.c display.h
+	$(CC) $(FLAGS) -c display.c
 
 extract_text.o: extract_text.c extract_text.h
 	$(CC) $(FLAGS) -c extract_text.c

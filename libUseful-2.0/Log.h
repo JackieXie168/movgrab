@@ -12,12 +12,20 @@
 
 extern char *G_LogFilePath;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval);
 int LogToSTREAM(STREAM *S, int Flags, char *Str);
 void LogFileFlushAll(int Force);
 int LogToFile(char *FileName,char *fmt, ...);
 void LogFileClose(char *Path);
 int LogFileAppendTempLog(char *LogPath, char *TmpLogPath);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif

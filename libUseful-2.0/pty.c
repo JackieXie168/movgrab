@@ -120,6 +120,7 @@ case 9600: val=B9600; break;
 case 19200: val=B19200; break;
 case 38400: val=B38400; break;
 case 57600: val=B57600; break;
+case 115200: val=B115200; break;
 case 230400: val=B230400; break;
 #ifdef B460800
 case 460800: val=B460800; break;
@@ -214,39 +215,3 @@ return(0);
 }
 
 
-
-int PseudoTTYSpawnFunction(int *ret_pty, BASIC_FUNC Func, void *Data)
-{
-int tty, pty, result, i;
-STREAM *S;
-char *Tempstr=NULL;
-
-if (GrabPseudoTTY(&pty,&tty))
-{
-result=fork();
-if (result==0)
-{
-for (i=0; i < 4; i++) close(i);
-close(pty);
-
-setsid();
-dup(tty);
-dup(tty);
-dup(tty);
-ioctl(tty,TIOCSCTTY,0);
-Func((char *) Data);
-_exit(0);
-}
-
-close(tty);
-}
-
-*ret_pty=pty;
-return(result);
-}
-
-
-int PseudoTTYSpawn(int *pty, const char *Command)
-{
-return(PseudoTTYSpawnFunction(pty, BASIC_FUNC_EXEC_COMMAND, (void *) Command));
-}

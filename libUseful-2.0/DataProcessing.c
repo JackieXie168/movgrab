@@ -25,39 +25,18 @@ EVP_CIPHER_CTX *dec_ctx;
 #endif
 
 
-#ifdef HAVE_CRYPTODEV
-
-#include <sys/ioctl.h>
-#include <linux/cryptodev.h>
-
-typedef struct
+void DataProcessorDestroy(void *In)
 {
-char *Key;
-int KeyLen;
-char *InputVector;
-int InputVectorLen;
-struct session_op sess;
-struct crypt_op cryp;
-int fd;
-char *EncryptBuff;
-int EncryptBuffLen;
-char *DecryptBuff;
-int DecryptBuffLen;
-} CryptoDevProcessorData;
+TProcessingModule *Mod;
 
-#endif
-
-
-void DestroyProcessingModule(TProcessingModule *Mod)
-{
-if (Mod)
-{
-   DestroyString(Mod->Name);
-   DestroyString(Mod->Args);
-   DestroyString(Mod->Buffer);
-	 ListDestroy(Mod->Values,DestroyString);
-   free(Mod);
-}
+Mod=(TProcessingModule *) In;
+if (! Mod) return;
+Mod->Close(Mod);
+DestroyString(Mod->Name);
+DestroyString(Mod->Args);
+DestroyString(Mod->ReadBuff);
+DestroyString(Mod->WriteBuff);
+free(Mod);
 }
 
 
@@ -84,6 +63,97 @@ Curr=ListFindNamedItem(M->Values,Name);
 if (Curr) Curr->Item = (void *) CopyStr( (char *) Curr->Item, Value);
 else ListAddNamedItem(M->Values,Name,CopyStr(NULL,Value));
 }
+
+
+
+void DataProcessorUpdateBuffer(char **Buffer, int *Used, int *Size, const char *Data, int DataLen)
+{
+int len;
+
+if (DataLen < 1) return;
+
+len=*Used+DataLen;
+
+
+if (len > *Size)
+{
+ *Buffer=(char *) realloc(*Buffer,len);
+ *Size=len;
+}
+
+//if we've been supplied actual data to put in the buffer, then do so
+//otherwise just expand it if needed
+if (Data) 
+{
+	memcpy((*Buffer) + (*Used) ,Data,DataLen);
+	*Used=len;
+}
+}
+
+
+int PipeCommandProcessorInit(TProcessingModule *ProcMod, const char *Args)
+{
+int result=FALSE;
+char *Tempstr=NULL;
+char *Name=NULL, *Value=NULL, *ptr;
+STREAM *S;
+
+ptr=GetNameValuePair(Args,"\\S","=",&Name,&Value);
+while (ptr)
+{
+  if (strcasecmp(Name,"Command")==0) Tempstr=CopyStr(Tempstr,Value);
+
+ptr=GetNameValuePair(ptr,"\\S","=",&Name,&Value);
+}
+
+if (! StrLen(Tempstr) )
+{
+	DestroyString(Tempstr);
+	return(FALSE);
+}
+
+S=STREAMSpawnCommand(Tempstr, COMMS_BY_PIPE);
+ProcMod->Data=(void *) S;
+result=TRUE;
+
+DestroyString(Name);
+DestroyString(Value);
+DestroyString(Tempstr);
+
+return(result);
+}
+
+
+int PipeCommandProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char **OutData, int *OutLen, int Flush)
+{
+STREAM *S;
+
+S=(STREAM *) ProcMod->Data;
+if (InLen > 0)
+{
+STREAMWriteBytes(S,InData,InLen);
+STREAMFlush(S);
+}
+
+if (Flush) 
+{
+	if (S->out_fd > -1) close(S->out_fd);
+	S->out_fd=-1;
+}
+
+if (! STREAMCheckForBytes(S)) return(0);
+return(STREAMReadBytes(S,*OutData,*OutLen));
+}
+
+
+int PipeCommandProcessorClose(TProcessingModule *ProcMod)
+{
+STREAMClose((STREAM *) ProcMod->Data);
+ProcMod->Data=NULL;
+
+return(TRUE);
+}
+
 
 
 void InitialiseEncryptionComponents(const char *Args, char **Cipher, char **InputVector, int *IVLen,  char **Key, int *KeyLen, int *Flags)
@@ -165,160 +235,6 @@ DestroyString(Value);
 DestroyString(Tempstr);
 DestroyString(TmpKey);
 DestroyString(Salt);
-}
-
-
-int CryptoDevProcessorInit(TProcessingModule *ProcMod, const char *Args)
-{
-int result=FALSE;
-#ifdef HAVE_CRYPTODEV
-CryptoDevProcessorData *Data;
-char *Cipher=NULL;
-int val;
-
-val=open("/dev/crypto",O_RDWR);
-
-if (! val) return(FALSE);
-Data=(CryptoDevProcessorData *) calloc(1,sizeof(CryptoDevProcessorData));
-Data->fd=val;
-
-InitialiseEncryptionComponents(Args, &Cipher, & Data->Key, &Data->KeyLen, &Data->InputVector, &Data->InputVectorLen,&ProcMod->Flags);
-
-if (StrLen(ProcMod->Name)==0) ProcMod->Name=CopyStr(ProcMod->Name,Cipher);
-
-Data->sess.cipher=CRYPTO_CIPHER_NAME | CRYPTO_FLAG_CBC;
-Data->sess.alg_name=ProcMod->Name;
-Data->sess.alg_namelen=StrLen(ProcMod->Name);
-Data->sess.key=Data->Key;
-Data->sess.keylen=Data->KeyLen;
-ProcMod->Data=Data;
-
-if (ioctl(Data->fd,CIOCGSESSION, &Data->sess) != -1)
-{
-  result=TRUE;
-}
-
-
-DestroyString(Cipher);
-#endif
-return(result);
-}
-
-
-int CryptoDevProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
-{
-int wrote=0;
-
-#ifdef HAVE_CRYPTODEV
-char *ptr;
-CryptoDevProcessorData *Data;
-int NoOfBlocks=0, OutBlocks=0, val;
-
-
-Data=(CryptoDevProcessorData *) ProcMod->Data;
-
-Data->cryp.len=0;
-
-if (InLen==0)
-{
-//Pad up to a block boundary
-while ((Data->EncryptBuffLen % Data->sess.blocksize) !=0)
-{
-Data->EncryptBuff=SetStrLen(Data->EncryptBuff,Data->EncryptBuffLen+1);
-*(Data->EncryptBuff+Data->EncryptBuffLen)='\0';
-Data->EncryptBuffLen++;
-}
-}
-else
-{
-Data->EncryptBuff=SetStrLen(Data->EncryptBuff,Data->EncryptBuffLen+InLen);
-memcpy(Data->EncryptBuff+Data->EncryptBuffLen,InData,InLen);
-Data->EncryptBuffLen+=InLen;
-}
-
-NoOfBlocks=Data->EncryptBuffLen / Data->sess.blocksize;
-OutBlocks=OutLen / Data->sess.blocksize;
-if (OutBlocks < NoOfBlocks) NoOfBlocks=OutBlocks;
-
-if (NoOfBlocks > 0)
-{
-val=NoOfBlocks * Data->sess.blocksize;
-Data->cryp.ses=Data->sess.ses;
-Data->cryp.src=Data->EncryptBuff;
-Data->cryp.len=val;
-Data->cryp.dst=OutData;
-Data->cryp.iv=Data->InputVector;
-Data->cryp.op=COP_ENCRYPT;
-
-
-if (ioctl(Data->fd,CIOCCRYPT,&Data->cryp))
-{
-return(FALSE);
-}
-
-Data->EncryptBuffLen-=val;
-if (Data->EncryptBuffLen > 0) memmove(Data->EncryptBuff,Data->EncryptBuff+val, Data->EncryptBuffLen);
-}
-
-wrote=Data->cryp.len;
-
-#endif
-return(wrote);
-}
-
-
-int CryptoDevProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
-{
-int wrote=0;
-#ifdef HAVE_CRYPTODEV
-CryptoDevProcessorData *Data;
-int NoOfBlocks=0, OutBlocks=0, val;
-
-
-Data=(CryptoDevProcessorData *) ProcMod->Data;
-
-Data->cryp.len=0;
-Data->DecryptBuff=SetStrLen(Data->DecryptBuff,Data->DecryptBuffLen+InLen);
-memcpy(Data->DecryptBuff+Data->DecryptBuffLen,InData,InLen);
-Data->DecryptBuffLen+=InLen;
-
-NoOfBlocks=Data->DecryptBuffLen / Data->sess.blocksize;
-OutBlocks=OutLen / Data->sess.blocksize;
-if (OutBlocks < NoOfBlocks) NoOfBlocks=OutBlocks;
-
-if (NoOfBlocks > 0)
-{
-val=NoOfBlocks * Data->sess.blocksize;
-Data->cryp.ses=Data->sess.ses;
-Data->cryp.len=val;
-Data->cryp.src=Data->DecryptBuff;
-Data->cryp.dst=OutData;
-Data->cryp.iv=Data->InputVector;
-Data->cryp.op=COP_DECRYPT;
-
-if (ioctl(Data->fd,CIOCCRYPT,&Data->cryp))return(FALSE);
-Data->DecryptBuffLen-=val;
-memmove(Data->DecryptBuff,Data->DecryptBuff+val, Data->DecryptBuffLen);
-}
-
-wrote=Data->cryp.len;
-
-#endif
-return(wrote);
-}
-
-
-
-int CryptoDevProcessorClose(TProcessingModule *ProcMod)
-{
-#ifdef HAVE_CRYPTODEV
-	if (ProcMod->Data)
-	{
-		free(ProcMod->Data);
-		ProcMod->Data=NULL;
-	}
-#endif
-return(TRUE);
 }
 
 
@@ -415,7 +331,6 @@ Data=(libCryptoProcessorData *) calloc(1,sizeof(libCryptoProcessorData));
 InitialiseEncryptionComponents(Args, &Tempstr, &Data->InputVector, &Data->InputVectorLen, & Data->Key, &Data->KeyLen,&ProcMod->Flags);
 
 if (StrLen(ProcMod->Name)==0) ProcMod->Name=CopyStr(ProcMod->Name,Tempstr);
-
 
 switch(val)
 {
@@ -541,7 +456,7 @@ return(TRUE);
 
 
 
-int libCryptoProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+int libCryptoProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char **OutData, int *OutLen, int Flush)
 {
 int wrote=0;
 
@@ -551,15 +466,15 @@ libCryptoProcessorData *Data;
 EVP_CIPHER_CTX *ctx;
 char *ptr, *Tempstr=NULL;
 
+/*
 if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
 ptr=OutData;
 
 Data=(libCryptoProcessorData *) ProcMod->Data;
 ctx=Data->enc_ctx;
 
-len=OutLen;
-
 ProcMod->Flags = ProcMod->Flags & ~DPM_WRITE_FINAL;
+*/
 
 /*
 if (ProcMod->Flags & DPM_NOPAD_DATA)
@@ -579,7 +494,7 @@ if (ProcMod->Flags & DPM_NOPAD_DATA)
 else 
 */
 {
-result=EVP_EncryptUpdate(ctx, ptr, &len, InData, InLen);
+//result=EVP_EncryptUpdate(ctx, ptr, &len, InData, InLen);
 }
 
 
@@ -598,6 +513,7 @@ int libCryptoProcessorFlush(TProcessingModule *ProcMod, const char *InData, int 
 int result=0, wrote=0, len;
 libCryptoProcessorData *Data;
 
+/*
 if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
 Data=(libCryptoProcessorData *) ProcMod->Data;
 
@@ -605,7 +521,7 @@ if (Data)
 {
 if (InLen > 0)
 {
-result=libCryptoProcessorWrite(ProcMod, InData, InLen, OutData, OutLen);
+result=libCryptoProcessorWrite(ProcMod, InData, InLen, OutData, OutLen,TRUE);
 if (result > 0) return(result);
 }
 
@@ -616,11 +532,13 @@ ProcMod->Flags |= DPM_WRITE_FINAL;
 if (! result) wrote=0;
 else wrote=len;
 
+*/
+
 return(wrote);
 }
 
 
-int libCryptoProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+int libCryptoProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char **OutData, int *OutLen, int Flush)
 {
 int bytes_read=0;
 #ifdef HAVE_LIBSSL
@@ -629,10 +547,12 @@ libCryptoProcessorData *Data;
 EVP_CIPHER_CTX *ctx;
 char *ptr;
 
+/*
 ptr=OutData;
 
 Data=(libCryptoProcessorData *) ProcMod->Data;
 if (!Data) return(0);
+*/
 
 /*
 if (ProcMod->Flags & DPM_READ_FINAL)
@@ -643,6 +563,7 @@ if (ProcMod->Flags & DPM_READ_FINAL)
 }
 */
 
+/*
 ctx=Data->dec_ctx;
 
 if (InLen==0) 
@@ -662,6 +583,7 @@ else
 if (! result) bytes_read=-1;
 else bytes_read+=InLen; //should be 'len' but DecryptUpdate returns the
 												//number of bytes output, not the number consumed
+*/
 
 #endif
 return(bytes_read);
@@ -701,6 +623,9 @@ ptr=GetNameValuePair(ptr,"\\S","=",&Name,&Value);
 }
 
 
+ProcMod->ReadMax=4096;
+ProcMod->WriteMax=4096;
+
 
 ZData=(zlibData *) calloc(1,sizeof(zlibData));
 ZData->z_in.avail_in=0;
@@ -722,6 +647,7 @@ DestroyString(Value);
 return(result);
 }
 
+
 int gzipProcessorInit(TProcessingModule *ProcMod, const char *Args)
 {
 int result=FALSE;
@@ -739,7 +665,8 @@ while (ptr)
 ptr=GetNameValuePair(ptr,"\\S","=",&Name,&Value);
 }
 
-
+ProcMod->ReadMax=4096;
+ProcMod->WriteMax=4096;
 
 ZData=(zlibData *) calloc(1,sizeof(zlibData));
 ZData->z_in.avail_in=0;
@@ -760,51 +687,114 @@ DestroyString(Value);
 return(result);
 }
 
-int zlibProcessorInternalWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen, int Flush)
-{
-int wrote=0;
-#ifdef HAVE_LIBZ
 
+//Zlib is a little weird. It accepts a pointer to a buffer (next_in) and a buffer length (avail_in) to specify the input
+//and another buffer (next_out) and length (avail_out) to write data into. When called it reads bytes from next_in, updates 
+//next_in to point to the end of what it read, and subtracts the number of bytes it read from avail_in so that avail_in
+//now says how many UNUSED bytes there are pointed to by next_in. Similarly it writes to next_out, updating that pointer
+//to point to the end of the write, and updating avail_out to say how much room is LEFT usused in the output buffer
+//
+//However, if zlib doesn't use all avail_in, then you can't mess with that buffer until it has. Hence you can't take the unusued
+//data from next_in/avail_in and copy it to a new buffer and pass that buffer into deflate/inflate on the next call. If zlib
+//doesn't use all the input the only way to handle it is to grow the output buffer and call inflate/deflate again, so that it
+//can write into the expanded buffer until it's used up all input. 
+//
+//Finally, when you've supplied all the input you've got, you have to call deflate with 'Z_FINISH' so that it knows there's no
+//more data coming. 
+
+int zlibProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char **OutData, int *OutLen, int Flush)
+{
+int wrote=0, val=0;
+#ifdef HAVE_LIBZ
 zlibData *ZData;
 
-//if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
+if (ProcMod->Flags & DPM_WRITE_FINAL) return(EOF);
 ZData=(zlibData *) ProcMod->Data;
 
-if (InLen > 0)
-{
-ZData->z_out.avail_in=InLen;
-ZData->z_out.next_in=(char *) InData;
-}
 
-ZData->z_out.avail_out=OutLen;
-ZData->z_out.next_out=OutData;
+	ZData->z_out.avail_in=InLen;
+	ZData->z_out.next_in=InData;
+	ZData->z_out.avail_out=*OutLen;
+	ZData->z_out.next_out=*OutData;
 
-if (Flush) deflate(& ZData->z_out, Z_FINISH);
-else deflate(& ZData->z_out, Z_NO_FLUSH);
+	while ((ZData->z_out.avail_in > 0) || Flush)
+	{
+		if (Flush) val=deflate(& ZData->z_out, Z_FINISH);
+		else val=deflate(& ZData->z_out, Z_NO_FLUSH);
 
-wrote=OutLen-ZData->z_out.avail_out;
-if (Flush && (wrote == 0) ) ProcMod->Flags |= DPM_WRITE_FINAL;
+		wrote=*OutLen-ZData->z_out.avail_out;
+		if (val==Z_STREAM_END) 
+		{
+			ProcMod->Flags |= DPM_WRITE_FINAL;
+			break;
+		}
+
+		if ((ZData->z_out.avail_in > 0) || Flush)
+		{
+			printf("Grow output buff!\n");
+			*OutLen+=BUFSIZ;
+			*OutData=(char *) realloc(*OutData,*OutLen);
+			ZData->z_out.avail_out+=BUFSIZ;
+		}
+
+	}
+
+
 
 #endif
 return(wrote);
 }
 
 
-
-int zlibProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+int zlibProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char **OutData, int *OutLen, int Flush)
 {
-return(zlibProcessorInternalWrite(ProcMod, InData, InLen, OutData, OutLen, FALSE));
+int wrote=0, result=0;
+#ifdef HAVE_LIBZ
+zlibData *ZData;
+
+if (ProcMod->Flags & DPM_READ_FINAL) return(EOF);
+ZData=(zlibData *) ProcMod->Data;
+
+
+	ZData->z_in.avail_in=InLen;
+	ZData->z_in.next_in=InData;
+	ZData->z_in.avail_out=*OutLen;
+	ZData->z_in.next_out=*OutData;
+
+	while ((ZData->z_in.avail_in > 0) || Flush)
+	{
+		if (Flush) result=inflate(& ZData->z_in, Z_FINISH);
+		else result=inflate(& ZData->z_in, Z_NO_FLUSH);
+
+		wrote=(*OutLen)-ZData->z_in.avail_out;
+
+
+		if (result==Z_DATA_ERROR) inflateSync(&ZData->z_in);
+		if (result==Z_STREAM_END) 
+		{
+			ProcMod->Flags |= DPM_READ_FINAL;
+			break;
+		}
+
+		if ((ZData->z_in.avail_in > 0) || Flush)
+		{
+			(*OutLen)+=BUFSIZ;
+			*OutData=(char *) realloc(*OutData,*OutLen);
+			ZData->z_in.next_out=(*OutData) + wrote;
+			ZData->z_in.avail_out=(*OutLen) - wrote;
+		}
+
+	}
+
+
+
+#endif
+return(wrote);
 }
 
-int zlibProcessorFlush(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
-{
-return(zlibProcessorInternalWrite(ProcMod, InData, InLen, OutData, OutLen, TRUE));
-}
 
-
-
-
-int zlibProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+/*
+int zlibProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char **OutData, int *OutLen, int Flush)
 {
 int wrote=0, result;
 #ifdef HAVE_LIBZ
@@ -813,32 +803,29 @@ int len;
 
 ZData=(zlibData *) ProcMod->Data;
 
-ProcMod->Buffer=SetStrLen(ProcMod->Buffer,ProcMod->BuffSize+InLen);
-memcpy(ProcMod->Buffer+ProcMod->BuffSize,InData,InLen);
-ZData->z_in.next_in=ProcMod->Buffer;
-ProcMod->BuffSize+=InLen;
-ZData->z_in.avail_in=ProcMod->BuffSize;
+if (InLen > 0)
+{
+DataProcessorUpdateBuffer(&ProcMod->ReadBuff, &ProcMod->ReadUsed, &ProcMod->ReadSize, InData, InLen);
 
-ZData->z_in.avail_out=OutLen;
-ZData->z_in.next_out=OutData;
+ZData->z_in.next_in=ProcMod->ReadBuff;
+ZData->z_in.avail_in=ProcMod->ReadUsed;
+
+ZData->z_in.avail_out=*OutLen;
+ZData->z_in.next_out=*OutData;
 
 if (InLen==0) result=inflate(& ZData->z_in, Z_FINISH);
 else result=inflate(& ZData->z_in, Z_NO_FLUSH);
-if (result==Z_DATA_ERROR) inflateSync(&ZData->z_in);
 
-if (ZData->z_in.avail_in > 0) 
-{
-memmove(ProcMod->Buffer,ZData->z_in.next_in,ZData->z_in.avail_in);
-ProcMod->BuffSize=ZData->z_in.avail_in;
-}
-else ProcMod->BuffSize=0;
+if (ZData->z_in.avail_in > 0) memmove(ProcMod->ReadBuff,ZData->z_in.next_in,ZData->z_in.avail_in);
+ProcMod->ReadUsed=ZData->z_in.avail_in;
 
 wrote=OutLen-ZData->z_in.avail_out;
+}
 
 #endif
 return(wrote);
 }
-
+*/
 
 
 int zlibProcessorClose(TProcessingModule *ProcMod)
@@ -861,9 +848,13 @@ return(TRUE);
 
 
 
-TProcessingModule *StandardDataProcessorCreate(const char *Class, const char *Name, const char *Args)
+TProcessingModule *StandardDataProcessorCreate(const char *Class, const char *Name, const char *iArgs)
 {
 TProcessingModule *Mod=NULL;
+char *Args=NULL;
+
+
+Args=CopyStr(Args,iArgs);
 
 #ifdef HAVE_LIBSSL
 #ifdef HAVE_LIBCRYPTO
@@ -874,85 +865,65 @@ if (strcasecmp(Class,"crypto")==0)
    Mod->Name=CopyStr(Mod->Name,Name);
    Mod->Init=libCryptoProcessorInit;
    Mod->Write=libCryptoProcessorWrite;
-   Mod->Flush=libCryptoProcessorFlush;
    Mod->Read=libCryptoProcessorRead;
    Mod->Close=libCryptoProcessorClose;
 
    if (Mod && Mod->Init(Mod, Args)) return(Mod);
    else 
 	{
-		DestroyProcessingModule(Mod);
+		DataProcessorDestroy(Mod);
 		Mod=NULL;
 	}
 }
 #endif
 #endif
 
-#ifdef HAVE_CRYPTODEV 
-if (strcasecmp(Class,"cryptodev")==0)
-{
-   Mod=(TProcessingModule *) calloc(1,sizeof(TProcessingModule));
-   Mod->Args=CopyStr(Mod->Args,Args);
-   Mod->Name=CopyStr(Mod->Name,Name);
-   Mod->Init=CryptoDevProcessorInit;
-   Mod->Write=CryptoDevProcessorWrite;
-   Mod->Read=CryptoDevProcessorRead;
-   Mod->Close=CryptoDevProcessorClose;
-
-   if (Mod && Mod->Init(Mod, Args)) return(Mod);
-   else 
-	{
-		DestroyProcessingModule(Mod);
-		Mod=NULL;
-	}
-}
-#endif
 
 
-
-
-
-#ifdef HAVE_LIBZ 
 if (strcasecmp(Class,"compression")==0)
 {
    Mod=(TProcessingModule *) calloc(1,sizeof(TProcessingModule));
    Mod->Args=CopyStr(Mod->Args,Args);
    Mod->Name=CopyStr(Mod->Name,Name);
 
-   if (strcasecmp(Name,"zlib")==0) Mod->Init=zlibProcessorInit;
-   else Mod->Init=gzipProcessorInit;
-   
-   Mod->Write=zlibProcessorWrite;
-   Mod->Read=zlibProcessorRead;
-   Mod->Flush=zlibProcessorFlush;
-   Mod->Close=zlibProcessorClose;
- 
-   if (Mod && Mod->Init(Mod, Args)) return(Mod);
-   else 
+   if (strcasecmp(Name,"zlib")==0) 
+	 {
+		#ifdef HAVE_LIBZ 
+		Mod->Init=zlibProcessorInit;
+   	Mod->Write=zlibProcessorWrite;
+   	Mod->Read=zlibProcessorRead;
+   	Mod->Close=zlibProcessorClose;
+		#endif
+   }
+	 else if (strcasecmp(Name,"gzip")==0)
+	 {
+		#ifdef HAVE_LIBZ 
+		Mod->Init=gzipProcessorInit;
+   	Mod->Write=zlibProcessorWrite;
+   	Mod->Read=zlibProcessorRead;
+   	Mod->Close=zlibProcessorClose;
+		#endif
+   }
+ 	 else if (strcasecmp(Name,"bzip2")==0)
+	 {
+		Args=MCopyStr(Args,"Command='/usr/bin/bzip2 --stdout -' ",iArgs,NULL);
+		Mod->Init=PipeCommandProcessorInit;
+   	Mod->Write=PipeCommandProcessorWrite;
+   	Mod->Close=PipeCommandProcessorClose;
+   }
+
+
+  if (Mod && Mod->Init && Mod->Init(Mod, Args)) return(Mod);
+  else 
 	{
-		DestroyProcessingModule(Mod);
+		DataProcessorDestroy(Mod);
 		Mod=NULL;
 	}
 }
-#endif
-
 
 return(NULL);
 }
 
-
-void DataProcessorDestroy(void *In)
-{
-TProcessingModule *Mod;
-
-Mod=(TProcessingModule *) In;
-if (! Mod) return;
-Mod->Close(Mod);
-DestroyString(Mod->Name);
-DestroyString(Mod->Args);
-DestroyString(Mod->Buffer);
-free(Mod);
-}
 
 
 

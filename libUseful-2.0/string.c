@@ -36,34 +36,6 @@ return(strcmp(S1,S2));
 }
 
 
-char *QuoteCharsInStr(char *Buffer, const char *String, const char *QuoteChars)
-{
-char *Tempstr=NULL;
-int si, ci, slen, clen, olen=0;
-
-slen=StrLen(String);
-clen=StrLen(QuoteChars);
-
-Tempstr=CopyStr(Buffer,"");
-
-for (si=0; si < slen; si++)
-{
-	for (ci=0; ci < clen; ci++)
-	{
-  		if (String[si]==QuoteChars[ci])
-		{
-			Tempstr=AddCharToBuffer(Tempstr,olen, '\\');
-			olen++;
-			break;
-		}
-	}
-	Tempstr=AddCharToBuffer(Tempstr,olen,String[si]);
-	olen++;
-}
-
-return(Tempstr);
-}
-
 
 char *CopyStrLen(char *Dest, const char *Src,int len)
 {
@@ -99,9 +71,10 @@ return(CatStr(Dest,Src));
 
 char *VCatStr(char *Dest, const char *Str1,  va_list args)
 {
-int len;
-char *ptr;
-const char *sptr;
+//initialize these to keep valgrind happy
+int len=0;
+char *ptr=NULL;
+const char *sptr=NULL;
 
 if (Dest !=NULL) 
 {
@@ -192,25 +165,31 @@ return(CopyStr(NULL,Str));
 }
 
 
-char *VFormatStr(char *InBuff, const char *FmtStr, va_list args)
+char *VFormatStr(char *InBuff, const char *InputFmtStr, va_list args)
 {
 int inc=100, count=1, result=0;
-char *tempstr=NULL;
+char *Tempstr=NULL, *FmtStr=NULL;
 va_list argscopy;
 
-tempstr=InBuff;
+Tempstr=InBuff;
+
+//Take a copy of the supplied Format string and change it.
+//Do not allow '%n', it's useable for exploits
+FmtStr=CopyStr(FmtStr,InputFmtStr);
+EraseString(FmtStr, "%n");
+
 
 inc=4 * StrLen(FmtStr); //this should be a good average
 for (count=1; count < 100; count++)
 {
 	result=inc * count +1;
-  tempstr=SetStrLen(tempstr, result);
+  Tempstr=SetStrLen(Tempstr, result);
 
 		//the vsnprintf function DESTROYS the arg list that is passed to it.
 		//This is just plain WRONG, it's a long-standing bug. The solution is to
 		//us va_copy to make a new one every time and pass that in.
 		va_copy(argscopy,args);
-     result=vsnprintf(tempstr,result,FmtStr,argscopy);
+     result=vsnprintf(Tempstr,result,FmtStr,argscopy);
 		va_end(argscopy);
 
   /* old style returns -1 to say couldn't fit data into buffer.. so we */
@@ -220,14 +199,17 @@ for (count=1; count < 100; count++)
   /* new style returns how long buffer should have been.. so we resize it */
   if (result > (inc * count))
   {
-    tempstr=SetStrLen(tempstr, result+10);
-    result=vsnprintf(tempstr,result+10,FmtStr,args);
+    Tempstr=SetStrLen(Tempstr, result+10);
+    result=vsnprintf(Tempstr,result+10,FmtStr,args);
   }
 
    break;
 }
 
-return(tempstr);
+DestroyString(FmtStr);
+
+
+return(Tempstr);
 }
 
 
@@ -429,66 +411,6 @@ while (ptr && (*ptr != '\0'))
 }
 return(ReturnStr);
 }
-
-#define ESC 0x1B
-
-char *DeQuoteStr(char *Buffer, const char *Line)
-{
-char *out, *in;
-int olen=0;
-
-if (Line==NULL) return(NULL);
-out=CopyStr(Buffer,"");
-in=(char *) Line;
-
-while(in && (*in != '\0') )
-{
-	if (*in=='\\')
-	{
-		in++;
-		switch (*in)
-		{
-		  case 'e': 
-			out=AddCharToBuffer(out,olen,ESC);
-			olen++;
-			break;
-
-
-		   case 'n': 
-			out=AddCharToBuffer(out,olen,'\n');
-			olen++;
-			break;
-
-		  case 'r': 
-			out=AddCharToBuffer(out,olen,'\r');
-			olen++;
-			break;
-
-		   case 't': 
-			out=AddCharToBuffer(out,olen,'\t');
-			olen++;
-			break;
-
-
-		   case '\\': 
-		   default:
-			out=AddCharToBuffer(out,olen,*in);
-			olen++;
-			break;
-
-		}
-	}
-	else 
-	{
-		out=AddCharToBuffer(out,olen,*in);
-		olen++;
-	}
-	in++;
-}
-
-return(out);
-}
-
 
 
 
@@ -746,5 +668,94 @@ if (StrLen(SepEnd) < 1)
 return((char *) SepEnd);
 }
 
+
+#define ESC 0x1B
+
+char *DeQuoteStr(char *Buffer, const char *Line)
+{
+char *out, *in;
+int olen=0;
+
+if (Line==NULL) return(NULL);
+out=CopyStr(Buffer,"");
+in=(char *) Line;
+
+while(in && (*in != '\0') )
+{
+	if (*in=='\\')
+	{
+		in++;
+		switch (*in)
+		{
+		  case 'e': 
+			out=AddCharToBuffer(out,olen,ESC);
+			olen++;
+			break;
+
+
+		   case 'n': 
+			out=AddCharToBuffer(out,olen,'\n');
+			olen++;
+			break;
+
+		  case 'r': 
+			out=AddCharToBuffer(out,olen,'\r');
+			olen++;
+			break;
+
+		   case 't': 
+			out=AddCharToBuffer(out,olen,'\t');
+			olen++;
+			break;
+
+
+		   case '\\': 
+		   default:
+			out=AddCharToBuffer(out,olen,*in);
+			olen++;
+			break;
+
+		}
+	}
+	else 
+	{
+		out=AddCharToBuffer(out,olen,*in);
+		olen++;
+	}
+	in++;
+}
+
+return(out);
+}
+
+
+
+char *QuoteCharsInStr(char *Buffer, const char *String, const char *QuoteChars)
+{
+char *Tempstr=NULL;
+int si, ci, slen, clen, olen=0;
+
+slen=StrLen(String);
+clen=StrLen(QuoteChars);
+
+Tempstr=CopyStr(Buffer,"");
+
+for (si=0; si < slen; si++)
+{
+	for (ci=0; ci < clen; ci++)
+	{
+  		if (String[si]==QuoteChars[ci])
+		{
+			Tempstr=AddCharToBuffer(Tempstr,olen, '\\');
+			olen++;
+			break;
+		}
+	}
+	Tempstr=AddCharToBuffer(Tempstr,olen,String[si]);
+	olen++;
+}
+
+return(Tempstr);
+}
 
 

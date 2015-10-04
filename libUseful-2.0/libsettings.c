@@ -4,6 +4,9 @@
 #include "includes.h"
 #include "Vars.h"
 
+/* These functions provide an interface for setting variables that */
+/* are used by libUseful itself */
+
 ListNode *LibUsefulSettings=NULL;
 
 ListNode *LibUsefulValuesGetHead()

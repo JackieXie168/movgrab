@@ -188,7 +188,7 @@ while (1)
 				continue;
 			}
  
-			if (S->Flags & SF_CONNECTING)
+			if (S->State & SS_CONNECTING)
 			{
 				FD_SET(S->in_fd,&WriteSet);
 			}
@@ -264,7 +264,7 @@ while (1)
 
 			if ((SelectResult > 0) && FD_ISSET(S->in_fd,&WriteSet))
 			{
-				if (S->Flags & SF_CONNECTING)
+				if (S->State & SS_CONNECTING)
 				{
 					if (STREAMIsConnected(S)) 
 					{
@@ -280,7 +280,7 @@ while (1)
 					 ((SelectResult > 0) && (FD_ISSET(S->in_fd,&ReadSet)))
 				)
 			{
-                if (! (S->Flags & SF_CONNECTING))
+                if (! (S->State & SS_CONNECTING))
                 {
 				if (Item->OnData)
 				{

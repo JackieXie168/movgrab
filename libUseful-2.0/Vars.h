@@ -7,13 +7,13 @@
 extern "C" {
 #endif
 
-void SetVar(ListNode *Vars, char *Name, char *Data);
-char *GetVar(ListNode *Vars, char *Name);
-void UnsetVar(ListNode *Vars,char *Name);
+void SetVar(ListNode *Vars, const char *Name, const char *Data);
+char *GetVar(ListNode *Vars, const char *Name);
+void UnsetVar(ListNode *Vars,const char *Name);
 void ClearVars(ListNode *Vars);
 void CopyVars(ListNode *Dest, ListNode *Source);
-char *SubstituteVarsInString(char *Buffer, char *Fmt, ListNode *Vars, int Flags);
-int ExtractVarsFromString(char *Data, char *FormatStr, ListNode *Vars);
+char *SubstituteVarsInString(char *Buffer, const char *Fmt, ListNode *Vars, int Flags);
+int ExtractVarsFromString(char *Data, const char *FormatStr, ListNode *Vars);
 
 
 #ifdef __cplusplus

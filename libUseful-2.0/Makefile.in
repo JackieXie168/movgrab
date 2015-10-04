@@ -4,7 +4,7 @@ CFLAGS = @CFLAGS@
 LIBS = @LIBS@
 FLAGS=$(CFLAGS) -fPIC @DEFS@ 
 prefix=@prefix@
-OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o
+OBJ=string.o list.o socket.o unix_socket.o file.o tar.o FileSystem.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o base64.o crc32.o md5c.o sha1.o sha2.o Hash.o Compression.o oauth.o libsettings.o Vars.o MathExpr.o Time.o Markup.o SpawnPrograms.o PatternMatch.o
 
 
 all: $(OBJ)
@@ -30,6 +30,11 @@ pty.o: pty.h pty.c
 http.o: http.h http.c
 	$(CC) $(FLAGS) -c http.c
 
+file.o: file.h file.c
+	$(CC) $(FLAGS) -c file.c
+
+tar.o: tar.h tar.c
+	$(CC) $(FLAGS) -c tar.c
 
 Log.o: Log.h Log.c
 	$(CC) $(FLAGS) -c Log.c
@@ -37,8 +42,20 @@ Log.o: Log.h Log.c
 unix_socket.o: unix_socket.h unix_socket.c
 	$(CC) $(FLAGS) -c unix_socket.c
 
-file.o: file.h file.c
-	$(CC) $(FLAGS) -c file.c
+PatternMatch.o: PatternMatch.h PatternMatch.c
+	$(CC) $(FLAGS) -c PatternMatch.c
+
+FileSystem.o: FileSystem.h FileSystem.c
+	$(CC) $(FLAGS) -c FileSystem.c
+
+MathExpr.o: MathExpr.h MathExpr.c
+	$(CC) $(FLAGS) -c MathExpr.c
+
+Time.o: Time.h Time.c
+	$(CC) $(FLAGS) -c Time.c
+
+Markup.o: Markup.h Markup.c
+	$(CC) $(FLAGS) -c Markup.c
 
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
@@ -87,6 +104,9 @@ Vars.o: Vars.c Vars.h
 
 libsettings.o: libsettings.c libsettings.h
 	$(CC) $(FLAGS) -c libsettings.c
+
+SpawnPrograms.o: SpawnPrograms.c SpawnPrograms.h
+	$(CC) $(FLAGS) -c SpawnPrograms.c
 
 
 clean:

@@ -2,7 +2,7 @@
 #ifndef MOVGRAB_COMMON
 #define MOVGRAB_COMMON
 //This is doable through autoconf, but I'm sick of fighting with it
-#define Version "1.1.15"
+#define Version "1.2.0"
 
 #include "libUseful-2.0/libUseful.h"
 #include <string.h>
@@ -17,7 +17,7 @@
 #define FLAG_DEBUG (FLAG_DEBUG1 | FLAG_DEBUG2 | FLAG_DEBUG3)
 #define FLAG_PORN 32
 #define FLAG_PRINT_USAGE 64
-#define FLAG_HTTPS 128
+#define FLAG_PRINT_VERSION 128
 #define FLAG_TEST  256
 #define FLAG_STDIN 512
 #define FLAG_POST  1024
@@ -27,9 +27,13 @@
 #define FLAG_STREAMCACHE 16384
 #define FLAG_RETRY_DOWNLOAD 32768
 #define FLAG_RESUME 65536
+#define FLAG_HTTPS 131072
 
 
 extern int Type, DefaultPort, Flags;
 extern char *FileTypes[];
+extern char *ItemSelectionArg;
+
+char *FileTypeFromURL(char *URL);
 
 #endif

@@ -27,12 +27,11 @@
 #include "dailymotion.h"
 #include "cbsnews.h"
 #include "ehow.h"
-
+#include "display.h"
 
 
 
 int Flags=0;
-char *ItemSelectionArg=NULL;
 char *ProgName=NULL, *CmdLine=NULL;
 char *FormatPreference=NULL;
 ListNode *DownloadQueue=NULL;
@@ -113,7 +112,7 @@ Type=TYPE_GENERIC;
 if (Type==TYPE_CONTAINERFILE) RetVal=DownloadContainer(NextPath,Title,Flags);
 else
 {
-NextPath=SiteSpecificPreprocessing(NextPath, Path, Proto, Server, Port, Doc, Type, &Title, &Flags);
+NextPath=SiteSpecificPreprocessing(NextPath, Path, Proto, Server, Port, Doc, &Type, &Title, &Flags);
 
 if (DownloadPage(NextPath, Type,Title,Flags)) RetVal=TRUE;
 }
@@ -129,74 +128,6 @@ DestroyString(Proto);
 return(RetVal);
 }
 
-
-
-//For websites with multiple videos on a page (not multiple formats of the
-//same video, but actual different videos) decide which one to get
-void GetDownloadSelectionList(char *Arg,ListNode *Vars,ListNode *Results)
-{ 
-char *Tempstr=NULL, *Var=NULL, *ptr;
-int MediaCount, i, startpos, endpos;
-
-Var=CopyStr(Var,GetVar(Vars,"MediaCount"));
-MediaCount=atoi(Var);
-startpos=0;
-endpos=MediaCount;
-
-		if (MediaCount==1) endpos=1;
-		else if (StrLen(Arg)==0)
-		{
-			if (! (Flags & FLAG_QUIET))
-			{
- 			fprintf(stderr,"\nMultiple downloads exist on this page.\n");
-			fprintf(stderr,"Please select by using the command-line argument -n <num>\n");
- 			fprintf(stderr,"	e.g. -n all\n");
- 			fprintf(stderr,"	     -n 0-4\n");
- 			fprintf(stderr,"	     -n 3-\n\n");
-			for (i=0; i < MediaCount; i++)
-			{
-			Tempstr=FormatStr(Tempstr,"ID:%d",i);
-			ptr=GetVar(Vars,Tempstr);
-			if (ptr) ptr=strrchr(ptr,'.');
-			if (! ptr) ptr="?";
-
-			Tempstr=FormatStr(Tempstr,"Title:%d",i);
-			Var=CopyStr(Var,GetVar(Vars,Tempstr));
-			fprintf(stderr,"	% 4d: %4s  %s\n",i,ptr,Var);
-			}
-			fprintf(stderr,"\n");
-			}
-			endpos=startpos;
-		}
-		else if (strcmp(Arg,"all")==0)
-		{
-			//do nothing
-		}
-		else if (strchr(Arg,'-'))
-		{
-		ptr=GetToken(Arg,"-",&Tempstr,0);
-		if (StrLen(Tempstr)) startpos=atoi(Tempstr);
-		else startpos=0;
-		if (StrLen(ptr)) endpos=atoi(ptr);
-		else endpos=MediaCount;
-		}
-		else
-		{
-			startpos=atoi(Arg);
-			endpos=startpos+1;
-		}
-
-		for (i=startpos; i < endpos; i++)
-		{
-		Tempstr=FormatStr(Tempstr,"ID:%d",i);
-		Var=CopyStr(Var,GetVar(Vars,Tempstr));
-		Tempstr=FormatStr(Tempstr,"Title:%d",i);
- 		ListAddNamedItem(Results,GetVar(Vars,Tempstr),CopyStr(NULL,Var));
-		}
-
-DestroyString(Tempstr);
-DestroyString(Var);
-}
 
 
 char *GatherMatchingFormats(char *Buffer, char *Type, ListNode *Vars)
@@ -229,65 +160,26 @@ int FmtIDMatches(char *FmtID, char *CurrItem, char *ItemData)
 }
 
 
-int DisplayAvailableFormats(ListNode *Vars, char *Formats)
-{
-char *Token=NULL, *TokenID=NULL, *Tempstr=NULL, *ptr;
-STREAM *S;
-int result=TRUE;
-
-fprintf(stderr, "\nFormats available for this Movie:");
-
-ptr=GetToken(Formats," ",&Token,0);
-while (ptr)
-{
-if (StrLen(Token)) TokenID=MCopyStr(TokenID,"item:",Token,NULL);
-
-Tempstr=CopyStr(Tempstr,GetVar(Vars,TokenID));
-
-if (strcmp(Token,"reference") !=0)
-{
-	S=HTTPMethod("HEAD",Tempstr,NULL,NULL);
-	fprintf(stderr,"%s",Token);
-	if (S)
-	{
-		Tempstr=CopyStr(Tempstr,STREAMGetValue(S,"HTTP:ResponseCode"));
-		if (strcmp(Tempstr,"200") !=0) 
-		{
-			printf("\nERROR: %s\n",Tempstr);
-			result=FALSE;
-			break;
-		}
-
-		Tempstr=CopyStr(Tempstr,STREAMGetValue(S,"HTTP:Content-length"));
-		fprintf(stderr, " (%s)",GetHumanReadableDataQty(strtod(Tempstr,NULL),FALSE));
-		STREAMClose(S);
-	}
-}
-fprintf(stderr,", ");
-
-ptr=GetToken(ptr," ",&Token,0);
-}
-
-fprintf(stderr,"\n\n",Tempstr);
-
-DestroyString(Token);
-DestroyString(TokenID);
-DestroyString(Tempstr);
-
-return(result);
-}
 
 //this function compares the video formats found on the page to the list of
 //preferences expressed by the user with the '-f' flag, and contained in the
 //global variable 'FormatPreference'
-int SelectDownloadFormat(ListNode *Vars, int WebsiteType)
+int SelectDownloadFormat(ListNode *Vars, int WebsiteType, int DisplaySize)
 {
 ListNode *Curr;
 char *ptr, *Tempstr=NULL, *Fmt=NULL, *FmtID=NULL, *Selected=NULL, *p_ItemFormat;
-int RetVal=-1, FoundMatch=FALSE;
+int RetVal=-1, FoundMatch=FALSE, i;
 
 Tempstr=GatherMatchingFormats(Tempstr,"",Vars);
-if (! (Flags & FLAG_QUIET)) DisplayAvailableFormats(Vars, Tempstr);
+	if (! (Flags & FLAG_QUIET))
+	{
+	for (i=0; i < 3; i++)
+	{
+ 		if (DisplayAvailableFormats(Vars, Tempstr, DisplaySize)) break;
+		printf("Connection Refused, sleeping for 20 secs before retry\n");
+		sleep(10);
+	}
+	}
 
 	ptr=GetToken(FormatPreference,",",&Fmt,0);
 	while (ptr)
@@ -351,24 +243,28 @@ return(RetVal);
 
 
 
+void PrintVersion()
+{
+fprintf(stdout,"\nMovgrab: version %s\n",Version);
+}
 
 
 void PrintUsage()
 {
 int i;
 
-fprintf(stdout,"\nMovgrab: version %s\n",Version);
+PrintVersion();
 fprintf(stdout,"Author: Colum Paget\n");
 fprintf(stdout,"Email: colums.projects@gmail.com\n");
-fprintf(stdout,"Blogs: \n");
-fprintf(stdout,"	tech: http://idratherhack.blogspot.com \n");
-fprintf(stdout,"	rants: http://thesingularitysucks.blogspot.com \n");
+fprintf(stdout,"Blog: http://idratherhack.blogspot.com \n");
 fprintf(stdout,"\n");
 fprintf(stdout,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-r] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-P] [-Pp] [-o <output file>] [+o <extra output file>] url\n");
 fprintf(stdout,"	movgrab -test-sites\n");
 fprintf(stdout,"\n'-v'		increases verbosity/debug level\n");
 fprintf(stdout,"'-v -v'		prints out all webpages encountered\n");
 fprintf(stdout,"'-v -v -v'	maximum debugging\n");
+fprintf(stdout,"'-version'		Program version\n");
+fprintf(stdout,"'--version'		Program version\n");
 fprintf(stdout,"'-T'		Test mode, don't do final download\n");
 fprintf(stdout,"'-P <program>'		Player program (e.g. \"mplayer\")\n");
 fprintf(stdout,"'-Pp'		Percent download to launch player at (default 25%)\n");
@@ -475,6 +371,8 @@ for (i=1; i < argc; i++)
 	else if (strcmp(argv[i],"-h")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"-help")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"--help")==0) Flags |= FLAG_PRINT_USAGE;
+	else if (strcmp(argv[i],"-version")==0) Flags |= FLAG_PRINT_VERSION;
+	else if (strcmp(argv[i],"--version")==0) Flags |= FLAG_PRINT_VERSION;
 	else if (strcmp(argv[i],"-test-sites")==0) 
 	{
 		Flags |= FLAG_TEST_SITES | FLAG_QUIET;
@@ -514,6 +412,7 @@ int OverrideType=TYPE_NONE;
 char *Tempstr=NULL;
 int result;
 
+HTTPSetFlags(HTTP_NOCOMPRESS);
 StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,0);
 
@@ -523,12 +422,13 @@ if (StrLen(Tempstr)) HTTPSetProxy(Tempstr);
 DownloadQueue=ListCreate();
 Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);
-FormatPreference=CopyStr(FormatPreference,"mp4,flv,webm,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
+FormatPreference=CopyStr(FormatPreference,"mp4,flv,webm,m4v,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
 AddOutputFile("", TRUE);
 
 ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
 
 if (Flags & FLAG_PRINT_USAGE) PrintUsage();
+else if (Flags & FLAG_PRINT_VERSION) PrintVersion();
 else if (! (Flags & FLAG_STDIN))
 {
 	if (ListSize(DownloadQueue)==0) PrintUsage();

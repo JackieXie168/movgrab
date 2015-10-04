@@ -1,6 +1,12 @@
 #include "includes.h"
 #include "expect.h"
 
+
+//Values for 'flags' that are not visible to the user
+//These must not clash with any visible values
+#define DIALOG_DONE 67108864
+
+
 void DialogAdd(ListNode *Dialogs, char *Expect, char *Reply, int Flags)
 {
 TDialog *Dialog;
@@ -29,6 +35,8 @@ while (inchar !=EOF)
     while (Curr)
     {
       Dialog=(TDialog *) Curr->Item;
+			if (! (Dialog->Flags & DIALOG_DONE))
+			{
       //if the current value does not equal where we are in the string
       //we have to consider whether it is the first character in the string
       if (Dialog->Expect[Dialog->Match]!=inchar) Dialog->Match=0;
@@ -39,11 +47,15 @@ while (inchar !=EOF)
         if (Dialog->Expect[Dialog->Match]=='\0')
         {
           Dialog->Match=0;
+					Dialog->Flags |= DIALOG_DONE;
           if (Dialog->Reply) STREAMWriteLine(Dialog->Reply,S);
           if (Dialog->Flags & DIALOG_END) return(TRUE);
           if (Dialog->Flags & DIALOG_FAIL) return(FALSE);
         }
       }
+
+			if (! (Dialog->Flags & DIALOG_OPTIONAL)) break;
+			}
       Curr=ListGetNext(Curr);
     }
   }

@@ -4,30 +4,32 @@
 #include <fcntl.h>
 #include "list.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 
 #define STREAM_CLOSED -1
 #define STREAM_NODATA -2
 #define STREAM_TIMEOUT -3
 #define STREAM_DATA_ERROR -4
 
+//Flags that alter stream behavior
 #define FLUSH_FULL 0
 #define FLUSH_LINE 1
-#define SF_AUTH 2
-#define SF_SYMLINK_OK 4
-#define SF_CONNECTING 8
-#define SF_CONNECTED 16
-#define SF_HANDSHAKE_DONE 32
-#define SF_WRONLY 64
-#define SF_RDONLY 128
-#define SF_RDWR 256
-#define SF_SSL  512
-#define SF_DATA_ERROR 1024
-#define SF_WRITE_ERROR 2048
-#define SF_NONBLOCK 4096
+#define FLUSH_BLOCK 2
+#define FLUSH_ALWAYS 4
+#define SF_RDONLY 8
+#define SF_WRONLY 16
+#define SF_RDWR 32
+#define SF_NONBLOCK 65
+#define SF_SYMLINK_OK 128
+#define SF_SSL 256
+#define SF_AUTH 512
+
+//Stream state values
+#define SS_CONNECTING 1
+#define SS_CONNECTED 2
+#define SS_HANDSHAKE_DONE 4
+#define SS_DATA_ERROR 8
+#define SS_WRITE_ERROR 16
+#define SS_AUTH 8192
 
 #define STREAM_TYPE_FILE 0
 #define STREAM_TYPE_UNIX 1
@@ -48,15 +50,19 @@ extern "C" {
 
 typedef struct
 {
+int Type;
+int in_fd, out_fd;
+unsigned int Flags;
+unsigned int State;
+unsigned int Timeout;
+unsigned int BlockSize;
+unsigned int BuffSize;
+
+unsigned int InStart, InEnd;
+unsigned int OutEnd;
 char *InputBuff;
 char *OutputBuff;
-int Timeout;
-int in_fd, out_fd;
-int Type;
-int Flags;
-unsigned int BuffSize;
-unsigned int InStart, InEnd;
-unsigned int OutStart, OutEnd;
+
 unsigned int BytesRead;
 unsigned int BytesWritten;
 char *Path;
@@ -65,49 +71,56 @@ ListNode *Values;
 ListNode *Items;
 } STREAM;
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 int FDSelect(int fd, int Flags, struct timeval *tv);
 int FDIsWritable(int);
 int FDCheckForBytes(int);
 
+void STREAMSetNonBlock(STREAM *S, int val);
+void STREAMSetTimeout(STREAM *, int);
+void STREAMSetFlushType(STREAM *Stream, int Type, int val);
+
 
 STREAM *STREAMCreate();
-STREAM *STREAMOpenFile(char *Path, int Mode);
+STREAM *STREAMOpenFile(const char *Path, int Mode);
 STREAM *STREAMClose(STREAM *Stream);
-void STREAMSetNonBlock(STREAM *S, int val);
 int STREAMLock(STREAM *S, int val);
 int STREAMFlush(STREAM *Stream);
 void STREAMClear(STREAM *Stream);
 double STREAMTell(STREAM *Stream);
 double STREAMSeek(STREAM *Stream, double, int whence);
 void STREAMResizeBuffer(STREAM *, int);
-void STREAMSetTimeout(STREAM *, int);
-void STREAMSetFlushType(STREAM *Stream, int Type, int val);
 int STREAMReadChar(STREAM *);
 int STREAMWriteChar(STREAM *, char);
 char* STREAMReadLine(char *Buffer, STREAM *);
 int ReadBytesToTerm(STREAM *S, char *Buffer, int BuffSize, char Term);
 char* STREAMReadToTerminator(char *Buffer, STREAM *, char Term);
 char* STREAMReadToMultiTerminator(char *Buffer, STREAM *, char *Terms);
-int STREAMWriteString(char *Buffer, STREAM *);
-int STREAMWriteLine(char *Buffer, STREAM *);
+int STREAMWriteString(const char *Buffer, STREAM *);
+int STREAMWriteLine(const char *Buffer, STREAM *);
 STREAM *STREAMFromFD(int fd);
 STREAM *STREAMFromDualFD(int in_fd, int out_fd);
-STREAM *STREAMSpawnCommand(char *Command, int type);
+STREAM *STREAMSpawnCommand(const char *Command, int type);
 
 int STREAMDisassociateFromFD(STREAM *Stream);
 int STREAMPeekChar(STREAM *);
 
 int STREAMReadBytes(STREAM *, char *Buffer, int Bytes);
-int STREAMWriteBytes(STREAM *, char *Buffer, int Bytes);
+int STREAMWriteBytes(STREAM *, const char *Buffer, int Bytes);
 int STREAMCheckForBytes(STREAM *);
 int STREAMCheckForWaitingChar(STREAM *S, char check_char);
 int STREAMCountWaitingBytes(STREAM *);
 STREAM *STREAMSelect(ListNode *Streams);
 
-void STREAMSetValue(STREAM *S, char *Name, char *Value);
-char *STREAMGetValue(STREAM *S, char *Name);
-void STREAMSetItem(STREAM *S, char *Name, void *Item);
-void *STREAMGetItem(STREAM *S, char *Name);
+void STREAMSetValue(STREAM *S, const char *Name, const char *Value);
+char *STREAMGetValue(STREAM *S, const char *Name);
+void STREAMSetItem(STREAM *S, const char *Name, void *Item);
+void *STREAMGetItem(STREAM *S, const char *Name);
 
 
 #ifdef __cplusplus

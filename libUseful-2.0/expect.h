@@ -6,6 +6,7 @@
 
 #define DIALOG_END 1
 #define DIALOG_FAIL 2
+#define DIALOG_OPTIONAL 4
 
 typedef struct
 {

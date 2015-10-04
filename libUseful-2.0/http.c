@@ -77,7 +77,7 @@ Mod->Data=(THTTPChunk *) calloc(1, sizeof(THTTPChunk));
 return(TRUE);
 }
 
-int HTTPChunkedRead(TProcessingModule *Mod, const char *InBuff, int InLen, char *OutBuff, int OutLen)
+int HTTPChunkedRead(TProcessingModule *Mod, const char *InBuff, int InLen, char **OutBuff, int *OutLen)
 {
 int len=0, val=0;
 THTTPChunk *Chunk;
@@ -112,9 +112,13 @@ if (Chunk->ChunkSize==0)
 else if (len >= Chunk->ChunkSize)
 {
 	val=Chunk->ChunkSize;
-	if (val > OutLen) val=OutLen;
 
-	memcpy(OutBuff,Chunk->Buffer,val);
+	//We should really grow OutBuff to take all the data
+	//but for the sake of simplicity we'll just use the space
+	//supplied
+	if (val > *OutLen) val=*OutLen;
+	memcpy(*OutBuff,Chunk->Buffer,val);
+
 	ptr=Chunk->Buffer+val;
 	Chunk->BuffLen-=val;
 	Chunk->ChunkSize-=val;
@@ -629,6 +633,7 @@ if (StrLen(Info->PostContentType) >0)
 Tempstr=FormatStr(Tempstr,"Content-type: %s\r\n",Info->PostContentType);
 SendStr=CatStr(SendStr,Tempstr);
 }
+
 if (Info->PostContentLength > 0) 
 {
 Tempstr=FormatStr(Tempstr,"Content-Length: %d\r\n",Info->PostContentLength);
@@ -644,6 +649,11 @@ SendStr=CatStr(SendStr,Tempstr);
 /* If we have authorisation details then send them */
 if  (Info->Authorization) SendStr=HTTPHeadersAppendAuth(SendStr, "Authorization", Info, Info->Authorization);
 if  (Info->ProxyAuthorization) SendStr=HTTPHeadersAppendAuth(SendStr, "Proxy-Authorization", Info, Info->ProxyAuthorization);
+
+if (Info->Flags & HTTP_NOCACHE)
+{
+SendStr=CatStr(SendStr,"Pragma: no-cache\r\nCache-control: no-cache\r\n");
+}
 
 
 if (Info->Depth > 0)
@@ -711,8 +721,11 @@ SendStr=MCatStr(SendStr,Curr->Tag, ": ", (char *)  Curr->Item, "\r\n",NULL);
 Curr=ListGetNext(Curr);
 }
 
+if (! (Info->Flags & HTTP_NOCOOKIES))
+{
 SendStr=AppendCookies(SendStr,Cookies);
 SendStr=CatStr(SendStr,"\r\n");
+}
 
 Info->State |= HTTP_HEADERS_SENT;
 if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HTTPSEND: ------\n%s------\n\n",SendStr);

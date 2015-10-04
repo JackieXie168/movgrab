@@ -1,0 +1,276 @@
+#include "SpawnPrograms.h"
+#include "libsettings.h"
+#include "pty.h"
+#include "file.h"
+#include <sys/ioctl.h>
+
+int ForkWithContext()
+{
+char *ptr;
+int result;
+
+result=fork();
+if (result==0)
+{
+	ptr=LibUsefulGetValue("FORK:Dir");
+	if (StrLen(ptr)) chdir(ptr);
+	ptr=LibUsefulGetValue("FORK:User");
+	if (StrLen(ptr)) SwitchUser(ptr);
+	ptr=LibUsefulGetValue("FORK:Group");
+	if (StrLen(ptr)) SwitchGroup(ptr);
+}
+return(result);
+}
+
+
+/* This function turns our process into a demon */
+int demonize()
+{
+int result, i=0;
+
+//Don't fork with context here, as a demonize involves two forks, so
+//it's wasted work here.
+result=fork();
+if (result != 0) exit(0);
+
+/*we can only get to here if result= 0 i.e. we are the child process*/
+setsid();
+
+result=ForkWithContext();
+if (result !=0) exit(0);
+umask(0);
+
+/* close stdin, stdout and std error, but only if they are a tty. In some  */
+/* situations (like working out of cron) we may not have been given in/out/err */
+/* and thus the first files we open will be 0,1,2. If we close them, we will have */
+/* closed files that we need! Alternatively, the user may have used shell redirection */
+/* to send output for a file, and I'm sure they don't want us to close that file */
+
+//for (i=0; i < 3; i++)
+{
+	if (isatty(i)) 
+	{
+		close(i);
+		/* reopen to /dev/null so that any output gets thrown away */
+		/* but the program still has somewhere to write to         */
+		open("/dev/null",O_RDWR);
+	}
+}
+
+
+return(1);
+}
+
+
+
+int ForkWithIO(int StdIn, int StdOut, int StdErr)
+{
+int result, fd;
+
+result=ForkWithContext();
+if (result==0)
+{
+	if (StdIn > -1) 
+	{
+		if (StdIn !=0) 
+		{
+			close(0);
+			dup(StdIn);
+		}
+	}
+	else
+	{
+		fd=open("/dev/null",O_RDONLY);
+		dup(fd);
+		close(fd);
+	}
+
+	if (StdOut > -1) 
+	{
+		if (StdOut !=1) 
+		{
+			close(1);
+			dup(StdOut);
+		}
+	}
+	else
+	{
+		fd=open("/dev/null",O_WRONLY);
+		dup(fd);
+		close(fd);
+	}
+
+	if (StdErr > -1) 
+	{
+		if (StdErr !=2) 
+		{
+		close(2);
+		dup(StdErr);
+		}
+	}
+}
+else
+{
+	fd=open("/dev/null",O_WRONLY);
+	dup(fd);
+	close(fd);
+}
+
+return(result);
+}
+
+
+
+int SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr)
+{
+int result, fd, i;
+
+result=ForkWithIO(StdIn,StdOut,StdErr);
+if (result==0)
+{
+SwitchProgram(CommandLine);
+_exit(result);
+}
+else return(result);
+}
+
+
+int Spawn(char *ProgName)
+{
+return(SpawnWithIO(ProgName, 0,1,2));
+}
+
+
+/* This creates a child process that we can talk to using a couple of pipes*/
+int PipeSpawnFunction(int *infd,int  *outfd,int  *errfd, BASIC_FUNC Func, void *Data )
+{
+int result;
+int channel1[2], channel2[2], channel3[2], DevNull=-1;
+int count;
+
+if (infd) pipe(channel1);
+if (outfd) pipe(channel2);
+if (errfd) pipe(channel3);
+
+result=ForkWithContext();
+if (result==0)
+{
+/* we are the child */
+if (infd) close(channel1[1]);
+else if (DevNull==-1) DevNull=open("/dev/null",O_RDWR);
+if (outfd) close(channel2[0]);
+else if (DevNull==-1) DevNull=open("/dev/null",O_RDWR);
+if (errfd) close(channel3[0]);
+else if (DevNull==-1) DevNull=open("/dev/null",O_RDWR);
+
+/*close stdin, stdout and stderr*/
+close(0);
+close(1);
+close(2);
+/*channel 1 is going to be our stdin, so we close the writing side of it*/
+if (infd) dup(channel1[0]);
+else dup(DevNull);
+/* channel 2 is stdout */
+if (outfd) dup(channel2[1]);
+else dup(DevNull);
+/* channel 3 is stderr */
+if (errfd) dup(channel3[1]);
+else dup(DevNull);
+
+Func(Data);
+exit(0);
+}
+else 
+{
+/* we close the appropriate halves of the link */
+if (infd) 
+{
+	close(channel1[0]);
+	*infd=channel1[1];
+}
+if (outfd)
+{
+	close(channel2[1]);
+	*outfd=channel2[0];
+}
+if (errfd)
+{
+	close(channel3[1]);
+	*errfd=channel3[0];
+}
+
+return(result);
+}
+
+}
+
+
+int BASIC_FUNC_EXEC_COMMAND(void *Data)
+{
+return(execl("/bin/sh","/bin/sh","-c",(char *) Data,NULL));
+}
+
+
+int PipeSpawn(int *infd,int  *outfd,int  *errfd, char *Command)
+{
+return(PipeSpawnFunction(infd,outfd,errfd, BASIC_FUNC_EXEC_COMMAND, Command));
+}
+
+
+
+
+int PseudoTTYSpawnFunction(int *ret_pty, BASIC_FUNC Func, void *Data)
+{
+int tty, pty, result, i;
+STREAM *S;
+char *Tempstr=NULL;
+
+if (GrabPseudoTTY(&pty,&tty))
+{
+result=ForkWithContext();
+if (result==0)
+{
+for (i=0; i < 4; i++) close(i);
+close(pty);
+
+setsid();
+dup(tty);
+dup(tty);
+dup(tty);
+ioctl(tty,TIOCSCTTY,0);
+Func((char *) Data);
+_exit(0);
+}
+
+close(tty);
+}
+
+*ret_pty=pty;
+return(result);
+}
+
+
+int PseudoTTYSpawn(int *pty, const char *Command)
+{
+return(PseudoTTYSpawnFunction(pty, BASIC_FUNC_EXEC_COMMAND, (void *) Command));
+}
+
+
+STREAM *STREAMSpawnCommand(const char *Command, int Type)
+{
+int to_fd, from_fd;
+STREAM *S=NULL;
+
+if (Type==COMMS_BY_PIPE)
+{
+	if (! PipeSpawn(&to_fd, &from_fd, NULL, Command)) return(NULL);
+	S=STREAMFromDualFD(from_fd, to_fd);
+}
+else if (Type==COMMS_BY_PTY)
+{
+	PseudoTTYSpawn(&to_fd,Command);
+	S=STREAMFromFD(to_fd);
+}
+STREAMSetFlushType(S,FLUSH_LINE,0);
+return(S);
+}

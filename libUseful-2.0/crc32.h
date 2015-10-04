@@ -14,8 +14,17 @@
 #ifndef ___CRC32_H___
 #define ___CRC32_H___
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void crc32Init(unsigned long *pCrc32);
 void crc32Update(unsigned long *pCrc32, unsigned char *pData, unsigned long uSize);
 void crc32Finish(unsigned long *pCrc32);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ___CRC32_H___ */

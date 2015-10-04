@@ -19,6 +19,7 @@
 #include "expect.h"
 #include "list.h"
 #include "file.h"
+#include "FileSystem.h"
 #include "GeneralFunctions.h"
 #include "DataProcessing.h"
 #include "EncryptedFiles.h"
@@ -30,5 +31,10 @@
 #include "Log.h"
 #include "http.h"
 #include "oauth.h"
+#include "Time.h"
+#include "Vars.h"
+#include "Markup.h"
+#include "MathExpr.h"
+#include "PatternMatch.h"
 
 #endif

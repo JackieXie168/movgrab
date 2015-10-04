@@ -4,14 +4,15 @@ int CompressBytes(char **Out, char *Alg, char *In, int Len, int Level)
 {
 TProcessingModule *Mod=NULL;
 char *Tempstr=NULL;
-int result;
+int result, val;
 
 Tempstr=FormatStr(Tempstr,"CompressionLevel=%d",Level);
 Mod=StandardDataProcessorCreate("compression",Alg,Tempstr);
 if (! Mod) return(-1);
 
-*Out=SetStrLen(*Out,Len*2);
-result=Mod->Flush(Mod,In,Len,*Out,Len*2);
+val=Len *2;
+*Out=SetStrLen(*Out,val);
+result=Mod->Write(Mod,In,Len,Out,&Len,TRUE);
 
 DestroyString(Tempstr);
 DataProcessorDestroy(Mod);

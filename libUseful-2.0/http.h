@@ -22,6 +22,7 @@
 #define HTTP_VER1_0 1
 #define HTTP_DEBUG 2
 #define HTTP_CHUNKED 4
+#define HTTP_NOCACHE 8
 #define HTTP_NOCOMPRESS 16
 #define HTTP_NOREDIRECT 32
 #define HTTP_TRY_HTTPS 64
@@ -33,6 +34,7 @@
 #define HTTP_GZIP 8192
 #define HTTP_DEFLATE 16384
 #define HTTP_NODECODE 32768
+#define HTTP_NOCOOKIES 65536
 
 
 #define HTTP_HEADERS_SENT 1
@@ -79,7 +81,9 @@ HTTPAuthStruct *ProxyAuthorization;
 STREAM *S;
 } HTTPInfoStruct;
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 char *HTTPQuote(char *, char*);
 char *HTTPQuoteChars(char *RetBuff, char *Str, char *CharList);
@@ -104,5 +108,11 @@ void HTTPSetProxy(char *Proxy);
 void HTTPSetFlags(int Flags);
 int HTTPGetFlags();
 char *HTTPParseURL(char *URL, char **Proto, char **Host, int *Port, char **Login, char **Password);
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif

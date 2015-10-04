@@ -1,11 +1,7 @@
 #include "download.h"
 #include "outputfiles.h"
+#include "display.h"
 
-pid_t PlayerPid=0;
-char *Player=NULL;
-int PlayerLaunchPercent=25;
-extern char *CmdLine, *ProgName;
-	
 /*
 Functions relating to connecting to hosts and downloading webpages.
 All the HTTP stuff is in here
@@ -103,115 +99,27 @@ return(Con);
 }
 
 
-void LaunchPlayer()
+
+
+
+int TransferItem(STREAM *Con, char *Title, char *URL, char *Format, double SegmentSize, double DocSize, double *BytesRead, int PrintName)
 {
 char *Tempstr=NULL;
-
-Tempstr=MCopyStr(Tempstr,Player," ",OutputFilesGetFilePath(),NULL);
-PlayerPid=Spawn(Tempstr);
-
-DestroyString(Tempstr);
-}
-
-
-//Display progress of download
-void DisplayProgress(char *FullTitle, char *Format, double bytes_read, double DocSize,time_t Now, int PrintName)
-{
-double Percent, Bps=0, ETAsecs;
-char *HUDocSize=NULL, *BpsStr=NULL, *ETAStr=NULL, *Title=NULL;
-static time_t SpeedStart=0;
-static double PrevBytesRead=0;
-
-if ((Now-SpeedStart) == 0) return;
-
-if (CheckForKeyboardInput()) PrintName=TRUE;
-
-
-Title=CopyStrLen(Title,FullTitle,30);
-Title=CatStr(Title,"...");
-if (! (Flags & FLAG_QUIET)) 
-{
-if (PrintName) fprintf(stderr,"\nGetting: %s  Size: %s  Format: %s\n",Title,GetHumanReadableDataQty(DocSize,0), Format);
-}
-
-
-
-BpsStr=CopyStr(BpsStr,"");
-if (SpeedStart > 0)
-{
-	Bps=(bytes_read - PrevBytesRead) / (Now-SpeedStart);
-	BpsStr=MCopyStr(BpsStr,GetHumanReadableDataQty(Bps,0),"/s ",NULL);
-}
-
-if (DocSize)
-{
-	HUDocSize=CopyStr(HUDocSize,GetHumanReadableDataQty(DocSize,0));
-
-	Percent=bytes_read * 100.0 / DocSize;
-
-	if (! (Flags & FLAG_QUIET)) 
-	{
-		if (bytes_read > 0)
-		{
-		ETAsecs=(DocSize-bytes_read) / Bps;
-		ETAStr=FormatStr(ETAStr,"%d:%02d",(int) ETAsecs/60, (int) ETAsecs % 60);
-		}
-		else ETAStr=CopyStr(ETAStr,"??:??");
-
-		fprintf(stderr,"	Progress: %0.2f%%  %s of %s  %s  ETA: %s         \r",Percent,GetHumanReadableDataQty(bytes_read,0),HUDocSize,BpsStr,ETAStr);
-		
-	}
-
-
-	sprintf(CmdLine,"%s %0.2f%% %s          \0",ProgName,Percent,Title);
-
-	if ((PlayerPid==0) && (Percent > PlayerLaunchPercent) && (Player)) LaunchPlayer();
-}
-else
-{
-	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %s %s     \r",GetHumanReadableDataQty((double) bytes_read,0),BpsStr);
-	sprintf(CmdLine,"%s %s              \0",ProgName,Title);
-}
-
-fflush(NULL);
-if (Now - SpeedStart > 5) 
-{
-	SpeedStart=Now;
-	PrevBytesRead=bytes_read;
-}
-
-DestroyString(HUDocSize);
-DestroyString(BpsStr);
-DestroyString(Title);
-}
-
-
-int TransferItem(STREAM *Con, char *Title, char *URL, char *Format, double DocSize, double *BytesRead)
-{
-char *Tempstr=NULL;
-time_t Now, LastProgressDisplay;
-int result, RetVal=FALSE;
+int result, RetVal=FALSE, PrintDownloadName;
 double ReadThisTime=0;
 
-
-DisplayProgress(Title, Format, *BytesRead, DocSize, Now, TRUE);
+DisplayProgress(Title, Format, *BytesRead, DocSize, PrintName);
 Tempstr=SetStrLen(Tempstr,BUFSIZ);
 result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
 while (result != EOF) 
 {
 	ReadThisTime +=result;
 	(*BytesRead) +=result;
-	time(&Now);
 
-
-	if (Now != LastProgressDisplay) 
-	{
-		DisplayProgress(Title, Format, *BytesRead,DocSize,Now,FALSE);
-		LastProgressDisplay=Now;
-	}
+	DisplayProgress(Title, Format, *BytesRead,DocSize,FALSE);
 
 	WriteOutputFiles(Tempstr,result);
-	if ((DocSize > 0) && (ReadThisTime >= DocSize))
+	if ((SegmentSize > 0) && (ReadThisTime >= SegmentSize))
 	{
 		 break;
 	}
@@ -222,8 +130,7 @@ RetVal=TRUE;
 //give a bit of time for 'player' program to finish
 sleep(3);
 
-DisplayProgress(Title, Format, *BytesRead,DocSize,Now,FALSE);
-printf("\n");
+DisplayProgress(Title, Format, *BytesRead,DocSize,FALSE);
 
 DestroyString(Tempstr);
 
@@ -284,7 +191,7 @@ if (Con)
 		if (Flags & FLAG_TEST_SITES) RetVal=TRUE;
 		else
 		{
-			RetVal=TransferItem(Con,Title, URL, Format, DocSize, &BytesRead);
+			RetVal=TransferItem(Con,Title, URL, Format, DocSize, DocSize, &BytesRead,TRUE);
 
 			Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Format, Doc));
 			CloseOutputFiles(Extn);

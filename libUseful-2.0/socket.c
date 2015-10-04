@@ -395,13 +395,13 @@ if (! S) return(FALSE);
 result=IsSockConnected(S->in_fd);
 if (result==TRUE)
 {
-	if (S->Flags & SF_CONNECTING)
+	if (S->State & SS_CONNECTING)
 	{
-		S->Flags |= SF_CONNECTED;
-		S->Flags &= (~SF_CONNECTING);
+		S->State |= SS_CONNECTED;
+		S->State &= (~SS_CONNECTING);
 	}
 }
-if ((result==SOCK_CONNECTING) && (! (S->Flags & SF_CONNECTING))) result=FALSE;
+if ((result==SOCK_CONNECTING) && (! (S->State & SS_CONNECTING))) result=FALSE;
 return(result);
 }
 
@@ -516,7 +516,7 @@ return(TRUE);
 
 
 
-void ParseHostDetails(char *Data,char **Host,int *Port,char **User)
+void ParseHostDetails(char *Data,char **Host,char **Port,char **User)
 {
 char *ptr=NULL;
 
@@ -529,11 +529,11 @@ ptr++;
 else ptr=Data;
 
 ptr=GetToken(ptr,":",Host,0);
-if (StrLen(ptr)) *Port=atoi(ptr);
+if (StrLen(ptr)) *Port=CopyStr(*Port,ptr);
 }
 
 
-void ParseConnectDetails(char *Str, char **Type, char **Host, int *Port, char **User, char **Pass, char **InitDir)
+void ParseConnectDetails(char *Str, char **Type, char **Host, char **Port, char **User, char **Pass, char **InitDir)
 {
 char *ptr, *ptr2, *Token=NULL, *Tmp=NULL;
 
@@ -543,6 +543,12 @@ while (ptr)
 if (strcmp(Token,"-password")==0)
 {
 ptr=GetToken(ptr," ",Pass,0);
+}
+else if (strcmp(Token,"-keyfile")==0)
+{
+ptr=GetToken(ptr," ",&Token,0);
+
+*Pass=MCopyStr(*Pass,"keyfile:",Token,NULL);
 }
 else
 {
@@ -568,13 +574,21 @@ DestroyString(Tmp);
 
 void ParseConnectHop(char *Line, int *Type,  char **Host, char **User, char **Password, char **KeyFile, int *Port)
 {
-char *ptr, *ptr2, *Token=NULL, *Trash=NULL;
+char *ptr, *ptr2, *TypeStr=NULL, *Token=NULL, *Trash=NULL;
 int result;
 
-ParseConnectDetails(Line, &Token, Host, Port, User, Password, &Trash);
-ptr=GetToken(Line,":",&Token,GETTOKEN_QUOTES);
-*Type=MatchTokenFromList(Token,HopTypes,0);
+ParseConnectDetails(Line, &TypeStr, Host, &Token, User, Password, &Trash);
+*Type=MatchTokenFromList(TypeStr,HopTypes,0);
+if (StrLen(Token)) *Port=atoi(Token);
 
+if (StrLen(*Password) && (strncmp(*Password,"keyfile:",8)==0) )
+{
+	*KeyFile=CopyStr(*KeyFile,(*Password)+8);
+	*Password=CopyStr(*Password,"");
+}
+
+
+DestroyString(TypeStr);
 DestroyString(Token);
 DestroyString(Trash);
 }
@@ -605,6 +619,7 @@ switch (val)
 	case CONNECT_HOP_SSH:
 //		if ((StrLen(KeyFile)==0) && (StrLen(Pass) > 0)) Tempstr=CopyStr(Tempstr,"ssh -2 -e none ");
 //		else 
+
 
 		Tempstr=CopyStr(Tempstr,"ssh -2 -T ");
 		//Tempstr=CopyStr(Tempstr,"ssh -2 ");
@@ -637,7 +652,7 @@ switch (val)
 		{
 			Tempstr=CatStr(Tempstr, " 2> /dev/null");
 			PseudoTTYSpawn(&S->in_fd,Tempstr);
-			
+	
 			S->out_fd=S->in_fd;
 
 
@@ -790,10 +805,14 @@ if (StrLen(DesiredHost))
 
 if (result==TRUE)
 {
-    if (Flags & CONNECT_NONBLOCK) S->Flags |=SF_CONNECTING | SF_NONBLOCK;
+	if (Flags & CONNECT_NONBLOCK) 
+	{
+		S->State |=SS_CONNECTING;
+		S->Flags |=SF_NONBLOCK;
+	}
 	else
 	{
-		S->Flags |=SF_CONNECTED;
+		S->State |=SS_CONNECTED;
 		STREAMDoPostConnect(S, Flags);
 	}
 }
@@ -901,16 +920,19 @@ if (InitDone) return(TRUE);
   SSL_load_error_strings();
 
   InitDone=TRUE;
-
   return(TRUE);
 #endif
-  return(FALSE);
+
+return(FALSE);
 }
+
 
 int SSLAvailable()
 {
-return(INTERNAL_SSL_INIT());
+	return(INTERNAL_SSL_INIT());
 }
+
+
 
 int DoSSLClientNegotiation(STREAM *S, int Flags)
 {
@@ -919,7 +941,8 @@ int result=FALSE, val;
 SSL_METHOD *Method;
 SSL_CTX *ctx;
 SSL *ssl;
-struct x509 *cert=NULL;
+//struct x509 *cert=NULL;
+X509 *cert=NULL;
 
 if (S)
 {

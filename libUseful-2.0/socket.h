@@ -65,7 +65,7 @@ int ProcessIncommingBytes(DownloadContext *);
 //int DownloadToDot(int sock, FILE *SaveFile);
 int DownloadToDot(STREAM *Connection, STREAM *SaveFile);
 int DownloadToTermStr(STREAM *Connection, STREAM *SaveFile, char *TermStr);
-void ParseConnectDetails(char *Str, char **Type, char **Host, int *Port, char **User, char **Pass, char **InitDir);
+void ParseConnectDetails(char *Str, char **Type, char **Host, char **Port, char **User, char **Pass, char **InitDir);
 
 
 /* IP Address and host lookup functions */
@@ -75,12 +75,12 @@ char *IPStrToHostName(char *);
 char *IPtoStr(unsigned long);
 unsigned long StrtoIP(char *);
 int IsIPAddress(char *);
-int SSLAvailable();
 
 
 int STREAMAddConnectionHop(STREAM *S, char *Value);
 void STREAMAddConnectionHopList(STREAM *S, char *HopList);
 
+int SSLAvailable();
 
 #ifdef __cplusplus
 }

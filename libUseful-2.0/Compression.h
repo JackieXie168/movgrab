@@ -9,7 +9,6 @@ extern "C" {
 
 int CompressBytes(char **Out, char *Alg, char *In, int Len, int Level);
 
-
 #ifdef __cplusplus
 }
 #endif

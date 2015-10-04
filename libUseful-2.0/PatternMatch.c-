@@ -1,0 +1,137 @@
+#include "PatternMatch.h"
+
+int int_pmatch(char *Pattern, char *String, char *Start, char **End, int Flags)
+{
+   char *P_Ptr, *S_Ptr, *Tmp_Ptr;
+   static char *OptionChars=NULL;
+   int ForceMatch=FALSE, result=FALSE, i;
+   char S_Char, P_Char;
+
+
+if ((! Pattern) || (! String)) return(FALSE);
+if ((StrLen(Pattern)==0) && (StrLen(String) !=0)) return(FALSE);
+if ((StrLen(String)==0) && (StrLen(Pattern) !=0)) return(FALSE);
+
+P_Ptr=Pattern;
+S_Ptr=String;
+if (Start) *Start=String;
+if (End) *End=String;
+
+if ((*S_Ptr==0) || (*P_Ptr==0)) return(FALSE);
+
+while (*S_Ptr !=0)
+{
+	S_Char=*S_Ptr;
+	P_Char=*P_Ptr;
+	if (Flags & PMATCH_NOCASE)
+	{
+		S_Char=tolower(S_Char);
+		P_Char=tolower(P_Char);
+	}
+
+	if (ForceMatch)
+	{
+		if (S_Char != P_Char)
+		{
+   		if (End) *End=S_Ptr;
+			return(FALSE);
+		}
+		P_Ptr++;
+		ForceMatch=FALSE;
+	}
+	else switch (*P_Ptr)
+	{
+		case '\0':
+		return(FALSE);
+		break;
+
+		case '?':
+			P_Ptr++;
+		break;
+
+		case '*':
+		if (Flags & PMATCH_NOWILDCARDS) return(FALSE);
+		do
+		{
+		result=int_pmatch(P_Ptr+1,S_Ptr,NULL,&Tmp_Ptr, Flags);
+		if (result)
+		{
+			  S_Ptr=Tmp_Ptr;
+  		  if (End) *End=S_Ptr;
+
+			  return(TRUE);
+		}
+		S_Ptr++;
+		} while (*S_Ptr);
+		break;
+
+		case '\\':
+			ForceMatch=TRUE;
+			P_Ptr++;
+		break;
+
+		case '[':
+			result=FALSE;
+			OptionChars=CopyStr(OptionChars,"");
+			while (*P_Ptr !=']')
+			{
+			   OptionChars=AddCharToStr(OptionChars,*P_Ptr);
+			   P_Ptr++;
+			}
+			P_Ptr++;
+	
+			for (i=0; i < StrLen(OptionChars); i++)
+			{
+			   if (OptionChars[i]==*S_Ptr) result=TRUE;
+			}
+	
+			if (result==FALSE)
+			{
+				S_Ptr=Tmp_Ptr;
+				if (End) *End=S_Ptr;
+				return(FALSE);
+			}
+		break;
+
+		default:
+		if (S_Char != P_Char)
+		{
+   		if (End) *End=S_Ptr;
+			return(FALSE);
+		}
+		else 
+		{
+			result=TRUE;
+			P_Ptr++;
+		}
+		break;
+	}
+
+	S_Ptr++;
+}
+
+if (End) *End=S_Ptr;
+
+if (
+		(StrLen(P_Ptr) !=0) &&
+		(strcmp(P_Ptr,"*") !=0)
+)
+{
+	return(FALSE);
+}
+
+  return(result); 
+}
+
+
+int pmatch(char *Pattern, char *String, char **Start, char **End, int Flags)
+{
+  //deal with the easy situation first
+  if (StrLen(Pattern)==0)
+  {
+	 if (StrLen(String)==0) return(TRUE);
+	 else return(FALSE);
+  }
+
+  return(int_pmatch(Pattern, String, Start, End, Flags));
+}
