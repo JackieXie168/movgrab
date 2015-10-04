@@ -87,6 +87,11 @@ while (ptr)
 			SetVar(Vars,"item:flv-h264:854x480",URL);
 			break;
 
+			case 36:
+			SetVar(Vars,"item:3gp:400x240",URL);
+			break;
+
+
 			case 37:
 			SetVar(Vars,"item:mp4:1920x1080",URL);
 			break;

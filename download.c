@@ -36,7 +36,7 @@ if (Flags & FLAG_HTTPS) Info->Flags |= HTTP_SSL|HTTP_SSL_REWRITE;
 if (Flags & FLAG_DEBUG3) Info->Flags |= HTTP_DEBUG;
 
 
-SetVar(Info->CustomSendHeaders,"Referer",LastPage); 
+if (StrLen(LastPage)) SetVar(Info->CustomSendHeaders,"Referer",LastPage); 
 
 LastPage=CopyStr(LastPage,Tempstr);
 if (BytesRange > 0)
