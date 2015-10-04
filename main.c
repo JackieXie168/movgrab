@@ -465,6 +465,9 @@ int result;
 StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,0);
 
+Tempstr=CopyStr(Tempstr,getenv("http_proxy"));
+if (StrLen(Tempstr)) HTTPSetProxy(Tempstr);
+
 DownloadQueue=ListCreate();
 Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);

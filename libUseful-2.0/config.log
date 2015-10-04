@@ -15,6 +15,6 @@ configure:870: checking for ANSI C header files
 configure:883: gcc -E  conftest.c >/dev/null 2>conftest.out
 configure:950: gcc -o conftest -g -O2   conftest.c  1>&5
 configure: In function 'main':
-configure:945:67: warning: incompatible implicit declaration of built-in function 'exit' [enabled by default]
+configure:945: warning: incompatible implicit declaration of built-in function 'exit'
 configure:982: checking for deflate in -lz
 configure:1001: gcc -o conftest -g -O2   conftest.c -lz   1>&5
