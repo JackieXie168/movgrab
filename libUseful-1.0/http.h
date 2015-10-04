@@ -14,17 +14,19 @@
 #define HTTP_OKAY 0
 #define HTTP_NOCONNECT 1
 #define HTTP_NOTFOUND 2
-#define HTTP_REDIRECT 4
-#define HTTP_CHUNKED 8
-#define HTTP_ERROR 16
+#define HTTP_REDIRECT 3
+#define HTTP_ERROR 4
+#define HTTP_CIRCULAR_REDIRECTS 5
+#define HTTP_NOTMODIFIED 6
+
+#define HTTP_VER1_0 1
+#define HTTP_DEBUG 2
+#define HTTP_CHUNKED 4
 #define HTTP_NOREDIRECT 32
-#define HTTP_VER1_0 64
 #define HTTP_KEEPALIVE 128
-#define HTTP_DEBUG 256
 #define HTTP_PROXY 512
 #define HTTP_SSL 1024
 #define HTTP_SSL_REWRITE 2048
-#define HTTP_CIRCULAR_REDIRECTS 4096
 #define HTTP_GZIP 8192
 #define HTTP_DEFLATE 16384
 
@@ -59,8 +61,8 @@ int Depth;
 char *PostData;
 char *PostContentType;
 int PostContentLength;
-char *IfModifiedSince;
 char *Proxy;
+time_t IfModifiedSince;
 ListNode *CustomSendHeaders;
 HTTPAuthStruct *Authorization;
 HTTPAuthStruct *ProxyAuthorization;

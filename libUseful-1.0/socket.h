@@ -25,10 +25,12 @@ extern "C" {
 
 
 /* Server Socket Funcs*/
-int InitServerSock(int Port);
+int InitServerSock(char *Address, int Port);
 int InitUnixServerSock(char *Path);
 int TCPServerSockAccept(int ServerSock,int *Addr);
 int UnixServerSockAccept(int ServerSock);
+
+int GetSockDetails(int fd, char **LocalAddress, int *LocalPort, char **RemoteAddress, int *RemotePort);
 
 /* Client Socket Funcs*/
 int IsSockConnected(int sock);

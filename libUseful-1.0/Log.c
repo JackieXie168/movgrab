@@ -66,15 +66,20 @@ TLogFile *LogFileGetEntry(char *FileName)
 	return(LogFile);
 }
 
-void LogFileClose(TLogFile *LogFile)
+void LogFileClose(char *Path)
 {
 ListNode *Node;
+TLogFile *LogFile;
 
-Node=ListFindItem(LogFiles,LogFile);
-if (Node) DeleteNodeFromList(Node);
+Node=ListFindNamedItem(LogFiles,Path);
+if (Node)
+{
+LogFile=(TLogFile *) Node->Item;
+DeleteNodeFromList(Node);
 DestroyString(LogFile->Path);
 STREAMClose(LogFile->S);
 free(LogFile);
+}
 }
 
 void LogFileInternalDoRotate(TLogFile *LogFile)
@@ -82,6 +87,7 @@ void LogFileInternalDoRotate(TLogFile *LogFile)
   struct stat FStat;
   char *Tempstr=NULL;
 
+	if (! LogFile) return;
   if (LogFile->MaxSize > 0)
   {
   fstat(LogFile->S->out_fd,&FStat);
@@ -219,10 +225,12 @@ int LogToFile(char *FileName,char *fmt, ...)
 {
 	char *Tempstr=NULL;
 	va_list args;
-	int result;
+	int result=FALSE;
 	TLogFile *LogFile;
 
 	LogFile=LogFileGetEntry(FileName);
+	if (LogFile)
+	{
 	LogFileInternalDoRotate(LogFile);
 
 	va_start(args,fmt);
@@ -230,35 +238,36 @@ int LogToFile(char *FileName,char *fmt, ...)
 	va_end(args);
 	StripTrailingWhitespace(Tempstr);
 	result=LogFileInternalWrite(LogFile->S,LOG_INFO, LogFile->LogFacility, LogFile->Flags, LogFile->Tag, Tempstr);
-	
+	}
+
 DestroyString(Tempstr);
 return(result);
 }
 
 int AppendTempLogToLogFile(char *LogPath, char *TmpLogPath)
 {
-TLogFile *LogFile, *TmpLog;
+TLogFile *LogFile;
 char *Tempstr=NULL;
 STREAM *S;
 
-	LogFile=LogFileGetEntry(LogPath);
-	TmpLog=LogFileGetEntry(TmpLogPath);
-	if (TmpLog) LogFileClose(TmpLog);
-	S=STREAMOpenFile(TmpLogPath,O_RDONLY);
-	if (LogFile && S)
-	{
+    LogFile=LogFileGetEntry(LogPath);
+    LogFileClose(TmpLogPath);
+    S=STREAMOpenFile(TmpLogPath,O_RDONLY);
+    if (LogFile && S)
+    {
 
-			STREAMLock(LogFile->S,LOCK_EX);
-			Tempstr=STREAMReadLine(Tempstr,S);
-			while(Tempstr)
-			{
-			STREAMWriteLine(Tempstr,LogFile->S);
-			Tempstr=STREAMReadLine(Tempstr,S);
-			}
-			if (LogFile->Flags & LOGFILE_FLUSH) STREAMFlush(LogFile->S);
-			STREAMLock(LogFile->S,LOCK_UN);
-			unlink(TmpLogPath);
-	}
+            STREAMLock(LogFile->S,LOCK_EX);
+            Tempstr=STREAMReadLine(Tempstr,S);
+            while(Tempstr)
+            {
+            STREAMWriteLine(Tempstr,LogFile->S);
+            Tempstr=STREAMReadLine(Tempstr,S);
+            }
+            if (LogFile->Flags & LOGFILE_FLUSH) STREAMFlush(LogFile->S);
+            STREAMLock(LogFile->S,LOCK_UN);
+            unlink(TmpLogPath);
+    }
 
 DestroyString(Tempstr);
 }
+

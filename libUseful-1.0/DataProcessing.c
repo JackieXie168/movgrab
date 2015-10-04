@@ -94,11 +94,9 @@ char *Name=NULL, *Value=NULL, *ptr;
 char *Salt=NULL;
 
 *IVLen=0;
-fprintf(stderr,"IEC1: [%s] \n",Args);
 ptr=GetNameValuePair(Args,"\\S","=",&Name,&Value);
 while (ptr)
 {
-fprintf(stderr,"IEC: [%s] [%s]\n",Name,Value);
   if (StrLen(Name))
   {
   if (strcasecmp(Name,"Cipher")==0)
@@ -463,7 +461,6 @@ libCryptoProcessorData *Data;
 EVP_CIPHER_CTX *ctx;
 char *ptr, *Tempstr=NULL;
 
-//fprintf(stderr,"LCPW: %s %d\n",InData,InLen);
 //if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
 ptr=OutData;
 
@@ -475,7 +472,6 @@ len=OutLen;
 ProcMod->Flags = ProcMod->Flags & ~DPM_WRITE_FINAL;
 if (ProcMod->Flags & DPM_NOPAD_DATA)
 {
-printf("PAD!\n");
 	val=InLen % Data->BlockSize;
 	Tempstr=CopyStrLen(Tempstr,InData,InLen);
 	if (val !=0) 
@@ -487,12 +483,10 @@ printf("PAD!\n");
 	else val=InLen;
 
 	result=EVP_EncryptUpdate(ctx, ptr, &len, Tempstr, val);
-fprintf(stderr,"WRITE: %s %d -> %d\n",Tempstr,val,len);
 }
 else 
 {
 result=EVP_EncryptUpdate(ctx, ptr, &len, InData, InLen);
-fprintf(stderr,"WRITE: %s %d -> %d (%d)\n",InData,InLen,len,OutLen);
 }
 
 
@@ -574,7 +568,7 @@ else
 
 if (! result) bytes_read=-1;
 else bytes_read+=InLen; //should be 'len' but DecryptUpdate returns the
-		   //wrong value.
+												//number of bytes output, not the number consumed
 
 #endif
 return(bytes_read);
@@ -680,23 +674,24 @@ int wrote=0;
 
 zlibData *ZData;
 
-if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
+//if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
 ZData=(zlibData *) ProcMod->Data;
 
+if (InLen > 0)
+{
 ZData->z_out.avail_in=InLen;
 ZData->z_out.next_in=(char *) InData;
+}
 
 ZData->z_out.avail_out=OutLen;
 ZData->z_out.next_out=OutData;
 
-if (Flush)
-{
-	deflate(& ZData->z_out, Z_FINISH);
-	ProcMod->Flags |= DPM_WRITE_FINAL;
-}
+if (Flush) deflate(& ZData->z_out, Z_FINISH);
 else deflate(& ZData->z_out, Z_NO_FLUSH);
 
 wrote=OutLen-ZData->z_out.avail_out;
+if (Flush && (wrote == 0) ) ProcMod->Flags |= DPM_WRITE_FINAL;
+
 #endif
 return(wrote);
 }
@@ -834,7 +829,6 @@ if (strcasecmp(Class,"compression")==0)
    if (strcasecmp(Name,"zlib")==0) Mod->Init=zlibProcessorInit;
    else Mod->Init=gzipProcessorInit;
    
-//fprintf(stderr,"SDP: %s %s\n",Class,Name);
    Mod->Write=zlibProcessorWrite;
    Mod->Read=zlibProcessorRead;
    Mod->Flush=zlibProcessorFlush;
@@ -916,7 +910,6 @@ int STREAMAddStandardDataProcessor(STREAM *S, const char *Class, const char *Nam
 {
 TProcessingModule *Mod=NULL;
 
-//fprintf(stderr,"SASDP: %s\n",Args);
 Mod=StandardDataProcessorCreate(Class,Name,Args);
 if (Mod) 
 {

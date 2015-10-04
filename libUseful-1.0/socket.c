@@ -27,7 +27,7 @@ return(FALSE);
 }
 
 
-int InitServerSock(int Port)
+int InitServerSock(char *Address, int Port)
 {
 int sock;
 struct sockaddr_in sa;
@@ -36,12 +36,16 @@ int result;
 
 sock=socket(AF_INET,SOCK_STREAM,0);
 if (sock <0) return(-1);
+
 result=1;
 salen=sizeof(result);
 setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&result,salen);
+
 sa.sin_port=htons(Port);
 sa.sin_family=AF_INET;
-sa.sin_addr.s_addr=INADDR_ANY;
+if (StrLen(Address) > 0) sa.sin_addr.s_addr=StrtoIP(Address);
+else sa.sin_addr.s_addr=INADDR_ANY;
+
 salen=sizeof(struct sockaddr_in);
 result=bind(sock,(struct sockaddr *) &sa, salen);
 
@@ -132,6 +136,45 @@ for (count=0; count < len; count++)
 
 return(TRUE);
 }
+
+
+int GetSockDetails(int sock, char **LocalAddress, int *LocalPort, char **RemoteAddress, int *RemotePort)
+{
+int salen, result;
+struct sockaddr_in sa;
+
+*LocalPort=0;
+*RemotePort=0;
+*LocalAddress=CopyStr(*LocalAddress,"");
+*RemoteAddress=CopyStr(*RemoteAddress,"");
+
+salen=sizeof(struct sockaddr_in);
+result=getsockname(sock, (struct sockaddr *) &sa, &salen);
+
+if (result==0)
+{
+	*LocalAddress=CopyStr(*LocalAddress,IPtoStr(sa.sin_addr.s_addr));
+	*LocalPort=ntohs(sa.sin_port);
+
+	//Set Address to be the same as control sock, as it might not be INADDR_ANY
+	result=getsockname(sock, (struct sockaddr *) &sa, &salen);
+
+	if (result==0)
+	{
+		*RemoteAddress=CopyStr(*RemoteAddress,IPtoStr(sa.sin_addr.s_addr));
+		*RemotePort=sa.sin_port;
+	}
+
+	//We've got the local sock, so lets still call it a success
+	result=0;
+}
+
+if (result==0) return(TRUE);
+return(FALSE);
+}
+
+
+
 
 
 
@@ -750,6 +793,12 @@ while (Curr)
   {
 	  SSL_CTX_load_verify_locations(ctx,NULL,(char *) Curr->Item);
   }
+
+	if ((StrLen(Curr->Tag)) && (strncasecmp(Curr->Tag,"SSL_VERIFY_CERTFILE",19)==0))
+	{
+		SSL_CTX_load_verify_locations(ctx,(char *) Curr->Item,NULL);
+	}
+
   Curr=GetNextListItem(Curr);
 }
 

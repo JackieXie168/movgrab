@@ -262,6 +262,8 @@ while (1)
 					 ((SelectResult > 0) && (FD_ISSET(S->in_fd,&ReadSet)))
 				)
 			{
+                if (! (S->Flags & SF_CONNECTING))
+                {
 				if (Item->OnData)
 				{
 					  result=Item->OnData(S, Item->Name);
@@ -281,6 +283,7 @@ while (1)
 							Item->Data=(void *) S;
 						}
 
+				}
 				}
 			}
 			Curr=GetNextListItem(Curr);

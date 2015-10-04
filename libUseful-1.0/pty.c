@@ -66,17 +66,26 @@ else old_tty_data=(struct termios *) Curr->Item;
 tcgetattr(tty,old_tty_data);
 tcgetattr(tty,&tty_data);
 
+//ignore break characters and parity errors
 tty_data.c_iflag=IGNBRK | IGNPAR;
+
+//Enable Special Characters
 if (Flags & TTYFLAG_CANON) tty_data.c_iflag|= ICANON;
 else tty_data.c_iflag &= ~ICANON;
 
-if (Flags & TTYFLAG_CRLF) tty_data.c_iflag |= ICRNL;
-else tty_data.c_iflag &= ~ICRNL;
+if (Flags & TTYFLAG_CRLF_KEEP)
+{
+	//translate carriage-return to newline
+	if (Flags & TTYFLAG_CRLF) tty_data.c_iflag |= ICRNL;
+	else tty_data.c_iflag &= ~ICRNL;
 
-if (Flags & TTYFLAG_LFCR) tty_data.c_iflag |= INLCR;
-tty_data.c_oflag=0;
+	//translate newline to carriage return
+	if (Flags & TTYFLAG_LFCR) tty_data.c_iflag |= INLCR;
+	tty_data.c_oflag=0;
 
-if (Flags & TTYFLAG_LFCR) tty_data.c_oflag |= ONLCR | OPOST;
+	//postprocess and translate newline to cr-nl
+	if (Flags & TTYFLAG_LFCR) tty_data.c_oflag |= ONLCR | OPOST;
+}
 
 tty_data.c_cflag=CREAD | CS8 | HUPCL;
 if (Flags & TTYFLAG_SOFTWARE_FLOW) 
@@ -99,6 +108,13 @@ case 9600: val=B9600; break;
 case 19200: val=B19200; break;
 case 38400: val=B38400; break;
 case 57600: val=B57600; break;
+case 230400: val=B230400; break;
+case 460800: val=B460800; break;
+case 500000: val=B500000; break;
+case 1000000: val=B1000000; break;
+case 1152000: val=B1152000; break;
+case 2000000: val=B2000000; break;
+case 4000000: val=B4000000; break;
 default: val=B115200; break;
 }
 cfsetispeed(&tty_data,val);

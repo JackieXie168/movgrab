@@ -49,7 +49,6 @@ DestroyString(Info->ContentType);
 DestroyString(Info->Timestamp);
 DestroyString(Info->PostData);
 DestroyString(Info->PostContentType);
-DestroyString(Info->IfModifiedSince);
 DestroyString(Info->Proxy);
 
 DestroyList(Info->CustomSendHeaders,DestroyString);
@@ -110,16 +109,16 @@ if (Chunk->ChunkSize==0)
 
 val=(Chunk->Buffer +len) - ptr;
 
-if (ptr)
+if (ptr && (val > 0))
 {
-if (val > Chunk->ChunkSize) val=Chunk->ChunkSize;
-if (val > OutLen) val=OutLen;
+	if (val > Chunk->ChunkSize) val=Chunk->ChunkSize;
+	if (val > OutLen) val=OutLen;
 
-memcpy(OutBuff,ptr,val);
-Chunk->BuffLen=(Chunk->Buffer+len) - (ptr + val);
-memmove(Chunk->Buffer, ptr+val, Chunk->BuffLen);
+	memcpy(OutBuff,ptr,val);
+	Chunk->BuffLen=(Chunk->Buffer+len) - (ptr + val);
+	memmove(Chunk->Buffer, ptr+val, Chunk->BuffLen);
 
-Chunk->ChunkSize-=val;
+	Chunk->ChunkSize-=val;
 }
 
 if (Chunk->ChunkSize < 0) Chunk->ChunkSize=0;
@@ -204,8 +203,10 @@ for (ptr=Str; ptr < (Str+ilen); ptr++)
 {
 switch (*ptr)
 {
-
 		case ' ':
+			RetStr=AddCharToStr(RetStr,'+');
+		break;
+
 		case '(':
 		case ')':
 		case '[':
@@ -399,7 +400,8 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 
 	Tempstr=MCopyStr(Tempstr,"HTTP:",Token,NULL);
 	STREAMSetValue(S,Tempstr,ptr);
-	if (StrLen(Token))
+
+	if (StrLen(Token) && StrLen(ptr))
 	{
 		if (strcasecmp(Token,"Location")==0)
 		{
@@ -478,7 +480,8 @@ char *ptr;
 	{
 		if (*Info->ResponseCode=='3') 
 		{
-			Info->Flags |= HTTP_REDIRECT;
+			//No longer a flag, HTTP Redirect is now just a response code
+			//Info->Flags |= HTTP_REDIRECT;
 		}
 
 		if (strcmp(Info->ResponseCode,"401")==0) 
@@ -608,7 +611,11 @@ SendStr=CatStr(SendStr,Buffer);
 }
 */
 
-if (StrLen(Info->IfModifiedSince)) SendStr=MCatStr(SendStr,"If-Modified-Since: ",Info->IfModifiedSince,"\r\n",NULL);
+  if (Info->IfModifiedSince > 0)
+	{
+		Tempstr=CopyStr(Tempstr,GetDateStrFromSecs("%a, %d %b %Y %H:%M:%S GMT",Info->IfModifiedSince,NULL));
+		SendStr=MCatStr(SendStr,"If-Modified-Since: ",Tempstr, "\r\n",NULL);
+	}
 
 if (
 		 (strcasecmp(Info->Method,"DELETE") !=0) &&
@@ -761,6 +768,10 @@ if (HTTPInfo->ResponseCode)
 RCode=atoi(HTTPInfo->ResponseCode);
 switch (RCode)
 {
+	case 304:
+	result=HTTP_NOTMODIFIED;
+	break;
+
 	case 200:
 	case 201:
 	case 202:
@@ -769,7 +780,6 @@ switch (RCode)
 	case 205:
 	case 206:
 	case 207:
-	case 304:
 	result=HTTP_OKAY;
   break;
 
@@ -836,7 +846,6 @@ char *Proto=NULL, *Host=NULL;
 int Port=80, Flags=0;
 
 S=STREAMCreate();
-Flags=Info->Flags;
 
 if (StrLen(Info->Proxy))
 {
@@ -860,8 +869,11 @@ else
 {
 	Host=CopyStr(Host,Info->Host);
 	Port=Info->Port;
+
 	if (Info->Flags & HTTP_SSL) Flags |= CONNECT_SSL;
 }
+
+S->Path=MCopyStr(S->Path,"http://",Host,Info->Doc,NULL);
 
 if (STREAMConnectToHost(S,Host,Port,Flags))
 {
@@ -910,6 +922,7 @@ while (1)
 
 		if (result == HTTP_OKAY) break;
 		if (result == HTTP_NOTFOUND) break;
+		if (result == HTTP_NOTMODIFIED) break;
 		if (result == HTTP_ERROR) break;
 		if (result == HTTP_CIRCULAR_REDIRECTS) break;
 

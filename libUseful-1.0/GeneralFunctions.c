@@ -346,7 +346,7 @@ tzset();
 
 val=StrLen(DateFormat)+ DATE_BUFF_LEN;
 Buffer=SetStrLen(Buffer,val);
-strftime(Buffer,DATE_BUFF_LEN,DateFormat,TMS);
+strftime(Buffer,val,DateFormat,TMS);
 
 DestroyString(Tempstr);
 return(Buffer);
@@ -365,7 +365,7 @@ return(GetDateStrFromSecs(DateFormat, Now, TimeZone));
 
 time_t DateStrToSecs(char *DateFormat, char *Str)
 {
-time_t Secs;
+time_t Secs=0;
 struct tm TMS;
 
 if (StrLen(DateFormat)==0) return(0);

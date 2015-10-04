@@ -56,6 +56,7 @@ if (! StrLen(RetStr)) RetStr=ExtractFromWebpage(RetStr,"http://checkip.dyndns.or
 return(RetStr);
 }
 
+#define IPInfo_API_KEY "1261fcbf647ea02c165aa3bfa66810f0be453d8a1c2e7f653c0666d4e7e205f0"
 
 int IPGeoLocate(char *IP, ListNode *Vars)
 {
@@ -63,8 +64,11 @@ STREAM *S=NULL;
 char *ptr, *TagType=NULL, *TagData=NULL, *Tempstr=NULL, *Token=NULL;
 char *DesiredTags[]={"CountryCode","CountryName","City","RegionName","Latitude","Longitude","TimeZone",NULL};
 
-if (! IsIPAddress(IP)) Tempstr=MCopyStr(Tempstr,"http://ipinfodb.com/ip_query.php?ip=",LookupHostIP(IP),NULL);
-else Tempstr=MCopyStr(Tempstr,"http://ipinfodb.com/ip_query.php?ip=",IP,NULL);
+if (! IsIPAddress(IP)) Token=CopyStr(Token,LookupHostIP(IP));
+else Token=CopyStr(Token,IP);
+
+Tempstr=MCopyStr(Tempstr,"http://api.ipinfodb.com/v2/ip_query.php?key=",IPInfo_API_KEY,"&ip=",Token,"&timezone=true",NULL);
+
 S=HTTPGet(Tempstr, "", "");
 if (S)
 {
@@ -76,9 +80,9 @@ if (S)
 		{
 		if (MatchTokenFromList(TagType,DesiredTags,0) > -1)
 		{
-		//we can't re-use 'TagType', we still need it
-		ptr=HtmlGetTag(ptr,&Token,&TagData);
-		SetVar(Vars,TagType,TagData);
+			//we can't re-use 'TagType', we still need it
+			ptr=HtmlGetTag(ptr,&Token,&TagData);
+			SetVar(Vars,TagType,TagData);
 		}
 		ptr=HtmlGetTag(ptr,&TagType,&TagData);
 		}

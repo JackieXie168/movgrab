@@ -21,15 +21,18 @@
  */
 
 
+//This is doable thorugh autoconf, but I'm sick of fighting with it
+#define Version "1.0.6"
+
 #include "libUseful-1.0/libUseful.h"
 #include <string.h>
 
 
 char *FileTypes[]={".flv",".mp3",".mp4",".mov",".wma",".m4a",".wmv",".avi",".3gp",NULL};
-char *DownloadTypes[]={"none","generic","youtube","metacafe","google","dailymotion","break","ehow","vimeo","almostkilled","5min","ign","vbox7","blip.tv","3gpdb","ted","myvideo","clipshack","crazymotion","mytopclip","redbalcony","mobango","izlese","izles", "izles.org","berkeley","yale","sdnhm","uchannel","princeton","ucsd.tv","reuters","clipfish.de","liveleak","academicearth","photobucket","vidoevo",NULL};
-char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Google Video: http://video.google.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.ign.com","www.vbox7.com","www.blip.tv","www.3gpdb.com","www.ted.com","www.myvideo.de","www.clipshack.com","crazymotion.net","www.mytopclip.com","www.redbalcony.com","www.mobango.com","www.izlese.org","www.izles.net","www.izles.org","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","University of California Television","Reuters","clipfish.de","Liveleak","Academic Earth","Photobucket","VidoEmo/VidoEvo",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","google","dailymotion","break","ehow","vimeo","almostkilled","5min","ign","vbox7","blip.tv","3gpdb","ted","myvideo","clipshack","crazymotion","mytopclip","redbalcony","mobango","izlese","izles", "izles.org","berkeley","yale","sdnhm","uchannel","princeton","ucsd.tv","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera",NULL};
+char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Google Video: http://video.google.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.ign.com","www.vbox7.com","www.blip.tv","www.3gpdb.com","www.ted.com","www.myvideo.de","www.clipshack.com","crazymotion.net","www.mytopclip.com","www.redbalcony.com","www.mobango.com","www.izlese.org","www.izles.net","www.izles.org","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","University of California Television","Reuters","clipfish.de","Liveleak","Academic Earth","Photobucket","VideoEmo","Videos Facebook","Aljazeera",NULL};
 
-typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_GOOGLE_VIDEO, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_IGN, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_3GPDB,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_CRAZYMOTION, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_IZLESE,TYPE_IZLES, TYPE_IZLES_ORG, TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_LIVELEAK_STAGE2, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,
+typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_GOOGLE_VIDEO, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_IGN, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_3GPDB,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_CRAZYMOTION, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_IZLESE,TYPE_IZLES, TYPE_IZLES_ORG, TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_LIVELEAK_STAGE2, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,TYPE_VIDEOSFACEBOOK,TYPE_ALJAZEERA,
 /*Following ones are not real types, but used by internal processes */
 TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2,TYPE_3GPDB_STAGE2,TYPE_BERKELEY_STAGE2, TYPE_YOUTUBE_REF, TYPE_CLIPSHACK_STAGE2, TYPE_CLIPSHACK_STAGE3, TYPE_VIDEOEMO_STAGE2}TDT;
 
@@ -60,7 +63,7 @@ int Type=TYPE_NONE, DefaultPort=80;
 ListNode *DownloadQueue=NULL;
 STREAM *StdIn=NULL;
 char *Username=NULL, *Password=NULL;
-int DLWaitInterval=10, DLWaitPeriod=60;
+
 
 int DownloadItem(char *URL, char *Path, int Post);
 void DownloadPage(char *Path, int Type, char *Title, int Post);
@@ -348,38 +351,31 @@ DestroyString(Title);
 STREAM *ConnectAndRetryUntilDownload(char *Server, char *Doc, int Port, int DLFlags, int BytesRead)
 {
 STREAM *Con;
-int i=0,j,NoOfWaits;
+int i;
 char *Tempstr=NULL, *ptr;
 
-NoOfWaits=DLWaitPeriod / DLWaitInterval;
-if (NoOfWaits==0) NoOfWaits++;
-if ((DLWaitInterval > 0) && (NoOfWaits < 2)) NoOfWaits++;
 
-do
+for (i=0; i < 20; i++)
 {
-	Con=ConnectAndSendHeaders(Server, Doc, Port, DLFlags & FLAG_POST,BytesRead);
-	if (! (DLFlags & FLAG_DL_RETRY))  break;
+Con=ConnectAndSendHeaders(Server, Doc, Port, DLFlags & FLAG_POST,BytesRead);
+if (! (DLFlags & FLAG_DL_RETRY))  break;
 
-	if (Con)
-	{
-		ptr=GetVar(Con->Values,"HTTP:Content-Type");
-		if (strncmp(ptr,"text/",5) !=0) break;
+if (Con)
+{
+ptr=GetVar(Con->Values,"HTTP:Content-Type");
+printf("CT: %s\n",ptr);
+if (strncmp(ptr,"text/",5) !=0) break;
 
-		Tempstr=STREAMReadLine(Tempstr,Con);
-		while (Tempstr) Tempstr=STREAMReadLine(Tempstr,Con);
-		STREAMClose(Con);
-		Con=NULL;
-		printf("Content is not video, possibly waiting on video conversion. Sleeping %d secs\n",DLWaitInterval);
+Tempstr=STREAMReadLine(Tempstr,Con);
+while (Tempstr) Tempstr=STREAMReadLine(Tempstr,Con);
+STREAMClose(Con);
+Con=NULL;
+printf("Sleeping 5s\n");
+sleep(5);
+CheckForKeyboardInput();
+}
 
-		for (j=0; j < DLWaitInterval; j++)
-		{
-		sleep(1);
-		CheckForKeyboardInput();
-		}
-	}
-
-i++;
-} while (i < NoOfWaits);
+}
 
 DestroyString(Tempstr);
 
@@ -1047,6 +1043,8 @@ case TYPE_LIVELEAK_STAGE2:
 case TYPE_CLIPFISH_DE:
 case TYPE_ACADEMIC_EARTH:
 case TYPE_PHOTOBUCKET:
+case TYPE_VIDEOSFACEBOOK:
+case TYPE_ALJAZEERA:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
 
  DownloadItem(Tempstr, Title,Post);
@@ -1897,6 +1895,25 @@ if (strstr(Tempstr,VIDEOEMO2_TITLE_START))
 
 break;
 
+#define VIDEOSFACEBOOK_ITEM_START "<link rel=\"video_src\" href=\"http://www.videosfacebook.net/js/jw/player.swf?file="
+#define VIDEOSFACEBOOK_ITEM_END "\""
+#define VIDEOSFACEBOOK_TITLE_START "<meta property=\"og:title\" content=\""
+#define VIDEOSFACEBOOK_TITLE_END "\""
+
+case TYPE_VIDEOSFACEBOOK:
+	if (strstr(Tempstr,VIDEOSFACEBOOK_ITEM_START))
+	{
+		GenericExtractFromLine(Tempstr, "ID",VIDEOSFACEBOOK_ITEM_START,VIDEOSFACEBOOK_ITEM_END,Vars,EXTRACT_DEQUOTE);
+	}
+
+	if (strstr(Tempstr,VIDEOSFACEBOOK_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",VIDEOSFACEBOOK_TITLE_START,VIDEOSFACEBOOK_TITLE_END,Vars,EXTRACT_DEQUOTE);
+	}
+
+
+break;
+
 
 
 case TYPE_CRAZYMOTION:
@@ -1906,6 +1923,7 @@ case TYPE_UCHANNEL:
 case TYPE_PRINCETON:
 case TYPE_UCSDTV:
 case TYPE_GENERIC:
+case TYPE_ALJAZEERA:
 
 //some site are actually just frontends to youtube
 #define YOUTUBE_REFERENCE1 "http://www.youtube.com/watch?v="
@@ -2029,7 +2047,7 @@ void PrintUsage()
 {
 int i;
 
-fprintf(stderr,"\nMovgrab: version %s\n",VERSION);
+fprintf(stderr,"\nMovgrab: version %s\n",Version);
 fprintf(stderr,"Author: Colum Paget\n");
 fprintf(stderr,"Email: colums.projects@gmail.com\n");
 fprintf(stderr,"Blogs: \n");
@@ -2278,6 +2296,10 @@ else if (strstr(Server,"vidoevo.com"))
 {
  Type=TYPE_VIDEOEMO;
 }
+else if (strstr(Server,"videosfacebook.net"))
+{
+ Type=TYPE_VIDEOSFACEBOOK;
+}
 else if (strstr(Server,"reuters"))
 {
  Type=TYPE_REUTERS;
@@ -2290,7 +2312,10 @@ else if (strstr(Server,"ucsd.tv"))
 {
  Type=TYPE_UCSDTV;
 }
-
+else if (strstr(Server,"aljazeera.net"))
+{
+ Type=TYPE_ALJAZEERA;
+}
 
 return(Type);
 }
@@ -2306,7 +2331,7 @@ StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,0);
 
 DownloadQueue=CreateEmptyList();
-Tempstr=MCopyStr(Tempstr,"Movgrab ",VERSION,NULL);
+Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);
 FormatPreference=CopyStr(FormatPreference,"mp4,flv,mov,mpg,mpeg,wmv,avi,3gp,yt-flv,mp3,m4a,wma");
 

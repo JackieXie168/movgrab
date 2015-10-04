@@ -16,6 +16,7 @@ int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval);
 int LogToSTREAM(STREAM *S, int Flags, char *Str);
 void LogFileFlushAll(int Force);
 int LogToFile(char *FileName,char *fmt, ...);
+void LogFileClose(char *Path);
 int AppendTempLogToLogFile(char *LogPath, char *TmpLogPath);
 
 

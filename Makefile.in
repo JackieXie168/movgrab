@@ -2,10 +2,10 @@ CC = @CC@
 VERSION = @VERSION@
 CFLAGS = @CFLAGS@
 LIBS = @LIBS@
-FLAGS=$(CFLAGS) @DEFS@
 INSTALL=@INSTALL@
 prefix=@prefix@
 bindir=$(prefix)@bindir@
+FLAGS=$(CFLAGS) @DEFS@ 
 
 all: 
 	@cd libUseful-1.0; $(MAKE)

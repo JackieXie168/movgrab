@@ -181,6 +181,7 @@ S->OutStart=0;
 while (! AllDataWritten)
 {
   AllDataWritten=TRUE;
+  if ((! Final) && (len==0)) break;
   Curr=GetNextListItem(S->ProcessingModules);
   while (Curr)
   {
@@ -195,24 +196,24 @@ while (! AllDataWritten)
 
      OutBuff=SetStrLen(OutBuff,olen);
 		 result=0;
+
      if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,len,OutBuff,olen);
      else if (Mod->Write && ((len > 0) || Final)) result=Mod->Write(Mod,InBuff,len,OutBuff,olen);
-			
-
-     if (result > 0)
+		
+		 len=0;			
+     while (result > 0)
      {
           if (Final) AllDataWritten=FALSE;
-          InBuff=SetStrLen(InBuff,result);
-          memcpy(InBuff,OutBuff,result);
-					len=result;
-     }
-		 else 
-		 {
-			//out of data for now
-			len=0;
-			break;
-		 }
+          InBuff=SetStrLen(InBuff,len+result);
+          memcpy(InBuff+len,OutBuff,result);
+					len+=result;
+					if (result < olen) break;
 
+					if (Final) result=EOF;
+					else result=0;
+			    if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,0,OutBuff,olen);
+					else if (Mod->Write) result=Mod->Write(Mod,InBuff,0,OutBuff,olen);
+     }
      Curr=GetNextListItem(Curr);
   }
 
@@ -280,13 +281,15 @@ else olen=len * 8;
 OutBuff=SetStrLen(OutBuff,olen);
 
 len=Mod->Read(Mod,InBuff,len,OutBuff,olen);
+
 if (len==-1)
 {
     S->Flags |=SF_DATA_ERROR;
     break;
 }
 
-if (len > 0)
+if (len==0) break;
+else
 {
 	InBuff=SetStrLen(InBuff,len);
 	memcpy(InBuff,OutBuff,len);
@@ -295,7 +298,10 @@ if (len > 0)
 Curr=GetNextListItem(Curr);
 }
 
-if (! (S->Flags & SF_DATA_ERROR))
+if (
+			(! (S->Flags & SF_DATA_ERROR)) &&
+			len
+		)
 {
 //Whatever happened above, InBuff should now contain the data to be written!
 //note that we resize buff to S->InEnd + len, where len is length of the new
@@ -311,6 +317,7 @@ DestroyString(OutBuff);
 DestroyString(InBuff);
 
 olen=S->InEnd - S->InStart;
+
 if ((olen==0) && (S->Flags & SF_DATA_ERROR)) return(STREAM_DATA_ERROR);
 return(olen);
 }
@@ -655,11 +662,16 @@ if (bytes < 1)
 	//and so filling up the buffer, was to only check for new bytes if
 	//we didn't have enough to satisfy another read like the one we just had
 
-	if (FDCheckForBytes(S->in_fd) < 1) 
+	//We must check for '< 1' rather than '-1' because 
+	result=FDCheckForBytes(S->in_fd);
+
+	if (result ==-1) 
 	{
 		if (total==0) total=EOF;
 		break;
 	}
+	if (result < 1) break;
+
 	result=STREAMReadCharsToBuffer(S);
 	if (result < 1)
 	{
