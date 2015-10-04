@@ -2,8 +2,6 @@
 //Written by Colum Paget.
 //Copyright 2010 Colum Paget.
 
-//
-
 
 /****  Gnu Public Licence ****/
 /*
@@ -317,7 +315,7 @@ if (StrLen(Selected))
 if (! (Flags & FLAG_TEST_SITES))
 {
 if (RetVal==-1) fprintf(stderr,"No suitable download format found from '%s'\n\n",FormatPreference);
-else if (RetVal==TYPE_REFERENCE) fprintf(stderr,"Reference to another site: \n",GetVar(Vars,"ID"));
+else if (RetVal==TYPE_REFERENCE) fprintf(stderr,"Reference to another site: %s\n",GetVar(Vars,"ID"));
 else fprintf(stderr,"Selected format %s\n",Selected);
 }
 
@@ -451,6 +449,7 @@ for (i=1; i < argc; i++)
 	else if (strcmp(argv[i],"-r")==0) Flags |= FLAG_RESUME;
 	else if (strcmp(argv[i],"-x")==0) Flags |= FLAG_PORN;
 	else if (strcmp(argv[i],"-T")==0) Flags |= FLAG_TEST;
+	else if (strcmp(argv[i],"-w")==0) Flags |= FLAG_STDIN;
 	else if (strcmp(argv[i],"-st")==0) STREAMTimeout=atoi(argv[++i]);
 	else if (strcmp(argv[i],"-P")==0) Player=CopyStr(Player,argv[++i]);
 	else if (strcmp(argv[i],"-Pp")==0) PlayerLaunchPercent=atoi(argv[++i]);
@@ -546,7 +545,7 @@ while (1)
 				else fprintf(stderr," BROKEN\n");
 			}
 			
-		if (result) ListDeleteNode(Curr);
+		ListDeleteNode(Curr);
 
 		Curr=Next;
 	}

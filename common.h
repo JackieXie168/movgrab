@@ -2,7 +2,7 @@
 #ifndef MOVGRAB_COMMON
 #define MOVGRAB_COMMON
 //This is doable through autoconf, but I'm sick of fighting with it
-#define Version "1.1.9"
+#define Version "1.1.10"
 
 #include "libUseful-2.0/libUseful.h"
 #include <string.h>
@@ -21,6 +21,7 @@
 #define FLAG_TEST  256
 #define FLAG_STDIN 512
 #define FLAG_POST  1024
+#define FLAG_WAIT_INPUT 2048
 #define FLAG_TEST_SITES 4096
 #define FLAG_STREAM 8192
 #define FLAG_STREAMCACHE 16384

@@ -13,7 +13,7 @@ Then site specific
 
 
 //Site type names used at the command line etc
-char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","princeton","reuters","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com","discovery","bloomberg",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","princeton","reuters","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com","discovery","bloomberg","nationalgeographic","videobash",NULL};
 
 //Longer names used in display
 char *DownloadNames[]={"none",
@@ -64,6 +64,8 @@ char *DownloadNames[]={"none",
 "teachertube.com",
 "dsc.discovery.com",
 "www.bloomberg.com (not bloomberg.tv)",
+"National Geographic (http://video.nationalgeographic.com)",
+"videobash",
 NULL};
 
 //links used by the -test-sites feature to test if a download site still
@@ -115,6 +117,8 @@ char *TestLinks[]={"", "",
 "http://www.teachertube.com/viewVideo.php?video_id=114089&title=Marco_Polo",
 "http://dsc.discovery.com/videos/how-the-universe-works-birth-of-a-black-hole.html",
 "http://www.bloomberg.com/video/72477250/",
+"http://video.nationalgeographic.com/video/environment/environment-natural-disasters/earthquakes/earthquake-101/",
+"http://www.videobash.com/video_show/wing-suit-amazing-footage-6086",
 NULL};
 
 
@@ -311,10 +315,19 @@ else if (strstr(Server,"dsc.discovery.com"))
 {
  Type=TYPE_DISCOVERY;
 }
+else if (strstr(Server,"video.nationalgeographic.com"))
+{
+ Type=TYPE_NATGEO;
+}
 else if (strstr(Server,"bloomberg.com"))
 {
  Type=TYPE_BLOOMBERG;
 }
+else if (strstr(Server,"www.videobash.com"))
+{
+ Type=TYPE_VIDEOBASH;
+}
+
 return(Type);
 }
 
@@ -743,6 +756,11 @@ break;
 
 case TYPE_BLOOMBERG:
  	Tempstr=SubstituteVarsInString(Tempstr,"http://videos.bloomberg.com/$(ID).flv",Vars,0);
+ 	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+break;
+
+case TYPE_VIDEOBASH:
+ 	Tempstr=SubstituteVarsInString(Tempstr,"http://$(ID)",Vars,0);
  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
@@ -1943,6 +1961,45 @@ case TYPE_BLOOMBERG:
 	if (strstr(Tempstr,GENERIC_TITLE_START))
 	{
 		GenericExtractFromLine(Tempstr, "Title",GENERIC_TITLE_START,GENERIC_TITLE_END,Vars,0);
+	}
+
+break;
+
+case TYPE_NATGEO:
+#define NATGEO_ITEMSTART "HTML5src:'"
+#define NATGEO_ITEMEND "\'"
+#define NATGEO_TITLE_START "plckArticleTitle=\""
+#define NATGEO_TITLE_END "\""
+
+	if (strstr(Tempstr,NATGEO_ITEMSTART))
+	{
+		GenericExtractFromLine(Tempstr, "tmp",NATGEO_ITEMSTART,NATGEO_ITEMEND,Vars,EXTRACT_DESLASHQUOTE | EXTRACT_NOSPACES);
+
+		Tempstr=MCopyStr(Tempstr,"http://",Server,"/",GetVar(Vars,"tmp"),NULL);
+		SetVar(Vars,"item:reference",Tempstr);
+	}
+
+	if (strstr(Tempstr,NATGEO_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",NATGEO_TITLE_START,NATGEO_TITLE_END,Vars,0);
+	}
+
+break;
+
+case TYPE_VIDEOBASH:
+#define VIDEOBASH_ITEMSTART "&amp;file=\" + 'http://' + '"
+#define VIDEOBASH_ITEMEND "\'"
+#define VIDEOBASH_TITLE_START "<meta property=\"og:title\" content=\""
+#define VIDEOBASH_TITLE_END "\""
+
+	if (strstr(Tempstr,VIDEOBASH_ITEMSTART))
+	{
+		GenericExtractFromLine(Tempstr, "item:mp4",VIDEOBASH_ITEMSTART,VIDEOBASH_ITEMEND,Vars,EXTRACT_DESLASHQUOTE | EXTRACT_NOSPACES);
+	}
+
+	if (strstr(Tempstr,VIDEOBASH_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",VIDEOBASH_TITLE_START,VIDEOBASH_TITLE_END,Vars,0);
 	}
 
 break;
