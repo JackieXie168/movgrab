@@ -1,7 +1,7 @@
 CC = gcc
-VERSION = 1.0.8
+VERSION = 1.0.9
 CFLAGS = -g -O2
-LIBS = -lcrypto -lssl -lz 
+LIBS = -lz -lcrypto -lssl -lz 
 INSTALL=/bin/install -c
 prefix=/usr/local
 bindir=$(prefix)${exec_prefix}/bin

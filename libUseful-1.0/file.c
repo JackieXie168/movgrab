@@ -15,11 +15,13 @@ int FDIsWritable(int fd)
 {
 fd_set selectset;
 int result;
+struct timeval tv;
 
-
+tv.tv_sec=0;
+tv.tv_usec=10000;
 FD_ZERO(&selectset);
 FD_SET(fd, &selectset);
-result=select(fd+1,NULL, &selectset,NULL,NULL);
+result=select(fd+1,NULL, &selectset,NULL,&tv);
 if ((result==-1) && (errno==EBADF)) return(-1);
 if ((result  > 0) && (FD_ISSET(fd, &selectset))) return(TRUE);
 
@@ -469,6 +471,8 @@ if (Flags & O_TRUNC) ftruncate(fd,0);
 
 Stream=STREAMFromFD(fd);
 Stream->Path=CopyStr(Stream->Path,FilePath);
+
+STREAMSetTimeout(Stream,0);
 return(Stream);
 }
 

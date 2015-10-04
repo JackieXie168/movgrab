@@ -22,10 +22,11 @@
 
 
 //This is doable thorugh autoconf, but I'm sick of fighting with it
-#define Version "1.0.8"
+#define Version "1.0.9"
 
 #include "libUseful-1.0/libUseful.h"
 #include <string.h>
+#include <glob.h>
 
 
 char *FileTypes[]={".flv",".mp3",".mp4",".mov",".wma",".m4a",".m4v",".wmv",".avi",".3gp",NULL};
@@ -53,6 +54,8 @@ TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2
 #define FLAG_POST  1024
 #define FLAG_DL_RETRY  2048
 #define FLAG_TEST_SITES 4096
+#define FLAG_STREAM 8192
+#define FLAG_STREAMCACHE 16384
 
 #define EXTRACT_DEQUOTE  1
 #define EXTRACT_WITHIN_QUOTES 2
@@ -220,33 +223,20 @@ return(ptr);
 }
 
 
-//Open the file we are going to save the move to. Check in the user 
-//filename preference stored in the global variable 'SaveFilePath'
-//If that's set to '-' then open stdout and write to that, if it's
-//set to anything else, then use that as the filename. Otherwise
-//build the filename from available info.
 //URL is used to provide a unique MD5 so that two downloads from
 //different sites with the same title don't overwrite each other
-STREAM *OpenSaveFile(char *Title, char *URL, int *FileSize)
+char *GetSaveFilePath(char *RetStr, char *Title, char *URL)
 {
-char *Tempstr=NULL, *Path=NULL, *MD5=NULL, *Extn=NULL, *ptr;
-STREAM *S;
-struct stat FStat;
+char *ptr=NULL;
+char *Tempstr=NULL, *MD5=NULL;
 
-*FileSize=0;
+//if an explicit path is given then use that
+if (StrLen(SaveFilePath)) return(CopyStr(RetStr,SaveFilePath));
 
-
-if (StrLen(SaveFilePath))
-{
-	if (strcmp(SaveFilePath,"-")==0)
-	{
-		return(STREAMFromFD(1));
-	}
-	else Tempstr=CopyStr(Tempstr,SaveFilePath);
-}
-else if (StrLen(Title)) ptr=Title;
+if (StrLen(Title)) ptr=Title;
 else 
 {
+		//Assume the filename is the document part of the url
 		ptr=strrchr(URL,'?');
 		if (ptr) *ptr='\0';
 
@@ -256,8 +246,7 @@ else
 		else ptr=URL;
 }
 
-
-Tempstr=MakeFilesystemSafeName(Tempstr, ptr);
+Tempstr=MakeFilesystemSafeName(RetStr, ptr);
 ptr=strrchr(Tempstr,'.');
 
 //some titles might have '.' in them, but not have an extension
@@ -268,22 +257,48 @@ if (ptr && (StrLen(ptr) < 6)) *ptr='\0';
 MD5=HashMD5(MD5,URL,StrLen(URL),0);
 Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
 
-S=STREAMOpenFile(Tempstr,O_CREAT | O_RDWR);
-if (! STREAMLock(S,LOCK_EX|LOCK_NB)) 
-{
-if (! (Flags & FLAG_QUIET)) fprintf(stderr,"Already downloading this item!\n");
-fflush(NULL);
-exit(0);
+DestroyString(MD5);
+return(Tempstr);
 }
-STREAMSeek(S,0,SEEK_END);
 
-//Filesize can be used to resume a part download
-fstat(S->in_fd,&FStat);
-*FileSize=FStat.st_size;
+
+//Open the file we are going to save the move to. Check in the user 
+//filename preference stored in the global variable 'SaveFilePath'
+//If that's set to '-' then open stdout and write to that, if it's
+//set to anything else, then use that as the filename. Otherwise
+//build the filename from available info.
+STREAM *OpenSaveFile(char *Title, char *URL, int *FileSize)
+{
+char *Tempstr=NULL, *Path=NULL, *MD5=NULL, *ptr;
+STREAM *S=NULL;
+struct stat FStat;
+
+*FileSize=0;
+
+
+Tempstr=GetSaveFilePath(Tempstr, Title, URL);
+if (strcmp(Tempstr,"-")==0)
+{
+	S=STREAMFromFD(1);
+	STREAMSetTimeout(S,0);
+}
+else
+{
+	S=STREAMOpenFile(Tempstr,O_CREAT | O_RDWR);
+	if (! STREAMLock(S,LOCK_EX|LOCK_NB)) 
+	{
+		if (! (Flags & FLAG_QUIET)) fprintf(stderr,"Already downloading this item!\n");
+		fflush(NULL);
+		exit(0);
+	}
+	STREAMSeek(S,0,SEEK_END);
+
+	//Filesize can be used to resume a part download
+	fstat(S->in_fd,&FStat);
+	*FileSize=FStat.st_size;
+}
 
 DestroyString(Tempstr);
-DestroyString(Extn);
-DestroyString(MD5);
 
 return(S);
 }
@@ -424,17 +439,129 @@ DestroyString(Tempstr);
 return(Con);
 }
 
+
+
+int TransferItem(STREAM *Con, char *Title, char *URL, char *Extn, int DocSize, int *BytesRead)
+{
+// 'S' is the  save file 'SIn' in 
+STREAM *S=NULL, *Cache=NULL,*StdOut=NULL;
+char *Tempstr=NULL;
+time_t Now, LastProgressDisplay;
+int result, RetVal=FALSE;;
+
+S=OpenSaveFile(Title,URL,BytesRead);
+if (! S) 
+{
+	if (Flags & FLAG_STREAM) S=OpenSaveFile("-",URL,BytesRead);
+	
+	if (! S)
+	{
+		fprintf(stderr,"ERROR: Cannot open output file\n");
+		return(FALSE);
+	}
+}
+else
+{
+	if (Flags & FLAG_STREAM)
+	{
+		Cache=STREAMOpenFile(S->Path,O_RDONLY);
+		StdOut=STREAMFromFD(1);
+		STREAMSetTimeout(StdOut,1);
+		if (! (Flags & FLAG_STREAMCACHE)) unlink(S->Path);
+	}
+}
+
+DisplayProgress(Title, *BytesRead,DocSize,Now,TRUE);
+Tempstr=SetStrLen(Tempstr,BUFSIZ);
+result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
+while (result != EOF)
+{
+	(*BytesRead) +=result;
+	time(&Now);
+	if (Now != LastProgressDisplay) 
+	{
+		DisplayProgress(Title, *BytesRead,DocSize,Now,FALSE);
+		LastProgressDisplay=Now;
+	}
+	STREAMWriteBytes(S,Tempstr,result);
+	if (Cache && FDIsWritable(StdOut->out_fd))
+	{
+		result=STREAMReadBytes(Cache,Tempstr,result);
+		STREAMWriteBytes(StdOut,Tempstr,result);
+	}
+	result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
+}
+RetVal=TRUE;
+if ((Flags & FLAG_STREAMCACHE) || (! (Flags & FLAG_STREAM)))
+{
+ Tempstr=MCopyStr(Tempstr,S->Path,Extn,NULL);
+ rename(S->Path,Tempstr);
+}
+STREAMClose(S);
+
+
+if (Cache)
+{
+	//We've resuled tempstr, so we can't trust its size
+	Tempstr=SetStrLen(Tempstr,BUFSIZ);
+	STREAMSetTimeout(StdOut,0);
+	result=STREAMReadBytes(Cache,Tempstr,BUFSIZ);
+	while (result != EOF)
+	{
+		STREAMWriteBytes(StdOut,Tempstr,result);
+		result=STREAMReadBytes(Cache,Tempstr,BUFSIZ);
+	}
+
+STREAMFlush(StdOut);
+STREAMClose(Cache);
+STREAMDisassociateFromFD(StdOut);
+
+//give a bit of time for 'player' program to finish
+sleep(3);
+}
+
+DestroyString(Tempstr);
+
+return(RetVal);
+}
+
+
+
+STREAM *OpenCacheFile(char *Title, char *URL)
+{
+char *Tempstr=NULL;
+STREAM *S=NULL;
+glob_t Glob;
+
+Tempstr=GetSaveFilePath(Tempstr, Title, URL);
+Tempstr=CatStr(Tempstr,".*");
+
+glob(Tempstr,0,0,&Glob);
+
+if (Glob.gl_pathc > 0)
+{
+S=STREAMOpenFile(Glob.gl_pathv[0],O_RDONLY);
+}
+
+globfree(&Glob);
+
+DestroyString(Tempstr);
+
+return(S);
+}
+
+
+
 //----- Download an actual Video ----------------------
 int DownloadItem(char *URL, char *Title, int DLFlags)
 {
-STREAM *S, *Con;
+STREAM *Con=NULL;
 char *Tempstr=NULL, *Token=NULL, *ptr;
-char *Server=NULL, *Doc=NULL, *FileName=NULL, *ContentType=NULL;
-int result, DocSize=0, BytesRead=0;
-int len, Port;
+char *Server=NULL, *Doc=NULL, *ContentType=NULL;
+int DocSize=0, BytesRead=0;
+int Port;
 int RetVal=FALSE;
 char *Extn=NULL;
-time_t Now, LastProgressDisplay;
 
 
 if (Flags & FLAG_TEST) 
@@ -450,7 +577,18 @@ ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
 if (Port==0) Port=DefaultPort;
 Doc=CopyStr(Doc,ptr);
 
-Con=ConnectAndRetryUntilDownload(Server, Doc, Port, DLFlags, BytesRead);
+if (Flags & FLAG_STREAMCACHE) 
+{
+	Con=OpenCacheFile(Title, URL);
+
+	//if cached file exists, just change to 'write to stdout'
+	if (Con) 
+	{
+		Flags &= ~(FLAG_STREAM | FLAG_STREAMCACHE);
+		SaveFilePath=CopyStr(SaveFilePath,"-");
+	}
+}
+if (! Con) Con=ConnectAndRetryUntilDownload(Server, Doc, Port, DLFlags, BytesRead);
 if (Con)
 {
 //Some sites throttle excessively
@@ -479,29 +617,9 @@ else
 		}
 		else
 		{
-		S=OpenSaveFile(Title,URL,&BytesRead);
-		DisplayProgress(Title, BytesRead,DocSize,Now,TRUE);
-		Tempstr=SetStrLen(Tempstr,BUFSIZ);
-		result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
-		while (result != EOF)
-		{
-			BytesRead+=result;
-			time(&Now);
-			if (Now != LastProgressDisplay) 
-			{
-				DisplayProgress(Title, BytesRead,DocSize,Now,FALSE);
-				LastProgressDisplay=Now;
-			}
-			STREAMWriteBytes(S,Tempstr,result);
-			result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
+			RetVal=TransferItem(Con, Title, URL, Extn, DocSize, &BytesRead);
 		}
-		RetVal=TRUE;
 		STREAMClose(Con);
-
-		Tempstr=MCopyStr(Tempstr,S->Path,Extn,NULL);
-		rename(S->Path,Tempstr);
-		STREAMClose(S);
-		}
 }
 
 
@@ -532,7 +650,7 @@ Tempstr=STREAMReadLine(Tempstr,S);
 while (Tempstr)
 {
 StripTrailingWhitespace(Tempstr);
-printf("%s\n",Tempstr);
+fprintf(stderr,"%s\n",Tempstr);
 Tempstr=STREAMReadLine(Tempstr,S);
 }
 
@@ -577,12 +695,13 @@ if (Type==TYPE_YOUTUBE)
 {
 
 	//hmm.. have we been given the http//www.youtube.com/v/ format?
-	if (strncmp(Doc,"v/",2)==0) Token=MCopyStr(Token,"watch?v=",Doc+2,NULL);
-	else Token=CopyStr(Token,Doc);
+	if (strncmp(Doc,"v/",2)==0) Token=CopyStr(Token,Doc+2);
+	else Token=CopyStr(Token,Doc+8);
+
+	NextPath=MCopyStr(NextPath,"http://www.youtube.com/get_video_info?&video_id=",Token,"&el=detailpage&ps=default&eurl=&gl=US&hl=enB",NULL);
 
 	//Do we have authentication info?
 	if (StrLen(Username) && StrLen(Password)) YoutubeLogin(Username,Password);
-	NextPath=MCopyStr(NextPath,Server,"/",Token,NULL);
 
 }
 else if (Type==TYPE_METACAFE)
@@ -1337,37 +1456,20 @@ case TYPE_YOUTUBE:
 //#define YOUTUBE_PTR "new SWFObject(\"/player2.swf?"
 
 //#define YOUTUBE_PTR "var swfArgs = {"
-#define YOUTUBE_DIV "video_id\":"
-#define YOUTUBE_DIV2 "fmt_url_map\": \""
-#define YOUTUBE_TITLE "<meta name=\"title\" content=\""
-#define YOUTUBE_TITLE2 "'VIDEO_TITLE': '"
+#define YOUTUBE_DIV "fmt_url_map="
+#define YOUTUBE_TITLE "&title="
 
 	if (strstr(Tempstr,YOUTUBE_TITLE))
 	{
-		GenericExtractFromLine(Tempstr, "Title",YOUTUBE_TITLE, "\">", Vars,EXTRACT_DEQUOTE);
-	}
-
-	if (strstr(Tempstr,YOUTUBE_TITLE2))
-	{
-		GenericExtractFromLine(Tempstr, "Title",YOUTUBE_TITLE2, "'", Vars,EXTRACT_DEQUOTE);
+		GenericExtractFromLine(Tempstr, "Title",YOUTUBE_TITLE, "&", Vars,EXTRACT_DEQUOTE);
 	}
 
 
-/*
 	if (strstr(Tempstr,YOUTUBE_DIV))
-	{
-		GenericExtractFromLine(Tempstr, "item:flv",YOUTUBE_DIV, ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		GenericExtractFromLine(Tempstr, "Extra","\"t\": ",",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-  	Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/get_video?video_id=$(ID)&t=$(Extra)",Vars,0);
-		SetVar(Vars,"item:flv",Tempstr);
-	}
-	*/
-
-	if (strstr(Tempstr,YOUTUBE_DIV2))
 	{
 		if (StrLen(GetVar(Vars,"item:flv"))==0) 
 		{
-			GenericExtractFromLine(Tempstr, "yt:url_fmt",YOUTUBE_DIV2, "\"", Vars,0);
+			GenericExtractFromLine(Tempstr, "yt:url_fmt",YOUTUBE_DIV, "&", Vars,EXTRACT_DEQUOTE);
 			Tempstr=CopyStr(Tempstr,GetVar(Vars,"yt:url_fmt"));
 			DecodeYouTubeFormats(Tempstr,Vars);
 		}
@@ -2377,7 +2479,7 @@ fprintf(stderr,"Blogs: \n");
 fprintf(stderr,"	tech: http://idratherhack.blogspot.com \n");
 fprintf(stderr,"	rants: http://thesingularitysucks.blogspot.com \n");
 fprintf(stderr,"\n");
-fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-o <output file> url\n");
+fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-s] [-sc] [-o <output file>] url\n");
 fprintf(stderr,"	movgrab -test-sites\n");
 fprintf(stderr,"\n'-v'		increases verbosity/debug level\n");
 fprintf(stderr,"'-v -v'		prints out all webpages encountered\n");
@@ -2389,6 +2491,8 @@ fprintf(stderr,"'-b'		Background. Fork into background and nohup\n");
 fprintf(stderr,"'-p'		address of HTTP proxy server in URL format.\n");
 fprintf(stderr,"'-w'		Wait for addresses to be entered on stdin.\n");
 fprintf(stderr,"'-st'		Connection inactivity timeout in seconds. Set high for sites that 'throttle'\n");
+fprintf(stderr,"'-s'		Streaming mode, writes to stdout, but backs it up with tempfile to handle 'pause'\n");
+fprintf(stderr,"'-sc'		Cached streaming mode. Writes to a file and to stdout, reuses the file if asked to get the video again \n");
 fprintf(stderr,"'-t'		specifies website type.\n");
 fprintf(stderr,"'-f'		specifies preferred video/audio formats for sites that offer more than one\n");
 fprintf(stderr,"			example: flv:640x480,flv,mp4,mp3\n");
@@ -2417,6 +2521,7 @@ fprintf(stderr,"\nFeel free to email me and tell me if you've used this software
 fprintf(stderr,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
 
 fprintf(stderr,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger' and others.\n");
+fprintf(stderr,"\nThanks to 'legatvs' for clive (http:\\clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube working again..\n");
 }
 
 
@@ -2468,6 +2573,8 @@ for (i=1; i < argc; i++)
 	else if (strcmp(argv[i],"-q")==0) Flags |= FLAG_QUIET;
 	else if (strcmp(argv[i],"-b")==0) Flags |= FLAG_BACKGROUND;
 	else if (strcmp(argv[i],"-x")==0) Flags |= FLAG_PORN;
+	else if (strcmp(argv[i],"-s")==0) Flags |= FLAG_STREAM;
+	else if (strcmp(argv[i],"-sc")==0) Flags |= FLAG_STREAMCACHE | FLAG_STREAM;
 	else if (strcmp(argv[i],"-T")==0) Flags |= FLAG_TEST;
 	else if (strcmp(argv[i],"-st")==0) STREAMTimeout=atoi(argv[++i]);
 	else if (strcmp(argv[i],"-?")==0) Flags |= FLAG_PRINT_USAGE;
