@@ -29,6 +29,7 @@ uname -v = #3 Thu Nov 11 21:56:14 UTC 2010
 
 PATH: /bin
 PATH: /usr/bin
+PATH: /usr/X11R6/bin
 
 
 ## ----------- ##

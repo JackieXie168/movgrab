@@ -26,9 +26,7 @@ If you happen to use a pure https proxy (so NOT TLS upgrade) you might find that
 USAGE:
 Generally you need to get the url of the webpage that the video would normally appear on if it were playing in your browser. Here are some examples of what URLs might look like:
 
-BBC: http://www.bbc.co.uk/iplayer/episode/b00p693b/In_Our_Time_Pythagoras/
 Youtube: http://www.youtube.com/watch?v=oP59tQf_njc
-Google Video: http://video.google.co.uk/videoplay?docid=6698933542780842398&hl=en
 Daily Motion: http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
 UCSD.tv: http://www.ucsd.tv/naturematters/desert/
 TED: http://www.ted.com/talks/john_gerzema_the_post_crisis_consumer.html
@@ -58,28 +56,33 @@ movgrab -o -  http://www.youtube.com/watch?v=oP59tQf_njc | mplayer -
 
 In some cases websites have more than one format of a video on offer. In general movgrab tries to extract Flash video (flv) first. If you want a different format, you can first see what the website offers by doing this:
 
-movgrab -v -f none http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+movgrab -T http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
 
-The '-v' flag turns on the first level of debugging, and the '-f' flag specifies that you want the format 'none' (which will cause it not to download anything). This will result in output like:
 
 ----- OUTPUT FROM MOVGRAB ------
-Selecting preferred format from: none
 
-Found on website: flv:320x240, flv:80x60, h264:848x480, h264:512x384, 
-  none ... no
-No suitable download format found from 'none'
+Formats available for this Movie: flv-h264:640x360 mp4:480x360 flv:400x240 
+
+TEST MODE: would have downloaded 'SPIN' url=http://v21.lscache1.c.youtube.com/videoplayback?sparams=id,expire,ip,ipbits,itag,algorithm,burst,factor&fexp=903903,910700&algorithm=throttle-factor&itag=18&ipbits=8&burst=40&sver=3&signature=6995A96BF52D06725F81299EC069F97E11FDED26.9403E631ABB0D480F9B1BDDF90B6333456D662C0&expire=1299823200&key=yt1&ip=82.0.0.0&factor=1.25&id=a0fe7db507ff9e37
+
 ----- OUTPUT FROM MOVGRAB ------
 
-This tells you that you can specify 'flv' or 'h264' (movgrab will go with the first thing that matches, regardless of resolution) or to be more specific 'flv:320x240' or 'h264:512x384', thusly:
+This tells you that you can specify 'flv' or 'flv-h264' or 'mp4' (movgrab will go with the first thing that matches, regardless of resolution) or to be more specific 'flv:400x240' or 'flv-h264:640x360', thusly:
 
 
 movgrab -f flv:80x60 http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
 
 You can combine formats in preference lists like this:
 
-movgrab -f flv:320x240,h264:512x384,flv,mp4,mov,wmv,mp3,m4a  http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+movgrab -f flv:320x240,flv-h264:512x384,flv,mp4,mov,wmv,mp3,m4a  http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
 
 Note, no gaps between formats, use ',' as a separator
+
+'*' can be used to mean 'any format' (but don't forget to put quotes round the whole format list, or the shell will mess with it. 
+
+movgrab -f flv:320x240,flv,mp4,*  http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+
+The above line asks for 320x240 flv first, then flv, then mp4, then says 'anything you can get'.
 
 Some websites (currently only Berkeley) have many media files on one page. If you movgrab such a page, you will see:
 
@@ -102,5 +105,44 @@ use of the -f flag can limit which downloads appear in this numeric list. Berkel
 		-n 2-6   Only items 2-6
 		-n 2-		 2 onwards
 		-n -4		 Up to item 4
+
+Changes made to websites frequently break the downloading systems, and other times websites are down or go out of business. In order to test which ones are working and which broken use 'movgrab -test-sites'. Currently it will produce output like:
+
+Checking youtube               okay
+Checking metacafe              BROKEN
+Checking dailymotion           okay
+Checking break                 okay
+Checking ehow                  BROKEN
+Checking vimeo                 BROKEN
+Checking almostkilled          okay
+Checking 5min                  okay
+Checking ign                   BROKEN
+Checking vbox7                 okay
+Checking blip.tv               okay
+Checking ted                   okay
+Checking myvideo               okay
+Checking clipshack             okay
+Checking mytopclip             okay
+Checking redbalcony            okay
+Checking mobango               okay
+Checking izlese                okay
+Checking izles                 BROKEN
+Checking berkeley              okay
+Checking yale                  okay
+Checking sdnhm                 okay
+Checking uchannel              BROKEN
+Checking princeton             BROKEN
+Checking uctv.tv               okay
+Checking reuters               okay
+Checking clipfish.de           okay
+Checking liveleak              okay
+Checking academicearth         okay
+Checking photobucket           okay
+Checking videoemo              okay
+Checking videosfacebook        BROKEN
+Checking aljazeera             okay
+Checking mefeedia              okay
+Checking myvido1               BROKEN
+Checking iviewtube             okay
 
 That's about it! Have fun!
