@@ -1,0 +1,9 @@
+#ifndef PAPERKNIFE_CONFIG_H
+#define PAPERKNIFE_CONFIG_H
+
+#define SYNC_INTERVAL 30
+#define CHECK_INTERVAL 6
+
+
+
+#endif

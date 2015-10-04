@@ -1,0 +1,104 @@
+AUTHOR:
+Movgrab and libUseful are (C) 2009 Colum Paget. They are released under the GPL so you may do anything with them that the GPL allows.
+
+Email: colums.projects@gmail.com
+Blogs: 
+	tech: http://idratherhack.blogspot.com 
+	rants: http://thesingularitysucks.blogspot.com 
+
+
+DISCLAIMER:
+	This is free software. It comes with no guarentees and I take no responsiblity if it makes your computer explode or opens a portal to the demon dimensions, or does anything.
+
+INSTALL:
+After unpacking the tar-ball:
+		tar -zxf movgrab-1.0.tar.gz
+
+running 'make' in the source directory should be all you have to do.
+		cd movgrab-1.0
+		make
+
+then copy the resulting executable 'movgrab' to somewhere in your path
+		cp movgrab /usr/bin
+
+USAGE:
+Generally you need to get the url of the webpage that the video would normally appear on if it were playing in your browser. Here are some examples of what URLs might look like:
+
+BBC: http://www.bbc.co.uk/iplayer/episode/b00p693b/In_Our_Time_Pythagoras/
+Youtube: http://www.youtube.com/watch?v=oP59tQf_njc
+Google Video: http://video.google.co.uk/videoplay?docid=6698933542780842398&hl=en
+Daily Motion: http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+UCSD.tv: http://www.ucsd.tv/naturematters/desert/
+TED: http://www.ted.com/talks/john_gerzema_the_post_crisis_consumer.html
+
+Basically:
+
+movgrab 'http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news'
+
+Note the use of quotes (') is a good idea, as many urls have characters like '&' in them that will confuse the shell if they are not in quotes.
+
+'movgrab -?' or just 'movgrab' will print out a short usage instruction. 
+
+If you want to specify the file to save the move to, use '-o <filename>'.
+Using '-o -' will pump the movie data out of stdout, so you can feed it to another program, like this:
+
+movgrab -o -  http://www.youtube.com/watch?v=oP59tQf_njc | mplayer -
+
+-q will tell movgrab to be 'quiet', not to print out any information as it works.
+
+-b will tell movgrab to fork into the background so you can carry on using the console (implies -q too)
+
+-v increases the debugging level. Two -v will cause every webpage visited to be printed out for inspection. Three -v will cause some extra information about headers etc to be printed out.
+
+-p allows you to specify a proxy server in http://username:password@url:port format. So, something like 'movgrab -p http://guest:password@myproxy.com:8080 . 'Username', 'password' and 'port' are optional if there is no user logon and the port is 80.
+
+-x attempts to get around 'family filter' on some websites
+
+In some cases websites have more than one format of a video on offer. In general movgrab tries to extract Flash video (flv) first. If you want a different format, you can first see what the website offers by doing this:
+
+movgrab -v -f none http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+
+The '-v' flag turns on the first level of debugging, and the '-f' flag specifies that you want the format 'none' (which will cause it not to download anything). This will result in output like:
+
+----- OUTPUT FROM MOVGRAB ------
+Selecting preferred format from: none
+
+Found on website: flv:320x240, flv:80x60, h264:848x480, h264:512x384, 
+  none ... no
+No suitable download format found from 'none'
+----- OUTPUT FROM MOVGRAB ------
+
+This tells you that you can specify 'flv' or 'h264' (movgrab will go with the first thing that matches, regardless of resolution) or to be more specific 'flv:320x240' or 'h264:512x384', thusly:
+
+
+movgrab -f flv:80x60 http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+
+You can combine formats in preference lists like this:
+
+movgrab -f flv:320x240,h264:512x384,flv,mp4,mov,wmv,mp3,m4a  http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news
+
+Note, no gaps between formats, use ',' as a separator
+
+Some websites (currently only Berkeley) have many media files on one page. If you movgrab such a page, you will see:
+
+
+----- OUTPUT FROM MOVGRAB ------
+Multiple downloads exist on this page.
+Please select by using the command-line argument -n <num>
+        e.g. -n all
+             -n 0-4
+             -n 3-
+
+           0: .mp4  
+           1: .mp4  Lecture 2
+           2: .mp4  Lecture 3
+----- OUTPUT FROM MOVGRAB ------
+
+use of the -f flag can limit which downloads appear in this numeric list. Berkeley offers both .mp4 video and .m4a audio, which appear in the list as seperate programs. Ideally you want to use '-f' to select one or the other. Then you can use the -n flag to say:
+
+		-n all   Download all items in list
+		-n 2-6   Only items 2-6
+		-n 2-		 2 onwards
+		-n -4		 Up to item 4
+
+That's about it! Have fun!

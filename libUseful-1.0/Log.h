@@ -1,0 +1,17 @@
+#ifndef LIBUSEFUL_LOG_H
+#define LIBUSEFUL_LOG_H
+
+#include "includes.h"
+#include "defines.h"
+#include "file.h"
+
+extern char *G_LogFilePath;
+
+int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval);
+int LogToSTREAM(STREAM *S, int Flags, char *Str);
+void LogFileFlushAll(int Force);
+int LogToFile(char *FileName,char *fmt, ...);
+int AppendTempLogToLogFile(char *LogPath, char *TmpLogPath);
+
+
+#endif
