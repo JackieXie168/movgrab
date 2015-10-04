@@ -1,5 +1,9 @@
 #include "download.h"
 
+pid_t PlayerPid=0;
+char *Player=NULL;
+int PlayerLaunchPercent=25;
+extern char *CmdLine, *ProgName;
 	
 /*
 Functions relating to connecting to hosts and downloading webpages.
@@ -99,26 +103,88 @@ return(Con);
 }
 
 
-
-int TransferItem(STREAM *Con, STREAM *S,char *Title, char *URL, int DocSize, int *BytesRead)
+void LaunchPlayer()
 {
-// 'S' is the  save file 'SIn' in 
-STREAM *Cache=NULL,*StdOut=NULL;
+char *Tempstr=NULL;
+
+Tempstr=MCopyStr(Tempstr,Player," ",OutputFilesGetFilePath(),NULL);
+printf("Launch! %s\n\n",Tempstr);
+PlayerPid=Spawn(Tempstr);
+
+DestroyString(Tempstr);
+}
+
+
+//Display progress of download
+void DisplayProgress(char *FullTitle, char *Format, unsigned int bytes_read, unsigned int DocSize,time_t Now, int PrintName)
+{
+float Percent, f1, f2;
+unsigned int Bps=0;
+char *HUDocSize=NULL, *BpsStr=NULL, *Title=NULL;
+static time_t SpeedStart=0;
+static unsigned int PrevBytesRead=0;
+
+if ((Now-SpeedStart) == 0) return;
+
+if (CheckForKeyboardInput()) PrintName=TRUE;
+
+
+Title=CopyStrLen(Title,FullTitle,30);
+Title=CatStr(Title,"...");
+if (! (Flags & FLAG_QUIET)) 
+{
+if (PrintName) fprintf(stderr,"\nGetting: %s  Size: %s  Format: %s\n",Title,GetHumanReadableDataQty(DocSize,0), Format);
+}
+
+
+
+BpsStr=CopyStr(BpsStr,"");
+if (SpeedStart > 0)
+{
+	Bps=(bytes_read - PrevBytesRead) / (Now-SpeedStart);
+	BpsStr=MCopyStr(BpsStr,GetHumanReadableDataQty(Bps,0),"/s ",NULL);
+}
+
+if (DocSize)
+{
+	HUDocSize=CopyStr(HUDocSize,GetHumanReadableDataQty(DocSize,0));
+
+	f1=(float) bytes_read * 100.0;
+	f2=(float) DocSize;
+	Percent=f1/f2;
+
+	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %0.2f%%  %s of %s  %s        \r",Percent,GetHumanReadableDataQty(bytes_read,0),HUDocSize,BpsStr);
+	sprintf(CmdLine,"%s %0.2f%% %s          \0",ProgName,Percent,Title);
+
+	if ((PlayerPid==0) && (Percent > PlayerLaunchPercent) && (Player)) LaunchPlayer();
+}
+else
+{
+	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %s %s     \r",GetHumanReadableDataQty(bytes_read,0),BpsStr);
+	sprintf(CmdLine,"%s %s              \0",ProgName,Title);
+}
+
+fflush(NULL);
+if (Now - SpeedStart > 5) 
+{
+	SpeedStart=Now;
+	PrevBytesRead=bytes_read;
+}
+
+DestroyString(HUDocSize);
+DestroyString(BpsStr);
+DestroyString(Title);
+}
+
+
+int TransferItem(STREAM *Con, char *Title, char *URL, char *Format, int DocSize, int *BytesRead)
+{
 char *Tempstr=NULL;
 time_t Now, LastProgressDisplay;
 int result, ReadThisTime=0, RetVal=FALSE;;
 
 
-
-if (Flags & FLAG_STREAM)
-{
-	Cache=STREAMOpenFile(S->Path,O_RDONLY);
-	StdOut=STREAMFromFD(1);
-	STREAMSetTimeout(StdOut,1);
-	if (! (Flags & FLAG_STREAMCACHE)) unlink(S->Path);
-}
-
-DisplayProgress(Title, *BytesRead,DocSize,Now,TRUE);
+DisplayProgress(Title, Format, *BytesRead,DocSize,Now,TRUE);
 Tempstr=SetStrLen(Tempstr,BUFSIZ);
 result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
 while (result != EOF) 
@@ -128,15 +194,11 @@ while (result != EOF)
 	time(&Now);
 	if (Now != LastProgressDisplay) 
 	{
-		DisplayProgress(Title, *BytesRead,DocSize,Now,FALSE);
+		DisplayProgress(Title, Format, *BytesRead,DocSize,Now,FALSE);
 		LastProgressDisplay=Now;
 	}
-	STREAMWriteBytes(S,Tempstr,result);
-	if (Cache && FDIsWritable(StdOut->out_fd))
-	{
-		result=STREAMReadBytes(Cache,Tempstr,result);
-		STREAMWriteBytes(StdOut,Tempstr,result);
-	}
+
+	WriteOutputFiles(Tempstr,result);
 	if ((DocSize > 0) && (ReadThisTime >= DocSize))
 	{
 		 break;
@@ -145,26 +207,8 @@ while (result != EOF)
 }
 RetVal=TRUE;
 
-
-if (Cache)
-{
-	//We've reused tempstr, so we can't trust its size
-	Tempstr=SetStrLen(Tempstr,BUFSIZ);
-	STREAMSetTimeout(StdOut,0);
-	result=STREAMReadBytes(Cache,Tempstr,BUFSIZ);
-	while (result != EOF)
-	{
-		STREAMWriteBytes(StdOut,Tempstr,result);
-		result=STREAMReadBytes(Cache,Tempstr,BUFSIZ);
-	}
-
-STREAMFlush(StdOut);
-STREAMClose(Cache);
-STREAMDisassociateFromFD(StdOut);
-
 //give a bit of time for 'player' program to finish
 sleep(3);
-}
 
 DestroyString(Tempstr);
 
@@ -174,7 +218,7 @@ return(RetVal);
 
 
 //----- Download an actual Video ----------------------
-int DownloadItem(char *URL, char *Title, int Flags)
+int DownloadItem(char *URL, char *Title, char *Format, int Flags)
 {
 STREAM *Con=NULL, *S=NULL;
 char *Tempstr=NULL, *Token=NULL, *ptr;
@@ -198,17 +242,6 @@ ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
 if (Port==0) Port=DefaultPort;
 Doc=CopyStr(Doc,ptr);
 
-if (Flags & FLAG_STREAMCACHE) 
-{
-	Con=OpenCacheFile(Title, URL);
-
-	//if cached file exists, just change to 'write to stdout'
-	if (Con) 
-	{
-		Flags &= ~(FLAG_STREAM | FLAG_STREAMCACHE);
-		SaveFilePath=CopyStr(SaveFilePath,"-");
-	}
-}
 if (! Con) Con=ConnectAndRetryUntilDownload(Server, Doc, Port, Flags, BytesRead);
 if (Con)
 {
@@ -216,7 +249,6 @@ if (Con)
 STREAMSetTimeout(Con,STREAMTimeout);
 ptr=strrchr(Doc,'?');
 if (ptr) *ptr='\0';
-Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Doc));
 
 Token=CopyStr(Token,GetVar(Con->Values,"HTTP:Content-Range"));
 if (StrLen(Token))
@@ -238,26 +270,17 @@ else
 		}
 		else
 		{
-			S=OpenSaveFile(Title,URL,&BytesRead);
-			if (! S) 
+			OpenOutputFiles(Title,URL,&BytesRead);
+			//if (S) 
 			{
-				if (Flags & FLAG_STREAM) S=OpenSaveFile("-",URL,&BytesRead);
-				if (! S)
-				{
-					fprintf(stderr,"ERROR: Cannot open output file\n");
-					return(FALSE);
-				}
-			}
 			ptr=STREAMGetValue(Con,"HTTP:content-length");
-			RetVal=TransferItem(Con,S, Title, URL, atoi(ptr), &BytesRead);
-			if ((Flags & FLAG_STREAMCACHE) || (! (Flags & FLAG_STREAM)))
-			{
-				 Tempstr=MCopyStr(Tempstr,S->Path,Extn,NULL);
-				 rename(S->Path,Tempstr);
+			RetVal=TransferItem(Con,Title, URL, Format, atoi(ptr), &BytesRead);
+			Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Doc));
+			CloseOutputFiles(Extn);
 			}
+	
 		}
 		STREAMClose(Con);
-		STREAMClose(S);
 }
 
 

@@ -6,5 +6,10 @@
 
 STREAM *OpenSaveFile(char *Title, char *URL, int *FileSize);
 STREAM *OpenCacheFile(char *Title, char *URL);
+char *OutputFilesGetFilePath();
+void OpenOutputFiles(char *Title, char *URL, int *FileSize);
+void WriteOutputFiles(char *Data, int Len);
+void AddOutputFile(char *Path, int SingleOutput);
+void CloseOutputFiles();
 
 #endif

@@ -19,6 +19,12 @@ Of course, movgrab can also write the stream to a file,
 
 movgrab 'http://www.triplag.com/webradio/darkpsy/triplag-darkpsy-playlist.asx' -o darktrance.mp3
 
+Best of all, a flag in the form '+o <path>' can be used to output the stream to a second (or third, or forth...) file, allowing you to listen to the stream and record it, thusly
+
+movgrab 'http://www.triplag.com/webradio/darkpsy/triplag-darkpsy-playlist.asx' -o -  +o darktrance.mp3 | mpg123 -
+
+This both pipes it into 'mpg123' and writes it to 'darktrance.mp3'
+
 
 
 

@@ -46,17 +46,7 @@ int Port, len=0, BytesRead=0;
 		return(FALSE);
 	}
 
-	S=OpenSaveFile(Title,URL,&BytesRead);
-	if (! S) 
-	{
-		if (Flags & FLAG_STREAM) S=OpenSaveFile("-",URL,&BytesRead);
-		if (! S)
-		{
-				fprintf(stderr,"ERROR: Cannot open output file\n");
-				return(FALSE);
-		}
-	}
-
+	OpenOutputFiles(Title,URL,&BytesRead);
 	while (Curr)
 	{
 		if (strncmp((char *) Curr->Item,"http:",5)==0) Tempstr=CopyStr(Tempstr,(char *) Curr->Item);
@@ -76,18 +66,12 @@ int Port, len=0, BytesRead=0;
 		{
 			ptr=STREAMGetValue(Con,"HTTP:content-length");
 			if (ptr) len=atoi(ptr);
-			TransferItem(Con, S, Title, Curr->Item, len, &BytesRead);
+			TransferItem(Con, Title, Curr->Item, len, &BytesRead);
 			STREAMClose(Con);
 		}
 		Curr=ListGetNext(Curr);
 	}
-
-	if ((Flags & FLAG_STREAMCACHE) || (! (Flags & FLAG_STREAM)))
-	{
-		 Tempstr=MCopyStr(Tempstr,S->Path,".mpeg",NULL);
-		 rename(S->Path,Tempstr);
-	}
-	STREAMClose(S);
+	CloseOutputFiles();
 
 DestroyString(Tempstr);
 DestroyString(Server);

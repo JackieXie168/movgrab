@@ -37,14 +37,11 @@ int Flags=0;
 char *ItemSelectionArg=NULL;
 char *ProgName=NULL, *CmdLine=NULL;
 char *FormatPreference=NULL;
-char *SaveFilePath=NULL;
 ListNode *DownloadQueue=NULL;
 STREAM *StdIn=NULL;
 char *Username=NULL, *Password=NULL;
 int STREAMTimeout=30;
 int Type=TYPE_NONE, DefaultPort=80;
-
-
 
 int CheckForKeyboardInput()
 {
@@ -67,65 +64,6 @@ DestroyString(Tempstr);
 return(result);
 }
 
-
-
-//Display progress of download
-void DisplayProgress(char *FullTitle, unsigned int bytes_read, unsigned int DocSize,time_t Now, int PrintName)
-{
-float Percent, f1, f2;
-unsigned int Bps=0;
-char *HUDocSize=NULL, *BpsStr=NULL, *Title=NULL;
-static time_t SpeedStart=0;
-static unsigned int PrevBytesRead=0;
-
-if ((Now-SpeedStart) == 0) return;
-
-if (CheckForKeyboardInput()) PrintName=TRUE;
-
-
-Title=CopyStrLen(Title,FullTitle,30);
-if (! (Flags & FLAG_QUIET)) 
-{
-if (PrintName) fprintf(stderr,"\nGetting: %s  Size: %s\n",Title,GetHumanReadableDataQty(DocSize,0));
-}
-
-
-
-BpsStr=CopyStr(BpsStr,"");
-if (SpeedStart > 0)
-{
-	Bps=(bytes_read - PrevBytesRead) / (Now-SpeedStart);
-	BpsStr=MCopyStr(BpsStr,GetHumanReadableDataQty(Bps,0),"/s ",NULL);
-}
-
-if (DocSize)
-{
-	HUDocSize=CopyStr(HUDocSize,GetHumanReadableDataQty(DocSize,0));
-
-	f1=(float) bytes_read * 100.0;
-	f2=(float) DocSize;
-	Percent=f1/f2;
-
-	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %0.2f%%  %s of %s  %s        \r",Percent,GetHumanReadableDataQty(bytes_read,0),HUDocSize,BpsStr);
-	sprintf(CmdLine,"%s %0.2f%% %s          \0",ProgName,Percent,Title);
-}
-else
-{
-	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %s %s     \r",GetHumanReadableDataQty(bytes_read,0),BpsStr);
-	sprintf(CmdLine,"%s %s              \0",ProgName,Title);
-}
-
-fflush(NULL);
-if (Now - SpeedStart > 5) 
-{
-	SpeedStart=Now;
-	PrevBytesRead=bytes_read;
-}
-
-DestroyString(HUDocSize);
-DestroyString(BpsStr);
-DestroyString(Title);
-}
 
 
 
@@ -350,6 +288,10 @@ else if (RetVal==TYPE_REFERENCE) fprintf(stderr,"Reference to another site: \n",
 else fprintf(stderr,"Selected format %s\n",Selected);
 }
 
+
+//+5 to get past leading 'item:' in variable name
+if (StrLen(Selected)) SetVar(Vars,"DownloadFormat",Selected+5);
+
 DestroyString(Selected);
 DestroyString(Tempstr);
 DestroyString(Fmt);
@@ -401,20 +343,20 @@ fprintf(stderr,"Blogs: \n");
 fprintf(stderr,"	tech: http://idratherhack.blogspot.com \n");
 fprintf(stderr,"	rants: http://thesingularitysucks.blogspot.com \n");
 fprintf(stderr,"\n");
-fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-s] [-sc] [-o <output file>] url\n");
+fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-P] [-Pp] [-o <output file>] [+o <extra output file>] url\n");
 fprintf(stderr,"	movgrab -test-sites\n");
 fprintf(stderr,"\n'-v'		increases verbosity/debug level\n");
 fprintf(stderr,"'-v -v'		prints out all webpages encountered\n");
 fprintf(stderr,"'-v -v -v'	maximum debugging\n");
 fprintf(stderr,"'-T'		Test mode, don't do final download\n");
+fprintf(stderr,"'-P <program>'		Player program (e.g. \"mplayer\")\n");
+fprintf(stderr,"'-Pp'		Percent download to launch player at (default 25%)\n");
 fprintf(stderr,"'-a'		Authentication info in Username:Password format.\n");
 fprintf(stderr,"'-q'		QUIET. No progress/informative output.\n");
 fprintf(stderr,"'-b'		Background. Fork into background and nohup\n");
 fprintf(stderr,"'-p'		address of HTTP proxy server in URL format.\n");
 fprintf(stderr,"'-w'		Wait for addresses to be entered on stdin.\n");
 fprintf(stderr,"'-st'		Connection inactivity timeout in seconds. Set high for sites that 'throttle'\n");
-fprintf(stderr,"'-s'		Streaming mode, writes to stdout, but backs it up with tempfile to handle 'pause'\n");
-fprintf(stderr,"'-sc'		Cached streaming mode. Writes to a file and to stdout, reuses the file if asked to get the video again \n");
 fprintf(stderr,"'-t'		specifies website type.\n");
 fprintf(stderr,"'-f'		specifies preferred video/audio formats for sites that offer more than one\n");
 fprintf(stderr,"			example: flv:640x480,flv,mp4,mp3\n");
@@ -422,6 +364,7 @@ fprintf(stderr,"			Use -T to get a list of formats the site offers\n");
 fprintf(stderr,"			Use * to mean 'any format' (the default)\n");
 fprintf(stderr,"			example: flv:640x480,mp4:640x480,*\n");
 fprintf(stderr,"'-o'		specifies output file ( '-' for stdout)\n");
+fprintf(stderr,"'+o'		add an output file to list of output files ( '-' for stdout)\n");
 fprintf(stderr,"'-x'		try to avoid 'family filter' on some sites\n");
 fprintf(stderr,"'-n'		For pages with multiple movies (not movie formats, but movies) specifes item selection for download. Argument has the form:\n");
 fprintf(stderr,"			-n all		Download all\n");
@@ -469,6 +412,7 @@ char *ptr;
 ProgName=CopyStr(ProgName,argv[0]);
 CmdLine=argv[0];
 
+
 for (i=1; i < argc; i++)
 {
 	if (strcmp(argv[i],"-p")==0)
@@ -486,7 +430,11 @@ for (i=1; i < argc; i++)
 	}
 	else if (strcmp(argv[i],"-o")==0)
 	{
-		SaveFilePath=CopyStr(SaveFilePath,argv[++i]);
+		AddOutputFile(argv[++i], TRUE);
+	}
+	else if (strcmp(argv[i],"+o")==0)
+	{
+		AddOutputFile(argv[++i], FALSE);
 	}
 	else if (strcmp(argv[i],"-n")==0)
 	{
@@ -497,11 +445,11 @@ for (i=1; i < argc; i++)
 	else if (strcmp(argv[i],"-q")==0) Flags |= FLAG_QUIET;
 	else if (strcmp(argv[i],"-b")==0) Flags |= FLAG_BACKGROUND;
 	else if (strcmp(argv[i],"-x")==0) Flags |= FLAG_PORN;
-	else if (strcmp(argv[i],"-s")==0) Flags |= FLAG_STREAM;
-	else if (strcmp(argv[i],"-sc")==0) Flags |= FLAG_STREAMCACHE | FLAG_STREAM;
 	else if (strcmp(argv[i],"-T")==0) Flags |= FLAG_TEST;
 	else if (strcmp(argv[i],"-st")==0) STREAMTimeout=atoi(argv[++i]);
-	else if (strcmp(argv[i],"-?")==0) Flags |= FLAG_PRINT_USAGE;
+	else if (strcmp(argv[i],"-x")==0) Flags |= FLAG_PORN;
+	else if (strcmp(argv[i],"-P")==0) Player=CopyStr(Player,argv[++i]);
+	else if (strcmp(argv[i],"-Pp")==0) PlayerLaunchPercent=atoi(argv[++i]);
 	else if (strcmp(argv[i],"-help")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"--help")==0) Flags |= FLAG_PRINT_USAGE;
 	else if (strcmp(argv[i],"-test-sites")==0) 
@@ -520,6 +468,7 @@ for (i=1; i < argc; i++)
 	}	
 
 }
+
 
 if (Flags & FLAG_BACKGROUND) 
 {
@@ -549,6 +498,7 @@ DownloadQueue=ListCreate();
 Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);
 FormatPreference=CopyStr(FormatPreference,"mp4,flv,webm,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
+AddOutputFile("", TRUE);
 
 ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
 

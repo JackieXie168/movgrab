@@ -13,7 +13,7 @@ Then site specific
 
 
 //Site type names used at the command line etc
-char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","sdnhm","princeton","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","sdnhm","princeton","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com",NULL};
 
 //Longer names used in display
 char *DownloadNames[]={"none",
@@ -62,6 +62,8 @@ char *DownloadNames[]={"none",
 "http://royalsociety.org/",
 "http://britac.studyserve.com",
 "KAVLI INSTITUTE: http://online.itp.ucsb.edu/plecture/",
+"dotsub.com",
+"astronomy.com",
 NULL};
 
 //links used by the -test-sites feature to test if a download site still
@@ -111,6 +113,8 @@ char *TestLinks[]={"", "",
 "http://royalsociety.tv/rsPlayer.aspx?presentationid=474",
 "broken",
 "http://online.itp.ucsb.edu/plecture/bmonreal11/",
+"http://dotsub.com/view/5d90ef11-d5e5-42fb-8263-a4c128fb64df",
+"http://www.astronomy.com/News-Observing/Liz%20and%20Bills%20Cosmic%20Adventures/2011/02/Episode%202.aspx",
 NULL};
 
 
@@ -302,6 +306,14 @@ else if (strcmp(Server,"britac.studyserve.com")==0)
 else if (strcmp(Server,"online.itp.ucsb.edu")==0)
 {
  Type=TYPE_KAVLIINSTITUTE;
+}
+else if (strcmp(Server,"dotsub.com")==0)
+{
+ Type=TYPE_DOTSUB;
+}
+else if (strstr(Server,"astronomy.com"))
+{
+ Type=TYPE_ASTRONOMYCOM;
 }
 return(Type);
 }
@@ -543,10 +555,11 @@ return(NextPath);
 
 int GetNextURL(int Type, char *Server, int Flags, ListNode *Vars)
 {
-char *Tempstr=NULL, *Title=NULL, *ptr;
+char *Tempstr=NULL, *Title=NULL, *Fmt=NULL, *ptr;
 int RetVal=FALSE;
 
 Title=CopyStr(Title,GetVar(Vars,"Title"));
+Fmt=CopyStr(Fmt,GetVar(Vars,"DownloadFormat"));
 
 switch (Type)
 {
@@ -558,17 +571,17 @@ break;
 
 case TYPE_YOUTUBE:
 	Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_BREAK_COM:
   Tempstr=SubstituteVarsInString(Tempstr,"$(ID)?$(EXTRA)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_EHOW:
 	ptr=GetVar(Vars,"ID");
-	if (strncmp(ptr,"http:",5)==0) RetVal=DownloadItem(ptr,Title,Flags);
+	if (strncmp(ptr,"http:",5)==0) RetVal=DownloadItem(ptr,Title, Fmt, Flags);
 	else
 	{
 		Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/embedvars.aspx?isEhow=true&show_related=true&id=$(ID)",Vars,0);
@@ -577,13 +590,13 @@ case TYPE_EHOW:
 break;
 
 case TYPE_EHOW_STAGE2:
-  	RetVal=DownloadItem(GetVar(Vars,"ID"), Title,Flags);
+  	RetVal=DownloadItem(GetVar(Vars,"ID"), Title, Fmt, Flags);
 break;
 
 
 case TYPE_METACAFE:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 
@@ -595,18 +608,18 @@ break;
 
 case TYPE_METACAFE_FINAL:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_DAILYMOTION:
 	Flags &= ~FLAG_POST;
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&allowFullScreen=true&allowScriptAccess=always&callback=player_proxy&lang=en&autoplay=1&uid=$(Extra)",Vars,0);
-  	RetVal=DownloadItem(GetVar(Vars,"ID"), Title,Flags);
+  	RetVal=DownloadItem(GetVar(Vars,"ID"), Title, Fmt, Flags);
 break;
 
 case TYPE_MOBANGO:
  Tempstr=SubstituteVarsInString(Tempstr,"http://media.mobango.com/$(ID)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_VIDEOEMO:
@@ -619,17 +632,17 @@ break;
 
 case TYPE_WASHINGTONPOST_STAGE2:
 	Tempstr=SubstituteVarsInString(Tempstr,"$(server)$(flvurl)",Vars,0);
- 	RetVal=DownloadItem(Tempstr,Title,Flags);
+ 	RetVal=DownloadItem(Tempstr,Title, Fmt, Flags);
 break;
 
 case TYPE_TED:
  Tempstr=SubstituteVarsInString(Tempstr,"http://video.ted.com/$(ID)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_MYVIDEO:
 		Tempstr=SubstituteVarsInString(Tempstr,"$(MyVidURL)/$(ID).flv",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title,Flags);
+  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_VBOX7:
@@ -647,13 +660,13 @@ break;
 
 case TYPE_VIMEO_STAGE2:
  Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/play/clip:$(ID)/$(Extra)/$(Extra2)/?q=sd&type=embed",Vars,0);
- 	RetVal=DownloadItem(Tempstr,Title,Flags);
+ 	RetVal=DownloadItem(Tempstr,Title, Fmt, Flags);
 break;
 
 
 case TYPE_YALE:
  Tempstr=SubstituteVarsInString(Tempstr,"http://openmedia.yale.edu/cgi-bin/open_yale/media_downloader.cgi?file=$(ID)",Vars,0);
- 	RetVal=DownloadItem(Tempstr,Title,Flags);
+ 	RetVal=DownloadItem(Tempstr,Title, Fmt, Flags);
 break;
 
 case TYPE_CLIPSHACK:
@@ -668,12 +681,12 @@ break;
 
 case TYPE_CLIPSHACK_STAGE3:
  Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
- 	RetVal=DownloadItem(Tempstr,Title,Flags);
+ 	RetVal=DownloadItem(Tempstr,Title, Fmt, Flags);
 break;
 
 case TYPE_VIDEOEMO_STAGE2:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
- 	RetVal=DownloadItem(Tempstr, Title,Flags);
+ 	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 case TYPE_BLIPTV:
@@ -722,6 +735,22 @@ case TYPE_KAVLIINSTITUTE:
   	RetVal=DownloadPage(Tempstr,TYPE_KAVLIINSTITUTE_STAGE2, Title,Flags);
 break;
 
+case TYPE_EURONEWS:
+ Tempstr=SubstituteVarsInString(Tempstr,"http://video.euronews.net/$(ID).flv",Vars,0);
+ RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+break;
+
+case TYPE_DOTSUB:
+ Tempstr=SubstituteVarsInString(Tempstr,"$(SERV)$(ID)",Vars,0);
+ RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
+break;
+
+case TYPE_ASTRONOMYCOM:
+ 	Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+  RetVal=DownloadPage(Tempstr,TYPE_ASTRONOMYCOM_STAGE2, Title,Flags);
+break;
+
+
 case TYPE_KAVLIINSTITUTE_STAGE2:
 case TYPE_SCIVEE:
 case TYPE_BLIPTV_STAGE3:
@@ -750,21 +779,17 @@ case TYPE_GUARDIAN:
 case TYPE_ESCAPIST_STAGE2:
 case TYPE_REDORBIT_STAGE2:
 case TYPE_REDBALCONY_STAGE2:
+case TYPE_ASTRONOMYCOM_STAGE2:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
 
- 	RetVal=DownloadItem(Tempstr, Title,Flags);
-break;
-
-
-case TYPE_EURONEWS:
- Tempstr=SubstituteVarsInString(Tempstr,"http://video.euronews.net/$(ID).flv",Vars,0);
- RetVal=DownloadItem(Tempstr, Title,Flags);
+ 	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 }
 
 
 DestroyString(Tempstr);
 DestroyString(Title);
+DestroyString(Fmt);
 
 return(RetVal);
 }
@@ -1846,6 +1871,53 @@ case TYPE_KAVLIINSTITUTE_STAGE2:
 		if (strstr(Tempstr,KAVLI_ITEMSTART)) GenericExtractFromLine(Tempstr, "ID",KAVLI_ITEMSTART,KAVLI_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 break;
 
+case TYPE_DOTSUB:
+#define DOTSUB_ITEMSTART "mediaUri = '"
+#define DOTSUB_ITEMEND "'"
+#define DOTSUB_SERVSTART "webAppUrl = '"
+#define DOTSUB_TITLESTART "og:title\" content=\""
+#define DOTSUB_TITLEEND "\""
+
+		if (strstr(Tempstr,DOTSUB_ITEMSTART)) GenericExtractFromLine(Tempstr, "ID",DOTSUB_ITEMSTART,DOTSUB_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		if (strstr(Tempstr,DOTSUB_SERVSTART)) GenericExtractFromLine(Tempstr, "SERV",DOTSUB_SERVSTART,DOTSUB_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		if (strstr(Tempstr,DOTSUB_TITLESTART))
+		{
+		GenericExtractFromLine(Tempstr, "Title",DOTSUB_TITLESTART,DOTSUB_TITLEEND,Vars,0);
+		}
+break;
+
+case TYPE_ASTRONOMYCOM:
+#define ASTRONOMYCOM_ITEMSTART "http://kws.astronomy.com/generator.aspx?key="
+#define ASTRONOMYCOM_ITEMEND "\""
+#define ASTRONOMYCOM_TITLESTART "<span class=\"currentItem\">"
+#define ASTRONOMYCOM_TITLEEND "</span>"
+
+		if (strstr(Tempstr,ASTRONOMYCOM_TITLESTART))
+		{
+		GenericExtractFromLine(Tempstr, "Title",ASTRONOMYCOM_TITLESTART,ASTRONOMYCOM_TITLEEND,Vars,0);
+		}
+
+		if (strstr(Tempstr,ASTRONOMYCOM_ITEMSTART))
+		{
+			 GenericExtractFromLine(Tempstr, "ID",ASTRONOMYCOM_ITEMSTART,ASTRONOMYCOM_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+			 Tempstr=MCopyStr(Tempstr,ASTRONOMYCOM_ITEMSTART,GetVar(Vars,"ID"),NULL);
+			 SetVar(Vars,"ID",Tempstr);
+		}
+		
+
+break;
+
+
+case TYPE_ASTRONOMYCOM_STAGE2:
+#define ASTRONOMYCOM_S2_ITEMSTART "so.addVariable(\"file\", \""
+#define ASTRONOMYCOM_S2_ITEMEND "\""
+
+		if (strstr(Tempstr,ASTRONOMYCOM_S2_ITEMSTART))
+		{
+			 GenericExtractFromLine(Tempstr, "ID",ASTRONOMYCOM_S2_ITEMSTART,ASTRONOMYCOM_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		}
+	
+break;
 
 case TYPE_MYTOPCLIP:
 case TYPE_SDNHM:

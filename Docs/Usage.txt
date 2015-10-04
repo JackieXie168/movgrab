@@ -40,6 +40,11 @@ This command works the same as the -s streaming command, except that the file wi
 
 -x attempts to get around 'family filter' on some websites
 
+-P allows you to specify a 'Player program' (e.g. 'mplayer') to run when a certain percentage (default, 25%) of the file has been downloaded.
+
+-Pp allow you to set what percent of download to launch the 'Player program' at.
+
+
 In some cases websites have more than one format of a video on offer. In general movgrab tries to extract Flash video (flv) first. If you want a different format, you can first see what the website offers by doing this:
 
 movgrab -T http://www.dailymotion.com/video/xbfxzk_making-friends-with-the-polar-bear_news

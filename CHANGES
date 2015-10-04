@@ -1,0 +1,4 @@
+Version 1.1.1:
+	Various bugfixes.
+	Removed '-s' and '-sc', which related to previous streaming methods, and replaced with '-P'. '-P <program>' allows you to specify a 'player program' that will be used to play the downloaded file. By default this will launch after 25% of the file is downloaded, but this value can be set with '-Pp <percent>'.
+	Added '+o' flag, which allows additional files for writing a download to, so that you can stream it and record it at the same time.

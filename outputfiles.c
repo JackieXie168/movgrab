@@ -1,5 +1,9 @@
 #include "outputfiles.h"
 
+
+ListNode *OutputFiles;
+
+
 //---------------- Functions to do with files and file names ----------
 
 //Strip out characters that make it difficult to specify a file on the 
@@ -55,8 +59,6 @@ char *GetSaveFilePath(char *RetStr, char *Title, char *URL)
 char *ptr=NULL;
 char *Tempstr=NULL, *MD5=NULL;
 
-//if an explicit path is given then use that
-if (StrLen(SaveFilePath)) return(CopyStr(RetStr,SaveFilePath));
 
 if (StrLen(Title)) ptr=Title;
 else 
@@ -149,4 +151,87 @@ globfree(&Glob);
 DestroyString(Tempstr);
 
 return(S);
+}
+
+void OpenOutputFiles(char *Title, char *URL, int *FileSize)
+{
+ListNode *Curr;
+
+Curr=ListGetNext(OutputFiles);
+while (Curr)
+{
+if (StrLen(Curr->Tag)==0) Curr->Item=OpenSaveFile(Title, URL, FileSize);
+else if (strcmp(Curr->Tag,"-")==0) Curr->Item=STREAMFromFD(1); 
+else Curr->Item=STREAMOpenFile(Curr->Tag,O_WRONLY|O_CREAT|O_TRUNC); 
+
+Curr=ListGetNext(Curr);
+}
+
+}
+
+
+void WriteOutputFiles(char *Data, int Len)
+{
+ListNode *Curr;
+
+Curr=ListGetNext(OutputFiles);
+while (Curr)
+{
+if (Curr->Item) STREAMWriteBytes((STREAM *) Curr->Item,Data,Len);
+Curr=ListGetNext(Curr);
+}
+}
+
+void CloseOutputFiles(char *Extn)
+{
+ListNode *Curr;
+char *Tempstr=NULL;
+STREAM *S;
+
+Curr=ListGetNext(OutputFiles);
+while (Curr)
+{
+if ((Curr->Item) && (strcmp(Curr->Tag,"-") !=0))
+{
+ S=(STREAM *) Curr->Item;
+ if (! StrLen(Curr->Tag)) 
+ {
+		Tempstr=MCopyStr(Tempstr,S->Path,Extn,NULL);
+		rename(S->Path,Tempstr);
+ }
+ STREAMClose(S);
+}
+Curr=ListGetNext(Curr);
+}
+DestroyString(Tempstr);
+}
+
+
+void AddOutputFile(char *Path, int SingleOutput)
+{
+//if 'SingleOutput' is set then overwrite any existing outputs, this should be the
+//only one
+if (SingleOutput) ListClear(OutputFiles,NULL);
+
+if (! OutputFiles) OutputFiles=ListCreate();
+ListAddNamedItem(OutputFiles,Path,NULL);
+
+
+}
+
+
+char *OutputFilesGetFilePath()
+{
+ListNode *Curr;
+STREAM *S;
+
+Curr=ListGetNext(OutputFiles);
+while (Curr)
+{
+S=(STREAM *) Curr->Item;
+if (S && (strcmp(Curr->Tag,"-") !=0)) return(S->Path);
+Curr=ListGetNext(Curr);
+}
+
+return("");
 }
