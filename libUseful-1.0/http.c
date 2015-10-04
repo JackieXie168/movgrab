@@ -104,21 +104,22 @@ if (Chunk->ChunkSize==0)
 	else ptr=Chunk->Buffer;
 	Chunk->ChunkSize=strtol(vptr,NULL,16);
 
+	Chunk->BuffLen=Chunk->Buffer+len-ptr;
+	memmove(Chunk->Buffer,ptr,Chunk->BuffLen);
+
 	if (Chunk->ChunkSize==0) return(0);
 }
-
-val=(Chunk->Buffer +len) - ptr;
-
-if (ptr && (val > 0))
+else if (len >= Chunk->ChunkSize)
 {
-	if (val > Chunk->ChunkSize) val=Chunk->ChunkSize;
+	val=Chunk->ChunkSize;
 	if (val > OutLen) val=OutLen;
 
-	memcpy(OutBuff,ptr,val);
-	Chunk->BuffLen=(Chunk->Buffer+len) - (ptr + val);
-	memmove(Chunk->Buffer, ptr+val, Chunk->BuffLen);
-
+	memcpy(OutBuff,Chunk->Buffer,val);
+	ptr=Chunk->Buffer+val;
+	Chunk->BuffLen-=val;
 	Chunk->ChunkSize-=val;
+	memmove(Chunk->Buffer, ptr, Chunk->BuffLen);
+
 }
 
 if (Chunk->ChunkSize < 0) Chunk->ChunkSize=0;
@@ -190,6 +191,38 @@ switch (*ptr)
 DestroyString(Token);
 return(RetStr);
 }
+
+
+char *HTTPQuoteChars(char *RetBuff, char *Str, char *CharList)
+{
+char *RetStr=NULL, *Token=NULL, *ptr;
+int olen=0, ilen;
+
+RetStr=CopyStr(RetStr,"");
+ilen=StrLen(Str);
+
+for (ptr=Str; ptr < (Str+ilen); ptr++)
+{
+if (strchr(CharList,*ptr))
+{
+		Token=FormatStr(Token,"%%%02X",*ptr); 
+		RetStr=CatStr(RetStr,Token);
+		olen+=StrLen(Token);
+}
+else
+{
+		 RetStr=AddCharToBuffer(RetStr,olen,*ptr); 
+		 olen++;
+}
+}
+
+
+RetStr[olen]='\0';
+DestroyString(Token);
+return(RetStr);
+}
+
+
 
 char *HTTPQuote(char *RetBuff, char *Str)
 {
@@ -565,8 +598,9 @@ static int AuthCounter=0;
 SendStr=CopyStr(SendStr,Info->Method);
 SendStr=CatStr(SendStr," ");
 
-if (StrLen(Info->Proxy)) SendStr=MCatStr(SendStr,"http://",Info->Host,Info->Doc,NULL);
-else SendStr=CatStr(SendStr,Info->Doc);
+Doc=HTTPQuoteChars(Doc,Info->Doc," :");
+if (StrLen(Info->Proxy)) SendStr=MCatStr(SendStr,"http://",Info->Host,Doc,NULL);
+else SendStr=CatStr(SendStr,Doc);
 
 if (Info->Flags & HTTP_VER1_0) SendStr=CatStr(SendStr," HTTP/1.0\r\n");
 else
@@ -914,11 +948,12 @@ while (1)
 		HTTPReadHeaders(Info->S,Info);
 		result=HTTPProcessResponse(Info);
 		if (Info->Flags & HTTP_CHUNKED) HTTPAddChunkedProcessor(Info->S);
+
 		if (Info->Flags & HTTP_GZIP) 
 		{
 			STREAMAddStandardDataProcessor(Info->S,"compression","gzip","");
 		}
-		if (Info->Flags & HTTP_DEFLATE) STREAMAddStandardDataProcessor(Info->S,"compression","zlib","");
+		else if (Info->Flags & HTTP_DEFLATE) STREAMAddStandardDataProcessor(Info->S,"compression","zlib","");
 
 		if (result == HTTP_OKAY) break;
 		if (result == HTTP_NOTFOUND) break;
@@ -927,17 +962,20 @@ while (1)
 		if (result == HTTP_CIRCULAR_REDIRECTS) break;
 
 
-		if (
-					(result == HTTP_AUTH_BASIC) && 
-					(
-						(Info->Authorization->Flags & HTTP_SENT_AUTH) ||
-						(! Info->Authorization->Logon) || 
-						(StrLen(Info->Authorization->Logon)==0) 
-					)
-			 )
+		if (result == HTTP_AUTH_BASIC) 
 		{
-			if (result == HTTP_AUTH_BASIC) break;
-			if (result == HTTP_AUTH_DIGEST) break;
+					if (
+							(! Info->Authorization) ||
+								(
+									(Info->Authorization->Flags & HTTP_SENT_AUTH) ||
+									(! Info->Authorization->Logon) || 
+									(StrLen(Info->Authorization->Logon)==0) 
+								)
+			 			)
+					{
+						if (result == HTTP_AUTH_BASIC) break;
+						if (result == HTTP_AUTH_DIGEST) break;
+					}
 		}
 
 		if (

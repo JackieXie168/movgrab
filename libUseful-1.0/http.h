@@ -72,6 +72,7 @@ STREAM *S;
 
 
 char *HTTPQuote(char *, char*);
+char *HTTPQuoteChars(char *RetBuff, char *Str, char *CharList);
 char *HTTPUnQuote(char *, char*);
 
 

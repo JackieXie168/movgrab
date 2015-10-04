@@ -1,14 +1,15 @@
+# Generated automatically from Makefile.in by configure.
 CC = gcc
 VERSION = 0.0.1
 CFLAGS = -g -O2
-LIBS = -lcrypto -lssl -lz 
-FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1 
+LIBS = -lz -lcrypto -lssl #-lesd
+FLAGS=$(CFLAGS) -fPIC  -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1 #-DHAVE_LIBESD=1  
 prefix=/usr/local
-OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o md5c.o base64.o
+OBJ=string.o list.o expect.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o md5c.o base64.o
 
 
 all: $(OBJ)
-	$(CC) $(FLAGS) $(LIBS) -shared -o libUseful-1.0.so $(OBJ)
+	$(CC) $(FLAGS) $(LIBS) -shared -o libUseful-1.1.so $(OBJ)
 	#ld -i -o libUseful-1.0.a $(OBJ)
 	ar rcs libUseful-1.0.a $(OBJ)
 
@@ -20,6 +21,10 @@ list.o: list.h list.c
 
 socket.o: socket.h socket.c
 	$(CC) $(FLAGS) -c socket.c
+
+expect.o: expect.h expect.c
+	$(CC) $(FLAGS) -c expect.c
+
 
 sound.o: sound.h sound.c
 	$(CC) $(FLAGS) -c sound.c
@@ -42,9 +47,6 @@ file.o: file.h file.c
 
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
-
-expect.o: expect.h expect.c
-	$(CC) $(FLAGS) -c expect.c
 
 GeneralFunctions.o: GeneralFunctions.h GeneralFunctions.c
 	$(CC) $(FLAGS) -c GeneralFunctions.c
