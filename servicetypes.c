@@ -116,7 +116,7 @@ char *TestLinks[]={"", "",
 "http://online.itp.ucsb.edu/plecture/bmonreal11/",
 "http://dotsub.com/view/5d90ef11-d5e5-42fb-8263-a4c128fb64df",
 "http://www.astronomy.com/News-Observing/Liz%20and%20Bills%20Cosmic%20Adventures/2011/02/Episode%202.aspx",
-"http://teachertube.com/embedFLV.php?pg=video_114089",
+"http://www.teachertube.com/viewVideo.php?video_id=114089&title=Marco_Polo",
 NULL};
 
 
@@ -619,7 +619,8 @@ break;
 
 case TYPE_DAILYMOTION:
 	Flags &= ~FLAG_POST;
- Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&allowFullScreen=true&allowScriptAccess=always&callback=player_proxy&lang=en&autoplay=1&uid=$(Extra)",Vars,0);
+// Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&allowFullScreen=true&allowScriptAccess=always&callback=player_proxy&lang=en&autoplay=1&uid=$(Extra)",Vars,0);
+ Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
   	RetVal=DownloadItem(GetVar(Vars,"ID"), Title, Fmt, Flags);
 break;
 
@@ -641,10 +642,6 @@ case TYPE_WASHINGTONPOST_STAGE2:
  	RetVal=DownloadItem(Tempstr,Title, Fmt, Flags);
 break;
 
-case TYPE_TED:
- Tempstr=SubstituteVarsInString(Tempstr,"http://video.ted.com/$(ID)",Vars,0);
-  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
-break;
 
 case TYPE_MYVIDEO:
 		Tempstr=SubstituteVarsInString(Tempstr,"$(MyVidURL)/$(ID).flv",Vars,0);
@@ -775,6 +772,7 @@ case TYPE_FIVE_MIN:
 case TYPE_GENERIC:
 case TYPE_MYTOPCLIP:
 case TYPE_PRINCETON:
+case TYPE_TED:
 case TYPE_SDNHM:
 case TYPE_UCSDTV:
 case TYPE_IZLESE:
@@ -1058,17 +1056,24 @@ break;
 
 
 case TYPE_EHOW:
-#define EHOW_ITEM "data-video-id=\""
+#define EHOW_ITEM "\"source\":\""
 #define EHOW_ITEM_END "\""
+#define EHOW_HD_ITEM "\"sourcehd\":\""
+#define EHOW_HD_ITEM_END "\""
 #define EHOW_TITLE "<h1 class=\"Heading1a\">"
 #define EHOW_TITLE_END "</h1>"
 #define EHOW_ITEM2 "showPlayer({"
 
-	ptr=strstr(Tempstr,EHOW_ITEM);
-	if (ptr)
+	if (strstr(Tempstr,EHOW_ITEM))
 	{
 		GenericExtractFromLine(Tempstr, "item:flv",EHOW_ITEM,EHOW_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 	}
+
+	if (strstr(Tempstr,EHOW_HD_ITEM))
+	{
+		GenericExtractFromLine(Tempstr, "item:flv:hd",EHOW_HD_ITEM,EHOW_HD_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	}
+
 
 	ptr=strstr(Tempstr,EHOW_ITEM2);
 	if (ptr)
@@ -1173,8 +1178,8 @@ break;
 case TYPE_DAILYMOTION:
 #define DAILYMOTION_ITEM "addVariable(\"sequence\","
 #define DAILYMOTION_ITEM_END ")"
-#define DAILYMOTION_PARAMS "\"videoPluginParameters\":{"
-#define DAILYMOTION_PARAMS_END "}"
+#define DAILYMOTION_URL "\"sdURL\":\""
+#define DAILYMOTION_URL_END "\""
 #define DAILYMOTION_TITLE_START "<h1 class=\"dmco_title\"><span class=\"title\" title=\""
 #define DAILYMOTION_TITLE_END "\""
 
@@ -1189,9 +1194,10 @@ case TYPE_DAILYMOTION:
 	{
 		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_ITEM,DAILYMOTION_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		Tempstr=CopyStr(Tempstr,GetVar(Vars,"DailyMotionItems"));
-		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_PARAMS,DAILYMOTION_PARAMS_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		ptr=GetVar(Vars,"DailyMotionItems");
-		DecodeDailyMotionFormats(ptr,Vars);
+	
+		GenericExtractFromLine(Tempstr, "ID",DAILYMOTION_URL,DAILYMOTION_URL_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		Tempstr=DeQuoteStr(Tempstr,GetVar(Vars,"ID"));
+		SetVar(Vars,"ID",Tempstr);
 	}
 break;
 
@@ -1211,25 +1217,14 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 }
 break;
 
+
 case TYPE_TED:
-#define TED_HIGH_ITEM_START "hs:\""
-#define TED_MED_ITEM_START "ms:\""
-#define TED_LOW_ITEM_START "ls:\""
+#define TED_ITEM_LINE "download the video"
+#define TED_ITEM_START "a href=\""
 #define TED_ITEM_END "\""
-if (strstr(Tempstr,TED_HIGH_ITEM_START))
+if (strstr(Tempstr,TED_ITEM_LINE))
 {
-		GenericExtractFromLine(Tempstr, "item:flv:highq",TED_HIGH_ITEM_START,TED_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-}
-
-if (strstr(Tempstr,TED_MED_ITEM_START))
-{
-		GenericExtractFromLine(Tempstr, "item:flv:medq",TED_MED_ITEM_START,TED_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		GenericExtractFromLine(Tempstr, "item:flv",TED_MED_ITEM_START,TED_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-}
-
-if (strstr(Tempstr,TED_LOW_ITEM_START))
-{
-		GenericExtractFromLine(Tempstr, "item:flv:lowq",TED_LOW_ITEM_START,TED_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	GenericExtractFromLine(Tempstr, "item:mp4",TED_ITEM_START,TED_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 }
 
 if (strstr(Tempstr,GENERIC_TITLE_START))
@@ -1237,6 +1232,7 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 		GenericExtractFromLine(Tempstr, "Title",GENERIC_TITLE_START,GENERIC_TITLE_END,Vars,EXTRACT_DEQUOTE);
 }
 break;
+
 
 case TYPE_MYVIDEO:
 #define MYVIDEO_URL_START "link rel='image_src' href='"

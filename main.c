@@ -281,7 +281,7 @@ if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie:
 			ptr=GetToken(ptr,",",&Fmt,0);
 	}
 
-//if (Flags & FLAG_DEBUG)
+if (! (Flags & FLAG_TEST_SITES))
 {
 if (RetVal==-1) fprintf(stderr,"No suitable download format found from '%s'\n\n",FormatPreference);
 else if (RetVal==TYPE_REFERENCE) fprintf(stderr,"Reference to another site: \n",GetVar(Vars,"ID"));

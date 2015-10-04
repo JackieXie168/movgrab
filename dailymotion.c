@@ -5,6 +5,8 @@ char *GetDailyMotionFormat(char *Formats, char **Val)
 char *Token=NULL, *Fmt=NULL, *ptr;
 char *ptr2;
 
+	printf("DEC: %s\n",Formats);
+
 	*Val=CopyStr(*Val,"");
 	ptr=GetToken(Formats,",",&Fmt,0);
 

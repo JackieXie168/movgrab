@@ -66,7 +66,7 @@ int Port, len=0, BytesRead=0;
 		{
 			ptr=STREAMGetValue(Con,"HTTP:content-length");
 			if (ptr) len=atoi(ptr);
-			TransferItem(Con, Title, Curr->Item, len, &BytesRead);
+			TransferItem(Con, Title, Curr->Item, "", len, &BytesRead);
 			STREAMClose(Con);
 		}
 		Curr=ListGetNext(Curr);
