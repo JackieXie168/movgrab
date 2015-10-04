@@ -56,7 +56,6 @@ int ChangeFileExtension(char *FilePath, char *NewExt);
 
 int BASIC_FUNC_EXEC_COMMAND(void *Data);
 
-char *XMLGetTag(char *Input, char **TagType, char **TagData);
 char *XMLDeQuote(char *RetStr, char *Data);
 
 
@@ -64,6 +63,7 @@ double ParseHumanReadableDataQty(char *Data, int Type);
 char *GetHumanReadableDataQty(double Size, int Type);
 char *FindFileInPath(char *InBuff, char *File, char *Path);
 
+char *XMLGetTag(char *Input, char **Namespace, char **TagType, char **TagData);
 char *HtmlGetTag(char *Input, char **TagType, char **TagData);
 char *HtmlDeQuote(char *RetStr, char *Data);
 

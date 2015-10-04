@@ -1,5 +1,9 @@
 #include "includes.h"
 
+#ifndef va_copy
+#define va_copy(dest, src) (dest) = (src) 
+#endif 
+
 /*
 int StrLen(char *Str)
 {

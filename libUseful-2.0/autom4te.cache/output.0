@@ -1226,6 +1226,7 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-largefiles       enable largefile support
   --enable-ssl       use Secure Sockets Layer
   --enable-oss       use Open Sound System
 
@@ -3410,6 +3411,25 @@ fi
 
 cf_have_libz=$ac_cv_lib_z_deflate
 
+
+# Check whether --enable-largefiles was given.
+if test "${enable_largefiles+set}" = set; then
+  enableval=$enable_largefiles; cf_use_largefiles=$enableval 
+fi
+
+
+if test "$cf_use_largefiles" = "yes"
+then
+cat >>confdefs.h <<\_ACEOF
+@%:@define _LARGEFILE64_SOURCE 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+@%:@define _FILE_OFFSET_BITS 64
+_ACEOF
+
+fi
+
 # Check whether --enable-ssl was given.
 if test "${enable_ssl+set}" = set; then
   enableval=$enable_ssl; cf_use_ssl=$enableval 
@@ -3717,8 +3737,8 @@ fi
 done
 
 
- { echo "$as_me:$LINENO: checking that OpenSSL Library is at least version 0.9.5" >&5
-echo $ECHO_N "checking that OpenSSL Library is at least version 0.9.5... $ECHO_C" >&6; }   
+ { echo "$as_me:$LINENO: checking that OpenSSL Library is at least version 0.9.7" >&5
+echo $ECHO_N "checking that OpenSSL Library is at least version 0.9.7... $ECHO_C" >&6; }   
  cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -3727,7 +3747,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
 		#include <openssl/evp.h>
-		#if SSLEAY_VERSION_NUMBER >= 0x00905000L
+		#if SSLEAY_VERSION_NUMBER >= 0x00907000L
 		yes        
 		#endif
 	

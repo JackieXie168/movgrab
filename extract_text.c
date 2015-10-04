@@ -53,6 +53,7 @@ int GTF=0;
 
 
     if (Flags & EXTRACT_DEQUOTE) Item=HTTPUnQuote(Item,Token);
+    else if (Flags & EXTRACT_DEHTMLQUOTE) Item=HtmlDeQuote(Item,Token);
     else if (Flags & EXTRACT_DESLASHQUOTE) Item=DeQuoteStr(Item,Token);
     else Item=CopyStr(Item,Token);
 		StripLeadingWhitespace(Item);

@@ -42,7 +42,10 @@ extern "C" {
 
 #define COMMS_BY_PIPE 0
 #define COMMS_BY_PTY 1
-	
+
+#define SELECT_READ 1
+#define SELECT_WRITE 2	
+
 typedef struct
 {
 char *InputBuff;
@@ -57,11 +60,14 @@ unsigned int OutStart, OutEnd;
 unsigned int BytesRead;
 unsigned int BytesWritten;
 char *Path;
-void *Extra;
-ListNode *Values;
 ListNode *ProcessingModules;
-ListNode *Index;
+ListNode *Values;
+ListNode *Items;
 } STREAM;
+
+int FDSelect(int fd, int Flags, struct timeval *tv);
+int FDIsWritable(int);
+int FDCheckForBytes(int);
 
 
 STREAM *STREAMCreate();
@@ -71,8 +77,8 @@ void STREAMSetNonBlock(STREAM *S, int val);
 int STREAMLock(STREAM *S, int val);
 int STREAMFlush(STREAM *Stream);
 void STREAMClear(STREAM *Stream);
-int STREAMTell(STREAM *Stream);
-int STREAMSeek(STREAM *Stream, off_t offset, int whence);
+double STREAMTell(STREAM *Stream);
+double STREAMSeek(STREAM *Stream, double, int whence);
 void STREAMResizeBuffer(STREAM *, int);
 void STREAMSetTimeout(STREAM *, int);
 void STREAMSetFlushType(STREAM *Stream, int Type, int val);
@@ -88,21 +94,20 @@ STREAM *STREAMFromFD(int fd);
 STREAM *STREAMFromDualFD(int in_fd, int out_fd);
 STREAM *STREAMSpawnCommand(char *Command, int type);
 
- int STREAMDisassociateFromFD(STREAM *Stream);
- int STREAMPeekChar(STREAM *);
+int STREAMDisassociateFromFD(STREAM *Stream);
+int STREAMPeekChar(STREAM *);
 
 int STREAMReadBytes(STREAM *, char *Buffer, int Bytes);
 int STREAMWriteBytes(STREAM *, char *Buffer, int Bytes);
-int FDCheckForBytes(int);
 int STREAMCheckForBytes(STREAM *);
 int STREAMCheckForWaitingChar(STREAM *S, char check_char);
 int STREAMCountWaitingBytes(STREAM *);
 STREAM *STREAMSelect(ListNode *Streams);
 
-
-int IndexedFileLoad(STREAM *S);
-int IndexedFileFind(STREAM *S, char *Key);
-int IndexedFileWrite(STREAM *S, char *Line);
+void STREAMSetValue(STREAM *S, char *Name, char *Value);
+char *STREAMGetValue(STREAM *S, char *Name);
+void STREAMSetItem(STREAM *S, char *Name, void *Item);
+void *STREAMGetItem(STREAM *S, char *Name);
 
 
 #ifdef __cplusplus

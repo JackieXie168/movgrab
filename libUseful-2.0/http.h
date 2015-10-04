@@ -88,6 +88,7 @@ char *HTTPUnQuote(char *, char*);
 
 void HTTPInfoDestroy(void *p_Info);
 void HTTPInfoSetValues(HTTPInfoStruct *Info, char *Host, int Port, char *Logon, char *Password, char *Method, char *Doc, char *ContentType, int ContentLength);
+void HTTPInfoSetAuth(HTTPInfoStruct *Auth, char *Logon, char *Password, int Type);
 HTTPInfoStruct *HTTPInfoCreate(char *Host, int Port, char *Logon, char *Password, char *Method, char *Doc, char *ContentType, int ContentLength);
 STREAM *HTTPConnect(HTTPInfoStruct *Info);
 STREAM *HTTPTransact(HTTPInfoStruct *Info);

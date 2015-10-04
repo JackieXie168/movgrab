@@ -13,7 +13,7 @@ Then site specific
 
 
 //Site type names used at the command line etc
-char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","princeton","reuters","liveleak","academicearth","photobucket","aljazeera","mefeedia","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com","discovery","bloomberg","nationalgeographic","videobash","ibtimes","smh","presstv","videojug",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","princeton","reuters","liveleak","academicearth","photobucket","aljazeera","mefeedia","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com","discovery","bloomberg","nationalgeographic","videobash","ibtimes","smh","presstv","videojug","animehere",NULL};
 
 //Longer names used in display
 char *DownloadNames[]={"none",
@@ -68,6 +68,7 @@ char *DownloadNames[]={"none",
 "Sidney Morning Herald",
 "Press TV (Iran)",
 "www.videojug.com",
+"www.animehere.com",
 NULL};
 
 //links used by the -test-sites feature to test if a download site still
@@ -123,6 +124,7 @@ char *TestLinks[]={"", "",
 "http://www.smh.com.au/technology/sci-tech/newly-discovered-planets-include-superearth-20110913-1k7tl.html",
 "http://www.presstv.ir/detail/2012/11/09/271229/brussels-demo-protests-eu-spending-cuts/",
 "http://www.videojug.com/film/how-to-do-the-best-card-trick-in-the-world",
+"http://www.animehere.com/roboticsnotes-episode-1.html",
 NULL};
 
 
@@ -227,6 +229,7 @@ else if (strstr(Server,"vimeo.com"))
 {
  Type=TYPE_VIMEO;
 }
+
 else if (strstr(Server,"presstv"))
 {
  Type=TYPE_PRESSTV;
@@ -338,6 +341,10 @@ else if (strstr(Server,"www.videobash.com"))
 else if (strstr(Server,"www.videojug.com"))
 {
  Type=TYPE_VIDEOJUG;
+}
+else if (strstr(Server,"animehere.com"))
+{
+ Type=TYPE_ANIMEHERE;
 }
 return(Type);
 }
@@ -790,6 +797,10 @@ case TYPE_VIDEOBASH:
  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
+case TYPE_ANIMEHERE:
+ 	Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+  RetVal=DownloadPage(Tempstr,TYPE_ANIMEHERE_STAGE2, Title,Flags);
+break;
 
 case TYPE_KAVLIINSTITUTE_STAGE2:
 case TYPE_SCIVEE:
@@ -820,6 +831,7 @@ case TYPE_ESCAPIST_STAGE2:
 case TYPE_REDORBIT_STAGE2:
 case TYPE_REDBALCONY_STAGE2:
 case TYPE_ASTRONOMYCOM_STAGE2:
+case TYPE_ANIMEHERE_STAGE2:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
 
  	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
@@ -2180,6 +2192,39 @@ case TYPE_VIDEOBASH:
 	}
 
 break;
+
+case TYPE_ANIMEHERE:
+//<p><iframe src="http://www.video44.net/gogo/?w=600&amp;h=438&amp;file=robotics_notes_-_01.flv&amp;sv=1" 
+#define ANIMEHERE_ITEMHINT ".flv"
+#define ANIMEHERE_ITEMSTART "<p><iframe src=\""
+#define ANIMEHERE_ITEMEND "\""
+#define ANIMEHERE_TITLE_START "<meta property=\"og:title\" content=\""
+#define ANIMEHERE_TITLE_END "\""
+
+	if (strstr(Tempstr,ANIMEHERE_ITEMHINT))
+	{
+		GenericExtractFromLine(Tempstr, "ID",ANIMEHERE_ITEMSTART,ANIMEHERE_ITEMEND,Vars,EXTRACT_DEHTMLQUOTE | EXTRACT_NOSPACES);
+	}
+
+	if (strstr(Tempstr,ANIMEHERE_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",ANIMEHERE_TITLE_START,ANIMEHERE_TITLE_END,Vars,0);
+	}
+
+break;
+
+
+case TYPE_ANIMEHERE_STAGE2:
+#define ANIMEHERE_S2_ITEMSTART "file="
+#define ANIMEHERE_S2_ITEMEND "&amp;"
+
+	if (strstr(Tempstr,ANIMEHERE_S2_ITEMSTART))
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",ANIMEHERE_S2_ITEMSTART,ANIMEHERE_S2_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	}
+break;
+
+
 
 
 

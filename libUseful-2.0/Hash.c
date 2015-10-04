@@ -106,7 +106,7 @@ int len;
 
 len=sizeof(unsigned long);
 crc32Finish((unsigned long *) Hash->Ctx);
-crc=htonl((unsigned long *) Hash->Ctx);
+//crc=htonl((unsigned long *) Hash->Ctx);
 
 free(Hash->Ctx);
 

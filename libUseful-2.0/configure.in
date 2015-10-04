@@ -19,6 +19,15 @@ cf_have_libesd=no
 AC_CHECK_LIB(z,deflate,,)
 cf_have_libz=$ac_cv_lib_z_deflate
 
+
+AC_ARG_ENABLE(largefiles, [  --enable-largefiles       enable largefile support], cf_use_largefiles=$enableval )
+
+if test "$cf_use_largefiles" = "yes"
+then
+AC_DEFINE([_LARGEFILE64_SOURCE])
+AC_DEFINE([_FILE_OFFSET_BITS],[64])
+fi
+
 AC_ARG_ENABLE(ssl, [  --enable-ssl       use Secure Sockets Layer], cf_use_ssl=$enableval )
 
 if test "$cf_use_ssl" = "yes"
@@ -31,10 +40,10 @@ cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_init
 
 AC_CHECK_FUNCS(OpenSSL_add_all_algorithms EVP_bf_cbc EVP_rc2_cbc EVP_rc4 EVP_rc5_32_12_16_cbc EVP_des_cbc EVP_desx_cbc EVP_cast5_cbc EVP_idea_cbc EVP_aes_128_cbc EVP_aes_256_cbc)
 
- AC_MSG_CHECKING([that OpenSSL Library is at least version 0.9.5])   
+ AC_MSG_CHECKING([that OpenSSL Library is at least version 0.9.7])   
  AC_EGREP_CPP(yes,      [
 		#include <openssl/evp.h>
-		#if SSLEAY_VERSION_NUMBER >= 0x00905000L
+		#if SSLEAY_VERSION_NUMBER >= 0x00907000L
 		yes        
 		#endif
 	],      

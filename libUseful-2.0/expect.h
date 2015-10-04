@@ -4,8 +4,8 @@
 
 #include "file.h"
 
-#define FLAG_FINAL_DIALOG 1
-#define FLAG_DIALOG_FAIL 2
+#define DIALOG_END 1
+#define DIALOG_FAIL 2
 
 typedef struct
 {
@@ -20,9 +20,10 @@ char *Reply;
 extern "C" {
 #endif
 
-void DialogAdd(ListNode *Dialogs, char *Expect, char *Reply, int Flags);
 int STREAMExpectAndReply(STREAM *S, char *Expect, char *Reply);
 int STREAMExpectSilence(STREAM *S, int wait);
+
+void DialogAdd(ListNode *Dialogs, char *Expect, char *Reply, int Flags);
 int STREAMDialog(STREAM *S, ListNode *Dialogs);
 
 

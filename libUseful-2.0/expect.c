@@ -40,8 +40,8 @@ while (inchar !=EOF)
         {
           Dialog->Match=0;
           if (Dialog->Reply) STREAMWriteLine(Dialog->Reply,S);
-          if (Dialog->Flags & FLAG_FINAL_DIALOG) return(TRUE);
-          if (Dialog->Flags & FLAG_DIALOG_FAIL) return(FALSE);
+          if (Dialog->Flags & DIALOG_END) return(TRUE);
+          if (Dialog->Flags & DIALOG_FAIL) return(FALSE);
         }
       }
       Curr=ListGetNext(Curr);

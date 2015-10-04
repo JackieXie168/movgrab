@@ -451,15 +451,31 @@ return(result);
 }
 
 
+
 int STREAMInternalConnect(STREAM *S, char *Host, int Port,int Flags)
 {
 int val, result=FALSE;
-
-S->in_fd=ConnectToHost(Host,Port,Flags);
-S->out_fd=S->in_fd;
+struct timeval tv;
 
 if (Flags & CONNECT_NONBLOCK) S->Flags |= SF_NONBLOCK;
+val=Flags;
+if (S->Timeout > 0) val |= CONNECT_NONBLOCK;
 
+S->in_fd=ConnectToHost(Host,Port,val);
+S->out_fd=S->in_fd;
+
+if ((S->in_fd > -1) && (S->Timeout > 0) )
+{
+  tv.tv_sec=S->Timeout;
+  tv.tv_usec=0;
+  if (FDSelect(S->in_fd, SELECT_WRITE, &tv) <=0)
+  {
+    close(S->in_fd);
+    S->in_fd=-1;
+    S->out_fd=-1;
+  }
+  else if (! (Flags & CONNECT_NONBLOCK))  STREAMSetNonBlock(S, FALSE);
+}
 
 if (S->in_fd > -1)
 {
@@ -590,7 +606,8 @@ switch (val)
 //		if ((StrLen(KeyFile)==0) && (StrLen(Pass) > 0)) Tempstr=CopyStr(Tempstr,"ssh -2 -e none ");
 //		else 
 
-		Tempstr=CopyStr(Tempstr,"ssh -2 -T ");
+		//Tempstr=CopyStr(Tempstr,"ssh -2 -T ");
+		Tempstr=CopyStr(Tempstr,"ssh -2 ");
 		if (StrLen(KeyFile))
 		{
 
@@ -620,7 +637,10 @@ switch (val)
 		{
 			Tempstr=CatStr(Tempstr, " 2> /dev/null");
 			PseudoTTYSpawn(&S->in_fd,Tempstr);
+			
 			S->out_fd=S->in_fd;
+
+
 			if (S->in_fd > -1)
 			{
 				result=TRUE;
@@ -907,7 +927,7 @@ INTERNAL_SSL_INIT();
   STREAM_INTERNAL_SSL_ADD_SECURE_KEYS(S,ctx);
   ssl=SSL_new(ctx);
   SSL_set_fd(ssl,S->in_fd);
-  S->Extra=ssl;
+  STREAMSetItem(S,"LIBUSEFUL-SSL-CTX",ssl);
   result=SSL_connect(ssl);
   S->Flags|=SF_SSL;
 
@@ -988,7 +1008,7 @@ INTERNAL_SSL_INIT();
   STREAM_INTERNAL_SSL_ADD_SECURE_KEYS(S,ctx);
   ssl=SSL_new(ctx);
   SSL_set_fd(ssl,S->in_fd);
-  S->Extra=ssl;
+  STREAMSetItem(S,"LIBUSEFUL-SSL-CTX",ssl);
   SSL_set_verify(ssl,SSL_VERIFY_NONE,NULL);
   SSL_set_accept_state(ssl);
   result=SSL_accept(ssl);
@@ -1011,10 +1031,15 @@ return(result);
 
 const char *STREAMQuerySSLCipher(STREAM *S)
 {
+void *ptr;
+
 if (! S) return(NULL);
-if (! S->Extra) return(NULL);
+ptr=STREAMGetItem(S,"LIBUSEFUL-SSL-CTX");
+if (! ptr) return(NULL);
+
 #ifdef HAVE_LIBSSL
-return(SSL_get_cipher((SSL *) S->Extra));
+
+return(SSL_get_cipher((SSL *) ptr));
 #else
 return(NULL);
 #endif
@@ -1023,35 +1048,18 @@ return(NULL);
 
 int STREAMIsPeerAuth(STREAM *S)
 {
+void *ptr;
+
 #ifdef HAVE_LIBSSL
-if (SSL_get_verify_result((SSL *) S->Extra)==X509_V_OK)
+ptr=STREAMGetItem(S,"LIBUSEFUL-SSL-CTX");
+if (! ptr) return(FALSE);
+
+if (SSL_get_verify_result((SSL *) ptr)==X509_V_OK)
 {
-  if (SSL_get_peer_certificate((SSL *) S->Extra) !=NULL) return(TRUE);
+  if (SSL_get_peer_certificate((SSL *) ptr) !=NULL) return(TRUE);
 }
 #endif
 return(FALSE);
-}
-
-
-char *STREAMGetValue(STREAM *S, char *Name)
-{
-char *ptr;
-ListNode *Curr;
-
-if (! S->Values) return(NULL);
-Curr=ListFindNamedItem(S->Values,Name);
-if (Curr) return(Curr->Item);
-return(NULL);
-}
-
-
-void STREAMSetValue(STREAM *S, char *Name, char *Value)
-{
-char *ptr;
-ListNode *Curr;
-
-if (! S->Values) S->Values=ListCreate();
-SetVar(S->Values,Name,Value);
 }
 
 

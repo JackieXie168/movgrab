@@ -49,8 +49,6 @@ int STREAMIsConnected(STREAM *S);
 int DoPostConnect(STREAM *S, int Flags);
 int DoSSLClientNegotiation(STREAM *S, int Flags);
 int DoSSLServerNegotiation(STREAM *S, int Flags);
-void STREAMSetValue(STREAM *S, char *Name, char *Value);
-char *STREAMGetValue(STREAM *S, char *Name);
 const char *STREAMQuerySSLCipher(STREAM *S);
 int STREAMIsPeerAuth(STREAM *S);
 

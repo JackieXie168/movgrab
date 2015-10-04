@@ -64,7 +64,8 @@ ListAddNamedItem(TTYAttribs,Tempstr,old_tty_data);
 else old_tty_data=(struct termios *) Curr->Item;
 
 tcgetattr(tty,old_tty_data);
-tcgetattr(tty,&tty_data);
+//tcgetattr(tty,&tty_data);
+memset(&tty_data,0,sizeof(tty_data));
 
 //ignore break characters and parity errors
 tty_data.c_iflag=IGNBRK | IGNPAR;

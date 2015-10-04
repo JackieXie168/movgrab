@@ -26,7 +26,7 @@ void OAuthParseForm(char *HTML, char *SubmitType, char **SubmitURL, ListNode *Hi
 {
 char *TagName=NULL, *TagData=NULL, *Type=NULL, *Name=NULL, *Value=NULL, *ptr;
 
-ptr=HtmlGetTag(HTML,&TagName,&TagData);
+ptr=XMLGetTag(HTML,NULL,&TagName,&TagData);
 while (ptr)
 {
 if (strcmp(TagName,"input")==0)	
@@ -45,7 +45,7 @@ if (strcmp(TagName,"form")==0)
 }
 
 
-ptr=HtmlGetTag(ptr,&TagName,&TagData);
+ptr=XMLGetTag(ptr,NULL,&TagName,&TagData);
 }
 
 DestroyString(TagName);

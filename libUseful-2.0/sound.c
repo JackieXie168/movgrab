@@ -163,7 +163,7 @@ switch(Header.Format)
 		break;
 }
 
-STREAMSeek(S,Header.DataStart,SEEK_SET);
+STREAMSeek(S,(double) Header.DataStart,SEEK_SET);
 return(AudioInfo);
 }
 

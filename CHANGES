@@ -1,3 +1,10 @@
+Version 1.1.14
+	Large file support added (files > 2G). Thanks to Mattias B for bug report
+	Animehere added
+	Escapist Magazine broken again. No 'Zero Punctuation' anymore :-(
+	Fixed 3gp downloads. Thanks to Deeice for bug report
+
+
 Version 1.1.13 
 	Fixed Academic Earth.
 	Fixed Teachertube.

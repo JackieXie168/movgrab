@@ -69,7 +69,7 @@ while (ptr)
 			break;
 
 			case 17:
-			SetVar(Vars,"item:3gp",URL);
+			SetVar(Vars,"item:3gp:176x144",URL);
 			break;
 
 			case 18:

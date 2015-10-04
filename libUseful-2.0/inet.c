@@ -75,16 +75,16 @@ if (S)
 	Tempstr=STREAMReadLine(Tempstr,S);
 	while (Tempstr)
 	{
-		ptr=HtmlGetTag(Tempstr,&TagType,&TagData);
+		ptr=XMLGetTag(Tempstr,NULL,&TagType,&TagData);
 		while (ptr)
 		{
 		if (MatchTokenFromList(TagType,DesiredTags,0) > -1)
 		{
 			//we can't re-use 'TagType', we still need it
-			ptr=HtmlGetTag(ptr,&Token,&TagData);
+			ptr=XMLGetTag(ptr,NULL,&Token,&TagData);
 			SetVar(Vars,TagType,TagData);
 		}
-		ptr=HtmlGetTag(ptr,&TagType,&TagData);
+		ptr=XMLGetTag(ptr,NULL,&TagType,&TagData);
 		}
 		Tempstr=STREAMReadLine(Tempstr,S);
 	}

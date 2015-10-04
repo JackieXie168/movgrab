@@ -15,7 +15,7 @@ All the HTTP stuff is in here
 
 extern int STREAMTimeout;
 
-STREAM *ConnectAndSendHeaders(char *Server, char *Doc, int Port, int Flags, int BytesRange)
+STREAM *ConnectAndSendHeaders(char *Server, char *Doc, int Port, int Flags, double BytesRange)
 {
 STREAM *Con;
 char *Tempstr=NULL, *Method=NULL;
@@ -41,7 +41,7 @@ if (StrLen(LastPage)) SetVar(Info->CustomSendHeaders,"Referer",LastPage);
 LastPage=CopyStr(LastPage,Tempstr);
 if (BytesRange > 0)
 {
-	Tempstr=FormatStr(Tempstr,"bytes=%d-",BytesRange);
+	Tempstr=FormatStr(Tempstr,"bytes=%lld-",(long long) BytesRange);
 	SetVar(Info->CustomSendHeaders,"Range",Tempstr); 
 }
 
@@ -59,10 +59,10 @@ return(Con);
 
 
 
-STREAM *ConnectAndRetryUntilDownload(char *Server, char *Doc, int Port, int Flags, int BytesRead)
+STREAM *ConnectAndRetryUntilDownload(char *Server, char *Doc, int Port, int Flags, double BytesRead)
 {
 STREAM *Con;
-int i, val=1;
+int i;
 char *Tempstr=NULL, *ptr;
 
 
@@ -74,15 +74,14 @@ if (! (Flags & FLAG_RETRY_DOWNLOAD)) break;
 
 if (Con)
 {
-ptr=GetVar(Con->Values,"HTTP:Content-Length");
-if (ptr) val=atoi(ptr);
 
-ptr=GetVar(Con->Values,"HTTP:Content-Type");
-if (Flags & FLAG_DEBUG) fprintf(stderr,"ContentType: %s\n",ptr);
+Tempstr=CopyStr(Tempstr,STREAMGetValue(Con,"HTTP:Content-Type"));
+if (Flags & FLAG_DEBUG) fprintf(stderr,"ContentType: %s\n",Tempstr);
 
 //If the Content Type is not text, then we have the video
 //else read the text, disconnect, and reconnect
-if ((val > 0) && (strncmp(ptr,"text/",5) !=0)) break;
+ptr=STREAMGetValue(Con,"HTTP:Content-Length");
+if ((strcmp(ptr,"0") !=0) && (strncmp(Tempstr,"text/",5) !=0)) break;
 
 Tempstr=STREAMReadLine(Tempstr,Con);
 while (Tempstr) Tempstr=STREAMReadLine(Tempstr,Con);
@@ -116,13 +115,12 @@ DestroyString(Tempstr);
 
 
 //Display progress of download
-void DisplayProgress(char *FullTitle, char *Format, unsigned int bytes_read, unsigned int DocSize,time_t Now, int PrintName)
+void DisplayProgress(char *FullTitle, char *Format, double bytes_read, double DocSize,time_t Now, int PrintName)
 {
-float Percent, f1, f2;
-unsigned int Bps=0;
+double Percent, Bps=0;
 char *HUDocSize=NULL, *BpsStr=NULL, *Title=NULL;
 static time_t SpeedStart=0;
-static unsigned int PrevBytesRead=0;
+static double PrevBytesRead=0;
 
 if ((Now-SpeedStart) == 0) return;
 
@@ -149,9 +147,7 @@ if (DocSize)
 {
 	HUDocSize=CopyStr(HUDocSize,GetHumanReadableDataQty(DocSize,0));
 
-	f1=(float) bytes_read * 100.0;
-	f2=(float) DocSize;
-	Percent=f1/f2;
+	Percent=bytes_read * 100.0 / DocSize;
 
 	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %0.2f%%  %s of %s  %s        \r",Percent,GetHumanReadableDataQty(bytes_read,0),HUDocSize,BpsStr);
 	sprintf(CmdLine,"%s %0.2f%% %s          \0",ProgName,Percent,Title);
@@ -160,7 +156,7 @@ if (DocSize)
 }
 else
 {
-	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %s %s     \r",GetHumanReadableDataQty(bytes_read,0),BpsStr);
+	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %s %s     \r",GetHumanReadableDataQty((double) bytes_read,0),BpsStr);
 	sprintf(CmdLine,"%s %s              \0",ProgName,Title);
 }
 
@@ -177,14 +173,15 @@ DestroyString(Title);
 }
 
 
-int TransferItem(STREAM *Con, char *Title, char *URL, char *Format, int DocSize, int *BytesRead)
+int TransferItem(STREAM *Con, char *Title, char *URL, char *Format, double DocSize, double *BytesRead)
 {
 char *Tempstr=NULL;
 time_t Now, LastProgressDisplay;
-int result, ReadThisTime=0, RetVal=FALSE;;
+int result, RetVal=FALSE;
+double ReadThisTime=0;
 
 
-DisplayProgress(Title, Format, *BytesRead,DocSize,Now,TRUE);
+DisplayProgress(Title, Format, *BytesRead, DocSize, Now, TRUE);
 Tempstr=SetStrLen(Tempstr,BUFSIZ);
 result=STREAMReadBytes(Con,Tempstr,BUFSIZ);
 while (result != EOF) 
@@ -228,10 +225,10 @@ int DownloadItem(char *URL, char *Title, char *Format, int Flags)
 STREAM *Con=NULL, *S=NULL;
 char *Tempstr=NULL, *Token=NULL, *ptr;
 char *Server=NULL, *Doc=NULL, *ContentType=NULL;
-int DocSize=0, BytesRead=0;
 int Port, val;
 int RetVal=FALSE;
 char *Extn=NULL;
+double DocSize=0, BytesRead=0;
 
 
 if (Flags & FLAG_TEST) 
@@ -256,17 +253,17 @@ if (Con)
 	ptr=strrchr(Doc,'?');
 	if (ptr) *ptr='\0';
 
-	Token=CopyStr(Token,GetVar(Con->Values,"HTTP:Content-Range"));
+	Token=CopyStr(Token,STREAMGetValue(Con,"HTTP:Content-Range"));
 	if (StrLen(Token))
 	{
 		ptr=strrchr(Token,'/');
 		ptr++;
-		DocSize=atoi(ptr);
+		DocSize=strtod(ptr,NULL);
 	}
 	else
 	{
-		Token=CopyStr(Token,GetVar(Con->Values,"HTTP:content-length"));
-		if (StrLen(Token)) DocSize=atoi(Token);
+		Token=CopyStr(Token,STREAMGetValue(Con,"HTTP:content-length"));
+		if (StrLen(Token)) DocSize=strtod(Token,NULL);
 	}
 
 
@@ -274,10 +271,7 @@ if (Con)
 		if (Flags & FLAG_TEST_SITES) RetVal=TRUE;
 		else
 		{
-			ptr=STREAMGetValue(Con,"HTTP:content-length");
-			if (ptr) val=atoi(ptr);
-			else val=0;
-			RetVal=TransferItem(Con,Title, URL, Format, val, &BytesRead);
+			RetVal=TransferItem(Con,Title, URL, Format, DocSize, &BytesRead);
 
 			Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Format, Doc));
 			CloseOutputFiles(Extn);

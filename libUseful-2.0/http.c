@@ -277,9 +277,17 @@ return(RetStr);
 }
 
 
+void HTTPInfoSetAuth(HTTPInfoStruct *Info, char *Logon, char *Password, int Type)
+{
+if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+HTTPAuthSet(Info->Authorization,Logon, Password, Type);
+}
+
+
 void HTTPInfoSetValues(HTTPInfoStruct *Info, char *Host, int Port, char *Logon, char *Password, char *Method, char *Doc, char *ContentType, int ContentLength)
 {
-
+Info->State=0;
+Info->PostData=CopyStr(Info->PostData,"");
 Info->Host=CopyStr(Info->Host,Host);
 if (Port > 0) Info->Port=Port;
 else Info->Port=0;
@@ -288,12 +296,7 @@ Info->Doc=CopyStr(Info->Doc,Doc);
 Info->PostContentType=CopyStr(Info->PostContentType,ContentType);
 Info->PostContentLength=ContentLength;
 
-if (StrLen(Logon) || StrLen(Password))
-{
-if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
-	HTTPAuthSet(Info->Authorization,Logon, Password, HTTP_AUTH_BASIC);
-}
-
+if (StrLen(Logon) || StrLen(Password)) HTTPInfoSetAuth(Info, Logon, Password, HTTP_AUTH_BASIC);
 }
 
 
@@ -1015,10 +1018,12 @@ while (1)
 			if (StrLen(Info->PostData)) 
 			{
 				STREAMWriteLine(Info->PostData,Info->S);
+				if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"\n%s\n",Info->PostData);
 			}
 			else
 			{
 				if (strcasecmp(Info->Method,"POST")==0) break;
+				if (strcasecmp(Info->Method,"PUT")==0) break;
 			}
 		}
 

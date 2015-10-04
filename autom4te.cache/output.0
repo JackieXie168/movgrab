@@ -1194,6 +1194,7 @@ if test -n "$ac_init_help"; then
 Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-largefiles       enable largefile support
   --enable-ssl       use Secure Sockets Layer
 
 Some influential environment variables:
@@ -1628,7 +1629,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-VERSION="1.1.11" 
+VERSION="1.1.14" 
  
 
 ac_aux_dir=
@@ -3484,11 +3485,28 @@ fi
 
 cf_have_libz=$ac_cv_lib_z_deflate
 
+# Check whether --enable-largefiles was given.
+if test "${enable_largefiles+set}" = set; then
+  enableval=$enable_largefiles; cf_use_largefiles=$enableval 
+fi
+
 # Check whether --enable-ssl was given.
 if test "${enable_ssl+set}" = set; then
   enableval=$enable_ssl; cf_use_ssl=$enableval 
 fi
 
+
+if test "$cf_use_largefiles" = "yes" 
+then
+cat >>confdefs.h <<\_ACEOF
+@%:@define _LARGEFILE64_SOURCE 1
+_ACEOF
+
+cat >>confdefs.h <<\_ACEOF
+@%:@define _FILE_OFFSET_BITS 64
+_ACEOF
+
+fi
 
 if test "$cf_use_ssl" = "yes" 
 then
@@ -4859,9 +4877,16 @@ echo
 echo "********** Movgrab Settings *********"
 if test	"$cf_have_libssl" != "yes" 
 then
-echo "SSL/https not enabled"
+echo "SSL/https NOT enabled"
 else
 echo "SSL and https enabled"
+fi
+
+if test	"$cf_use_largefiles" != "yes" 
+then
+echo "Largefiles NOT enabled"
+else
+echo "Largefiles enabled"
 fi
 
 

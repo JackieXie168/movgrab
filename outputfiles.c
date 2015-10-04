@@ -109,7 +109,7 @@ return(Tempstr);
 //If that's set to '-' then open stdout and write to that, if it's
 //set to anything else, then use that as the filename. Otherwise
 //build the filename from available info.
-STREAM *OpenSaveFile(char *Path, int *FileSize, int ResumeDownload)
+STREAM *OpenSaveFile(char *Path, double *FileSize, int ResumeDownload)
 {
 STREAM *S=NULL;
 struct stat FStat;
@@ -136,7 +136,7 @@ else
 	if (ResumeDownload)
 	{
 		fstat(S->in_fd,&FStat);
-		*FileSize=FStat.st_size;
+		*FileSize=(double) FStat.st_size;
 		STREAMSeek(S,0,SEEK_END);
 	}
 }
@@ -168,7 +168,7 @@ DestroyString(Tempstr);
 return(S);
 }
 
-void OpenOutputFiles(char *Title, char *URL, int *FileSize)
+void OpenOutputFiles(char *Title, char *URL, double *FileSize)
 {
 char *Tempstr=NULL;
 ListNode *Curr;

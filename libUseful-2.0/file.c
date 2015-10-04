@@ -11,39 +11,63 @@
 #include <openssl/err.h>
 #endif
 
+
+int FDSelect(int fd, int Flags, struct timeval *tv)
+{
+fd_set *readset=NULL, *writeset=NULL;
+int result, RetVal=0;
+
+
+if (Flags & SELECT_READ)
+{
+  readset=(fd_set *) calloc(1,sizeof(fd_set));
+  FD_ZERO(readset);
+  FD_SET(fd, readset);
+}
+
+if (Flags & SELECT_WRITE)
+{
+  writeset=(fd_set *) calloc(1,sizeof(fd_set));
+  FD_ZERO(writeset);
+  FD_SET(fd, writeset);
+}
+
+
+result=select(fd+1,readset,writeset,NULL,tv);
+if ((result==-1) && (errno==EBADF)) RetVal=-1;
+else if (result  > 0)
+{
+    if (readset && FD_ISSET(fd, readset)) RetVal |= SELECT_READ;
+    if (writeset && FD_ISSET(fd, writeset)) RetVal |= SELECT_WRITE;
+}
+
+if (readset) free(readset);
+if (writeset) free(writeset);
+
+return(RetVal);
+}
+
+
 int FDIsWritable(int fd)
 {
-fd_set selectset;
-int result;
+struct timeval tv;
 
-
-FD_ZERO(&selectset);
-FD_SET(fd, &selectset);
-result=select(fd+1,NULL, &selectset,NULL,NULL);
-if ((result==-1) && (errno==EBADF)) return(-1);
-if ((result  > 0) && (FD_ISSET(fd, &selectset))) return(TRUE);
-
- return(FALSE);
+tv.tv_sec=0;
+tv.tv_usec=0;
+if (FDSelect(fd, SELECT_WRITE, &tv)) return(TRUE);
+return(FALSE);
 }
 
 
 
 int FDCheckForBytes(int fd)
 {
-fd_set selectset;
 struct timeval tv;
-int result;
 
-
-FD_ZERO(&selectset);
-FD_SET(fd, &selectset);
 tv.tv_sec=0;
 tv.tv_usec=0;
-result=select(fd+1,&selectset,NULL,NULL,&tv);
-  if ((result==-1) && (errno==EBADF)) return(-1);
-  if ((result  > 0) && (FD_ISSET(fd, &selectset))) return(TRUE);
-
-  return(FALSE);
+if (FDSelect(fd, SELECT_READ, &tv)) return(TRUE);
+return(FALSE);
 }
 
 
@@ -161,7 +185,8 @@ while (count < DataLen)
 if (S->Flags & SF_SSL)
 {
 #ifdef HAVE_LIBSSL
-result=SSL_write((SSL *) S->Extra, Data + count, DataLen - count);
+
+result=SSL_write((SSL *) STREAMGetItem(S,"LIBUSEFUL-SSL-CTX"), Data + count, DataLen - count);
 #endif
 }
 else
@@ -568,7 +593,9 @@ int result, diff, read_result=0, WaitForBytes=TRUE;
 struct timeval tv;
 char *tmpBuff=NULL;
 int v1, v2,v3;
+void *SSL_CTX=NULL;
 
+SSL_CTX=STREAMGetItem(S,"LIBUSEFUL-SSL-CTX");
 
 if (S->InStart >= S->InEnd)
 {
@@ -595,7 +622,7 @@ if (S->InEnd >= S->BuffSize) return(1);
 #ifdef HAVE_LIBSSL
 if (S->Flags & SF_SSL)
 {
-if (SSL_pending((SSL *) S->Extra) > 0) WaitForBytes=FALSE;
+if (SSL_pending((SSL *) SSL_CTX) > 0) WaitForBytes=FALSE;
 }
 //else
 #endif
@@ -639,7 +666,7 @@ if (read_result==0)
 	#ifdef HAVE_LIBSSL
 	if (S->Flags & SF_SSL)
 	{
-		read_result=SSL_read((SSL *) S->Extra, tmpBuff, S->BuffSize-S->InEnd);
+		read_result=SSL_read((SSL *) SSL_CTX, tmpBuff, S->BuffSize-S->InEnd);
 	}
 	else
 	#endif
@@ -738,19 +765,25 @@ return(total);
 
 
 
-int STREAMTell(STREAM *S)
+double STREAMTell(STREAM *S)
 {
-int pos;
-pos=lseek(S->in_fd,0,SEEK_CUR);
+double pos;
+
+#ifdef _LARGEFILE64_SOURCE
+pos=(double) lseek64(S->in_fd,0,SEEK_CUR);
+#else
+pos=(double) lseek(S->in_fd,0,SEEK_CUR);
+#endif
 pos-=(S->InEnd-S->InStart);
 
 return(pos);
 }
 
 
-int STREAMSeek(STREAM *S, off_t offset, int whence)
+double STREAMSeek(STREAM *S, double offset, int whence)
 {
-int pos, wherefrom;
+double pos;
+int wherefrom;
 
 if (S->OutEnd != S->OutStart)
 {
@@ -771,9 +804,14 @@ else
 S->InStart=0;
 S->InEnd=0;
 
+#ifdef _LARGEFILE64_SOURCE
+pos=(double) lseek64(S->in_fd,(off64_t) pos, wherefrom);
+#else
+pos=(double) lseek(S->in_fd,(off_t) pos,wherefrom);
+#endif
 
 
-return(lseek(S->in_fd,pos,wherefrom));
+return(pos);
 }
 
 
@@ -972,7 +1010,7 @@ return(STREAMReadToTerminator(Buffer,S,'\n'));
 
 void STREAMResetInputBuffers(STREAM *S)
 {
-int pos;
+double pos;
 
 pos=STREAMTell(S);
 S->InStart=0;
@@ -981,73 +1019,42 @@ STREAMSeek(S,pos,SEEK_SET);
 }
 
 
-int IndexedFileLoad(STREAM *S)
+
+char *STREAMGetValue(STREAM *S, char *Name)
 {
-char *Tempstr=NULL, *IndexVal=NULL;
-
-if (! S) return(FALSE);
-if (! S->Index) S->Index=ListCreate();
-
-Tempstr=STREAMReadLine(Tempstr,S);
-while (Tempstr)
-{
-IndexVal=CopyStrLen(IndexVal,Tempstr,10);
-OrderedListAddNamedItem(S->Index, IndexVal,(void *) STREAMTell(S));
-Tempstr=STREAMReadLine(Tempstr,S);
-}
-
-return(TRUE);
-}
-
-
-
-int IndexedFileFind(STREAM *S, char *Key)
-{
-char *Tempstr=NULL, *IndexVal=NULL;
 ListNode *Curr;
-int result=FALSE;
 
-if (! S) return(FALSE);
-if (! S->Index) S->Index=ListCreate();
+if (! S->Values) return(NULL);
+Curr=ListFindNamedItem(S->Values,Name);
+if (Curr) return(Curr->Item);
+return(NULL);
+}
 
-IndexVal=CopyStrLen(IndexVal,Key,10);
-Curr=ListFindNamedItem(S->Index,IndexVal);
-while (Curr)
+
+void STREAMSetValue(STREAM *S, char *Name, char *Value)
 {
-STREAMSeek(S, (int) Curr->Item,SEEK_SET);
-Tempstr=STREAMReadLine(Tempstr,S);
-StripTrailingWhitespace(Tempstr);
-if (strcmp(Tempstr,Key)==0)
+
+if (! S->Values) S->Values=ListCreate();
+SetVar(S->Values,Name,Value);
+}
+
+void *STREAMGetItem(STREAM *S, char *Name)
 {
-	result=TRUE;
-	break;
-}
-Curr=ListGetNext(Curr);
+ListNode *Curr;
 
-if (strcmp(IndexVal,Curr->Tag) !=0) break;
-}
-
-DestroyString(Tempstr);
-DestroyString(IndexVal);
-
-return(result);
+if (! S->Items) return(NULL);
+Curr=ListFindNamedItem(S->Items,Name);
+if (Curr) return(Curr->Item);
+return(NULL);
 }
 
 
-
-int IndexedFileWrite(STREAM *S, char *Line)
+void STREAMSetItem(STREAM *S, char *Name, void *Value)
 {
-char *IndexVal=NULL;
+ListNode *Curr;
 
-if (! S) return(FALSE);
-if (! S->Index) S->Index=ListCreate();
-
-IndexVal=CopyStrLen(IndexVal,Line,10);
-OrderedListAddNamedItem(S->Index, IndexVal,(void *) STREAMTell(S));
-STREAMWriteLine(Line,S);
-
-return(TRUE);
+if (! S->Items) S->Items=ListCreate();
+Curr=ListFindNamedItem(S->Items,Name);
+if (Curr) Curr->Item=Value;
+else ListAddNamedItem(S->Items,Name,Value);
 }
-
-
-
