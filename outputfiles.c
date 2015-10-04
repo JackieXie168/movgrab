@@ -80,11 +80,14 @@ ptr=strrchr(Tempstr,'.');
 //only assume it's an extension if it's under six chars long
 if (ptr && (StrLen(ptr) < 6)) *ptr='\0';
 
-
+if (! (Flags & FLAG_RESUME))
+{
 MD5=HashBytes(MD5,"md5",URL,StrLen(URL),0);
 Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
+}
 
 DestroyString(MD5);
+
 return(Tempstr);
 }
 
@@ -94,38 +97,38 @@ return(Tempstr);
 //If that's set to '-' then open stdout and write to that, if it's
 //set to anything else, then use that as the filename. Otherwise
 //build the filename from available info.
-STREAM *OpenSaveFile(char *Title, char *URL, int *FileSize)
+STREAM *OpenSaveFile(char *Path, int *FileSize, int ResumeDownload)
 {
-char *Tempstr=NULL, *Path=NULL, *MD5=NULL, *ptr;
 STREAM *S=NULL;
 struct stat FStat;
 
 *FileSize=0;
 
-
-Tempstr=GetSaveFilePath(Tempstr, Title, URL);
-if (strcmp(Tempstr,"-")==0)
+if (strcmp(Path,"-")==0)
 {
 	S=STREAMFromFD(1);
 	STREAMSetTimeout(S,0);
 }
 else
 {
-	S=STREAMOpenFile(Tempstr,O_CREAT | O_RDWR);
+	S=STREAMOpenFile(Path,O_CREAT | O_RDWR);
+
 	if (! STREAMLock(S,LOCK_EX|LOCK_NB)) 
 	{
 		if (! (Flags & FLAG_QUIET)) fprintf(stderr,"Already downloading this item!\n");
 		fflush(NULL);
 		exit(0);
 	}
-	STREAMSeek(S,0,SEEK_END);
 
 	//Filesize can be used to resume a part download
-	fstat(S->in_fd,&FStat);
-	*FileSize=FStat.st_size;
+	if (ResumeDownload)
+	{
+		fstat(S->in_fd,&FStat);
+		*FileSize=FStat.st_size;
+		STREAMSeek(S,0,SEEK_END);
+	}
 }
 
-DestroyString(Tempstr);
 
 return(S);
 }
@@ -155,18 +158,28 @@ return(S);
 
 void OpenOutputFiles(char *Title, char *URL, int *FileSize)
 {
+char *Tempstr=NULL;
 ListNode *Curr;
+int val=0, Resume=FALSE;
+
+if ((Flags & FLAG_RESUME) && (ListSize(OutputFiles)==1)) Resume=TRUE;
 
 Curr=ListGetNext(OutputFiles);
 while (Curr)
 {
-if (StrLen(Curr->Tag)==0) Curr->Item=OpenSaveFile(Title, URL, FileSize);
-else if (strcmp(Curr->Tag,"-")==0) Curr->Item=STREAMFromFD(1); 
-else Curr->Item=STREAMOpenFile(Curr->Tag,O_WRONLY|O_CREAT|O_TRUNC); 
+	if (StrLen(Curr->Tag)==0) 
+	{
+		Tempstr=GetSaveFilePath(Tempstr, Title, URL);
+		Curr->Item=OpenSaveFile(Tempstr, FileSize, Resume);
+	}
+	else if (strcmp(Curr->Tag,"-")==0) Curr->Item=STREAMFromFD(1); 
+	else Curr->Item=OpenSaveFile(Curr->Tag, FileSize, Resume);
 
 Curr=ListGetNext(Curr);
 }
 
+
+DestroyString(Tempstr);
 }
 
 

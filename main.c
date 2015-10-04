@@ -302,36 +302,6 @@ return(RetVal);
 
 
 
-int DownloadPage(char *Path, int Type, char *Title, int DLFlags)
-{
-char *ptr, *Server=NULL, *Doc=NULL, *Args=NULL;
-char *Tempstr=NULL, *Token=NULL;
-int Port;
-STREAM *S;
-int RetVal=FALSE;
-
-if (Flags & (FLAG_DEBUG)) fprintf(stderr,"Next URL: %s\n",Path);
-ptr=HTTPParseURL(Path,&Tempstr,&Server,&Port,NULL,NULL);
-Doc=CopyStr(Doc,ptr);
-if (Port==0) Port=DefaultPort;
-
-S=ConnectAndSendHeaders(Server, Doc, Port, Flags, 0);
-
-if (S)
-{
-  if (ExtractItemInfo(S, Type, Path, Server, Port, Title, DLFlags)) RetVal=TRUE;
-}
-else if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: failed to Connect to %s\n",Server);
-
-DestroyString(Tempstr);
-DestroyString(Token);
-DestroyString(Server);
-DestroyString(Doc);
-
-return(RetVal);
-}
-
-
 void PrintUsage()
 {
 int i;
@@ -343,7 +313,7 @@ fprintf(stderr,"Blogs: \n");
 fprintf(stderr,"	tech: http://idratherhack.blogspot.com \n");
 fprintf(stderr,"	rants: http://thesingularitysucks.blogspot.com \n");
 fprintf(stderr,"\n");
-fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-P] [-Pp] [-o <output file>] [+o <extra output file>] url\n");
+fprintf(stderr,"Usage: movgrab [-t <type>] -a [<username>:<password>] [-p http://username:password@x.x.x.x:80 ] [-r] [-b] [-x] [-q] [-st <stream timeout>] [-f <format list>] [-v] [-P] [-Pp] [-o <output file>] [+o <extra output file>] url\n");
 fprintf(stderr,"	movgrab -test-sites\n");
 fprintf(stderr,"\n'-v'		increases verbosity/debug level\n");
 fprintf(stderr,"'-v -v'		prints out all webpages encountered\n");
@@ -358,6 +328,7 @@ fprintf(stderr,"'-p'		address of HTTP proxy server in URL format.\n");
 fprintf(stderr,"'-w'		Wait for addresses to be entered on stdin.\n");
 fprintf(stderr,"'-st'		Connection inactivity timeout in seconds. Set high for sites that 'throttle'\n");
 fprintf(stderr,"'-t'		specifies website type.\n");
+fprintf(stderr,"'-r'		Resume download (only works when writing a single file, not with +o).\n");
 fprintf(stderr,"'-f'		specifies preferred video/audio formats for sites that offer more than one\n");
 fprintf(stderr,"			example: flv:640x480,flv,mp4,mp3\n");
 fprintf(stderr,"			Use -T to get a list of formats the site offers\n");
@@ -444,10 +415,10 @@ for (i=1; i < argc; i++)
 	else if (strcmp(argv[i],"-f")==0) FormatPreference=CopyStr(FormatPreference,argv[++i]);
 	else if (strcmp(argv[i],"-q")==0) Flags |= FLAG_QUIET;
 	else if (strcmp(argv[i],"-b")==0) Flags |= FLAG_BACKGROUND;
+	else if (strcmp(argv[i],"-r")==0) Flags |= FLAG_RESUME;
 	else if (strcmp(argv[i],"-x")==0) Flags |= FLAG_PORN;
 	else if (strcmp(argv[i],"-T")==0) Flags |= FLAG_TEST;
 	else if (strcmp(argv[i],"-st")==0) STREAMTimeout=atoi(argv[++i]);
-	else if (strcmp(argv[i],"-x")==0) Flags |= FLAG_PORN;
 	else if (strcmp(argv[i],"-P")==0) Player=CopyStr(Player,argv[++i]);
 	else if (strcmp(argv[i],"-Pp")==0) PlayerLaunchPercent=atoi(argv[++i]);
 	else if (strcmp(argv[i],"-help")==0) Flags |= FLAG_PRINT_USAGE;

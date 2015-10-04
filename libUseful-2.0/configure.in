@@ -39,7 +39,7 @@ fi
 
 
 AC_CHECK_LIB(esd,esd_open_sound,,)
-cf_have_libesd=$ac_cv_lib_esd_esd_open_sound
+#cf_have_libesd=$ac_cv_lib_esd_esd_open_sound
 
 
 echo

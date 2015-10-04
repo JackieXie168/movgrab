@@ -13,7 +13,7 @@ Then site specific
 
 
 //Site type names used at the command line etc
-char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","sdnhm","princeton","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","yale","sdnhm","princeton","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","escapist","guardian","redorbit","scivee","izlese","uctv.tv","royalsociety.tv","britishacademy","kitp","dotsub","astronomy.com","teachertube.com",NULL};
 
 //Longer names used in display
 char *DownloadNames[]={"none",
@@ -64,6 +64,7 @@ char *DownloadNames[]={"none",
 "KAVLI INSTITUTE: http://online.itp.ucsb.edu/plecture/",
 "dotsub.com",
 "astronomy.com",
+"teachertube.com",
 NULL};
 
 //links used by the -test-sites feature to test if a download site still
@@ -74,7 +75,7 @@ char *TestLinks[]={"", "",
 "http://www.dailymotion.com/video/x5790e_hubblecast-16-galaxies-gone-wild_tech",
 "http://www.break.com/index/ninja-cat.html",
 "http://www.ehow.com/video_6819748_creamy-thyme-scrambled-eggs-recipe.html",
-"http://vimeo.com/channels/knowyourmeme",
+"http://vimeo.com/31191754",
 "http://www.5min.com/Video/Learn-About-Chocolate-516948033",
 "http://www.vbox7.com/play:1417ad5a",
 "http://blip.tv/file/4855647/",
@@ -115,6 +116,7 @@ char *TestLinks[]={"", "",
 "http://online.itp.ucsb.edu/plecture/bmonreal11/",
 "http://dotsub.com/view/5d90ef11-d5e5-42fb-8263-a4c128fb64df",
 "http://www.astronomy.com/News-Observing/Liz%20and%20Bills%20Cosmic%20Adventures/2011/02/Episode%202.aspx",
+"http://teachertube.com/embedFLV.php?pg=video_114089",
 NULL};
 
 
@@ -314,6 +316,10 @@ else if (strcmp(Server,"dotsub.com")==0)
 else if (strstr(Server,"astronomy.com"))
 {
  Type=TYPE_ASTRONOMYCOM;
+}
+else if (strstr(Server,"teachertube.com"))
+{
+ Type=TYPE_TEACHERTUBE;
 }
 return(Type);
 }
@@ -654,12 +660,13 @@ case TYPE_MYVIDO1:
 break;
 
 case TYPE_VIMEO:
- Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/load/clip:$(ID)/embed?param_fullscreen=1&param_clip_id=$(ID)&param_show_byline=0&param_server=vimeo.com&param_color=cc6600&param_show_portrait=0&param_show_title=1",Vars,0);
- 	RetVal=DownloadPage(Tempstr,TYPE_VIMEO_STAGE2,Title,FLAG_POST);
+ Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/load/clip:$(ID)",Vars,0);
+
+ 	RetVal=DownloadPage(Tempstr,TYPE_VIMEO_STAGE2,Title,Flags);
 break;
 
 case TYPE_VIMEO_STAGE2:
- Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/play/clip:$(ID)/$(Extra)/$(Extra2)/?q=sd&type=embed",Vars,0);
+ Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/play/clip:$(ID)/$(Extra)/$(Extra2)/?q=sd",Vars,0);
  	RetVal=DownloadItem(Tempstr,Title, Fmt, Flags);
 break;
 
@@ -748,6 +755,16 @@ break;
 case TYPE_ASTRONOMYCOM:
  	Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
   RetVal=DownloadPage(Tempstr,TYPE_ASTRONOMYCOM_STAGE2, Title,Flags);
+break;
+
+case TYPE_TEACHERTUBE:
+ 	Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+  RetVal=DownloadPage(Tempstr,TYPE_TEACHERTUBE_STAGE2, Title,Flags);
+break;
+
+case TYPE_TEACHERTUBE_STAGE2:
+ 	Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+ 	RetVal=DownloadItem(Tempstr, Title, Fmt, Flags);
 break;
 
 
@@ -1087,14 +1104,15 @@ break;
 
 
 case TYPE_VIMEO:
-#define VIMEO_ITEM "targ_clip_id:"
-#define VIMEO_TITLE "<meta name=\"title\" content=\""
+#define VIMEO_ITEM "property=\"og:url\" content=\"http://vimeo.com/"
+#define VIMEO_ITEM_END "\""
+#define VIMEO_TITLE "property=\"og:title\" content=\""
 #define VIMEO_TITLE_END "\""
 
 	ptr=strstr(Tempstr,VIMEO_ITEM);
 	if (ptr)
 	{
-		GenericExtractFromLine(Tempstr, "ID",VIMEO_ITEM,",",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "ID",VIMEO_ITEM,VIMEO_ITEM_END,Vars,EXTRACT_NOSPACES);
 	}
 
 	ptr=strstr(Tempstr,VIMEO_TITLE);
@@ -1918,6 +1936,40 @@ case TYPE_ASTRONOMYCOM_STAGE2:
 		}
 	
 break;
+
+case TYPE_TEACHERTUBE:
+#define TEACHERTUBE_ITEMSTART "mediaplayer.swf?file="
+#define TEACHERTUBE_ITEMEND "\""
+#define TEACHERTUBE_TITLE_START "meta name=\"title\" content=\""
+#define TEACHERTUBE_TITLE_END "\""
+
+	if (strstr(Tempstr,TEACHERTUBE_TITLE_START))
+	{
+		GenericExtractFromLine(Tempstr, "Title",TEACHERTUBE_TITLE_START,TEACHERTUBE_TITLE_END,Vars,EXTRACT_DEQUOTE);
+	}
+
+		if (strstr(Tempstr,TEACHERTUBE_ITEMSTART))
+		{
+			 GenericExtractFromLine(Tempstr, "ID",TEACHERTUBE_ITEMSTART,TEACHERTUBE_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		}
+break;
+
+
+case TYPE_TEACHERTUBE_STAGE2:
+#define TEACHERTUBE_S2_ITEMSTART "media:content url=\""
+#define TEACHERTUBE_S2_ITEMEND "\""
+
+		if (strstr(Tempstr,TEACHERTUBE_S2_ITEMSTART))
+		{
+			 GenericExtractFromLine(Tempstr, "item:flv",TEACHERTUBE_S2_ITEMSTART,TEACHERTUBE_S2_ITEMEND,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		}
+
+
+
+
+break;
+
+
 
 case TYPE_MYTOPCLIP:
 case TYPE_SDNHM:

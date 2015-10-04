@@ -190,7 +190,7 @@ return(CopyStr(NULL,Str));
 
 char *VFormatStr(char *InBuff, const char *FmtStr, va_list args)
 {
-int inc=100, count=1, result;
+int inc=100, count=1, result=0;
 char *tempstr=NULL;
 va_list argscopy;
 

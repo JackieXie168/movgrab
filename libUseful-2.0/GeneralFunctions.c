@@ -1254,8 +1254,8 @@ return(val);
 char *GetHumanReadableDataQty(double Size, int Type)
 {
 static char *Str=NULL;
-double val;
-char kMGT;
+double val=0;
+char kMGT=' ';
 double KAY,MEG,GIG,TERA;
 
 if (Type)
@@ -1272,8 +1272,11 @@ MEG=MEGIBYTE;
 GIG=GIGIBYTE;
 //TERA=TERIBYTE;
 }
-    val=Size;
-    kMGT=' ';
+
+val=Size;
+kMGT=' ';
+
+
 /*    if (val > (TERA))
     {
       val=val / TERA;
@@ -1289,7 +1292,6 @@ GIG=GIGIBYTE;
     {
       val=val / MEG;
       kMGT='M';
-
     }
     else if (val > (KAY))
     {

@@ -318,9 +318,9 @@ Copyright (C) 2006 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/meta/movgrab-1.0.16'
+ac_pwd='/var/root/movgrab-1.1.2'
 srcdir='.'
-INSTALL='/bin/install -c'
+INSTALL='/usr/bin/install -c'
 # If no file are specified by the user, then we need to provide default
 # value.  By we need to know if files were specified by the user.
 ac_need_defaults=:
@@ -490,7 +490,7 @@ s,@LIBS@,|#_!!_#|-lz ,g
 s,@build_alias@,|#_!!_#|,g
 s,@host_alias@,|#_!!_#|,g
 s,@target_alias@,|#_!!_#|,g
-s,@VERSION@,|#_!!_#|,g
+s,@VERSION@,|#_!!_#|1.1.1,g
 s,@subdirs@,|#_!!_#| libUseful-2.0,g
 s,@CC@,|#_!!_#|gcc,g
 s,@CFLAGS@,|#_!!_#|-g -O2,g

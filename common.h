@@ -2,7 +2,7 @@
 #ifndef MOVGRAB_COMMON
 #define MOVGRAB_COMMON
 //This is doable through autoconf, but I'm sick of fighting with it
-#define Version "1.1.1"
+#define Version "1.1.3"
 
 #include "libUseful-2.0/libUseful.h"
 #include <string.h>
@@ -25,6 +25,7 @@
 #define FLAG_STREAM 8192
 #define FLAG_STREAMCACHE 16384
 #define FLAG_RETRY_DOWNLOAD 32768
+#define FLAG_RESUME 65536
 
 
 extern int Type, DefaultPort, Flags;

@@ -5,6 +5,7 @@ LIBS = @LIBS@
 INSTALL=@INSTALL@
 prefix=@prefix@
 bindir=$(prefix)@bindir@
+DESTDIR=
 FLAGS=$(CFLAGS) @DEFS@ 
 OBJ=containerfiles.o outputfiles.c common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o
 
@@ -47,4 +48,5 @@ extract_text.o: extract_text.c extract_text.h
 
 
 install:
-	$(INSTALL) movgrab $(bindir)
+	$(INSTALL) -d $(DESTDIR)$(bindir)
+	$(INSTALL) movgrab $(DESTDIR)$(bindir)

@@ -596,7 +596,7 @@ int i;
 char *ptr;
 static int AuthCounter=0;
 
-STREAMClearDataProcessors(S);
+//STREAMClearDataProcessors(S);
 SendStr=CopyStr(SendStr,Info->Method);
 SendStr=CatStr(SendStr," ");
 
