@@ -9,8 +9,7 @@ FLAGS=$(CFLAGS) @DEFS@
 
 all: 
 	@cd libUseful-1.0; $(MAKE)
-	$(CC) $(FLAGS) $(LIBS) -g -o movgrab main.c libUseful-1.0/libUseful-1.0.a
-
+	$(CC) $(FLAGS) -o movgrab main.c libUseful-1.0/libUseful-1.0.a $(LIBS)
 clean:
 	@rm -f movgrab libUseful-1.0/*.o libUseful-1.0/*.a libUseful-1.0/*.so
 

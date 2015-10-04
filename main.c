@@ -22,7 +22,7 @@
 
 
 //This is doable thorugh autoconf, but I'm sick of fighting with it
-#define Version "1.0.10"
+#define Version "1.0.12"
 
 #include "libUseful-1.0/libUseful.h"
 #include <string.h>
@@ -1015,45 +1015,64 @@ DestroyString(Token);
 }
 
 
+char *GetDailyMotionFormat(char *Formats, char **Val)
+{
+char *Token=NULL, *Fmt=NULL, *ptr;
+char *ptr2;
+
+	*Val=CopyStr(*Val,"");
+	ptr=GetToken(Formats,",",&Fmt,0);
+
+	ptr2=GetToken(Fmt,":",&Token,GETTOKEN_QUOTES);
+	ptr2=GetToken(ptr2,":",&Token,GETTOKEN_QUOTES);
+	if (strncmp(Token,"http",4) ==0) *Val=DeQuoteStr(*Val,Token);
+
+DestroyString(Token);
+DestroyString(Fmt);
+
+return(ptr);
+}
+
+
 char *DecodeDailyMotionFormats(char *Formats, ListNode *Vars)
 {
 char *Token=NULL, *ptr;
 
-			ptr=GetToken(Formats,"||",&Token,0);
-			while (ptr)
-			{
-			if (strstr(Token,"FLV-320x240")) 
-			{
-					SetVar(Vars,"item:flv:320x240",Token);
-			}
-			else if (strstr(Token,"FLV-80x60")) 
-			{
-					SetVar(Vars,"item:flv:80x60",Token);
-			}
-			else if (strstr(Token,"ON2-848x480"))
-			{
-					SetVar(Vars,"item:on2:848x480",Token);
-			}
-			else if (strstr(Token,"ON2-320x240")) 
-			{
-					SetVar(Vars,"item:on2:320x240",Token);
-			}
-			else if (strstr(Token,"H264-848x480")) 
-			{
-					SetVar(Vars,"item:mp4-h264:848x480",Token);
-			}
-			else if (strstr(Token,"H264-512x384")) 
-			{
-					SetVar(Vars,"item:mp4-h264:512x384",Token);
-			}
-			else if (strstr(Token,"H264-1280x720")) 
-			{
-					SetVar(Vars,"item:mp4-h264:1280x720",Token);
-			}
-			else fprintf(stderr,"Unknown DailyMotion Format: [%s]\n",Token);
+	ptr=GetDailyMotionFormat(Formats,&Token);
+	while (ptr)
+	{
+	if (strstr(Token,"FLV-320x240")) 
+	{
+		SetVar(Vars,"item:flv:320x240",Token);
+	}
+	else if (strstr(Token,"FLV-80x60")) 
+	{
+		SetVar(Vars,"item:flv:80x60",Token);
+	}
+	else if (strstr(Token,"ON2-848x480"))
+	{
+			SetVar(Vars,"item:on2:848x480",Token);
+	}
+	else if (strstr(Token,"ON2-320x240")) 
+	{
+			SetVar(Vars,"item:on2:320x240",Token);
+	}
+	else if (strstr(Token,"H264-848x480")) 
+	{
+		SetVar(Vars,"item:mp4-h264:848x480",Token);
+	}
+	else if (strstr(Token,"H264-512x384")) 
+	{
+			SetVar(Vars,"item:mp4-h264:512x384",Token);
+	}
+	else if (strstr(Token,"H264-1280x720")) 
+	{
+			SetVar(Vars,"item:mp4-h264:1280x720",Token);
+	}
+	else if (StrLen(Token)) fprintf(stderr,"Unknown DailyMotion Format: [%s]\n",Token);
 
-			ptr=GetToken(ptr,"||",&Token,0);
-			}
+	ptr=GetDailyMotionFormat(ptr,&Token);
+	}
 
 DestroyString(Token);
 
@@ -1761,11 +1780,12 @@ break;
 
 
 case TYPE_DAILYMOTION:
-#define DAILYMOTION_ITEM "addVariable(\"video\", \""
-#define DAILYMOTION_ITEM_END "&"
+#define DAILYMOTION_ITEM "addVariable(\"sequence\","
+#define DAILYMOTION_ITEM_END ")"
+#define DAILYMOTION_PARAMS "\"videoPluginParameters\":{"
+#define DAILYMOTION_PARAMS_END "}"
 #define DAILYMOTION_TITLE_START "<h1 class=\"dmco_title\"><span class=\"title\" title=\""
 #define DAILYMOTION_TITLE_END "\""
-#define DAILYMOTION_EXTRA "addVariable(\"uid\", \""
 
 
 	if (strstr(Tempstr,DAILYMOTION_TITLE_START))
@@ -1776,14 +1796,11 @@ case TYPE_DAILYMOTION:
 
 	if (strstr(Tempstr,DAILYMOTION_ITEM))
 	{
-		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_ITEM,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_ITEM,DAILYMOTION_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		Tempstr=CopyStr(Tempstr,GetVar(Vars,"DailyMotionItems"));
+		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_PARAMS,DAILYMOTION_PARAMS_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		ptr=GetVar(Vars,"DailyMotionItems");
 		DecodeDailyMotionFormats(ptr,Vars);
-	}
-
-	if (strstr(Tempstr,DAILYMOTION_EXTRA))
-	{
-		GenericExtractFromLine(Tempstr, "Extra",DAILYMOTION_EXTRA,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 	}
 break;
 
@@ -2549,8 +2566,10 @@ fprintf(stderr,"\nFeel free to email me and tell me if you've used this software
 
 fprintf(stderr,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
 
-fprintf(stderr,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger' and others.\n");
-fprintf(stderr,"\nThanks to 'legatvs' for clive (http:\\clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube working again..\n");
+fprintf(stderr,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', Ashish Disawal and others.\n");
+fprintf(stderr,"\nSpecial thanks to:\n");
+fprintf(stderr,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
+fprintf(stderr,"	Robert Crowley (http://tools.99k.org/) For all sorts of bug reports and advice.\n");
 }
 
 

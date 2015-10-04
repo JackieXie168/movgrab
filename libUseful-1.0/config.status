@@ -318,7 +318,7 @@ Copyright (C) 2006 Free Software Foundation, Inc.
 This config.status script is free software; the Free Software Foundation
 gives unlimited permission to copy, distribute and modify it."
 
-ac_pwd='/home/meta/movgrab-1.0.10/libUseful-1.0'
+ac_pwd='/home/colum/Desktop/movgrab-1.0.11/libUseful-1.0'
 srcdir='.'
 # If no file are specified by the user, then we need to provide default
 # value.  By we need to know if files were specified by the user.
@@ -481,11 +481,11 @@ s,@psdir@,|#_!!_#|${docdir},g
 s,@libdir@,|#_!!_#|${exec_prefix}/lib,g
 s,@localedir@,|#_!!_#|${datarootdir}/locale,g
 s,@mandir@,|#_!!_#|${datarootdir}/man,g
-s,@DEFS@,|#_!!_#|-DPACKAGE_NAME=\\"\\" -DPACKAGE_TARNAME=\\"\\" -DPACKAGE_VERSION=\\"\\" -DPACKAGE_STRING=\\"\\" -DPACKAGE_BUGREPORT=\\"\\" -DSTDC_HEADERS=1 -DHAVE_LIBESD=1,g
-s,@ECHO_C@,|#_!!_#|\\c,g
-s,@ECHO_N@,|#_!!_#|,g
+s,@DEFS@,|#_!!_#|-DPACKAGE_NAME=\\"\\" -DPACKAGE_TARNAME=\\"\\" -DPACKAGE_VERSION=\\"\\" -DPACKAGE_STRING=\\"\\" -DPACKAGE_BUGREPORT=\\"\\" -DSTDC_HEADERS=1,g
+s,@ECHO_C@,|#_!!_#|,g
+s,@ECHO_N@,|#_!!_#|-n,g
 s,@ECHO_T@,|#_!!_#|,g
-s,@LIBS@,|#_!!_#|-lesd ,g
+s,@LIBS@,|#_!!_#|,g
 s,@build_alias@,|#_!!_#|,g
 s,@host_alias@,|#_!!_#|,g
 s,@target_alias@,|#_!!_#|,g
