@@ -538,14 +538,17 @@ while (Curr)
 {
    if (Curr->Jump)
    {
-		result=strcmp(Curr->Jump->Tag,Name);
+		result=strcasecmp(Curr->Jump->Tag,Name);
 		if (result < 0) Curr=Curr->Jump;
    }
-   if (Curr->Tag && (strcmp(Curr->Tag,Name)==0)) return(Curr);
+   if (Curr->Tag && (strcasecmp(Curr->Tag,Name)==0)) return(Curr);
    Curr=GetNextListItem(Curr);
 }
 return(Curr);
 }
+
+
+
 
 ListNode *ListFindItem(ListNode *Head, void *Item)
 {

@@ -77,7 +77,7 @@ int catlen=0;
 catlen=StrLen(Dest);
 ptr=CatStr(Dest,Src);
 catlen+=len;
-if (strlen(ptr) > catlen) ptr[catlen]=0;
+if (StrLen(ptr) > catlen) ptr[catlen]=0;
 return(ptr);
 }
 
@@ -101,7 +101,7 @@ const char *sptr;
 
 if (Dest !=NULL) 
 {
-len=strlen(Dest);
+len=StrLen(Dest);
 ptr=Dest;
 }
 else
@@ -158,7 +158,7 @@ char *ptr;
 
 if (Dest !=NULL) 
 {
-len=strlen(Dest);
+len=StrLen(Dest);
 ptr=Dest;
 }
 else
@@ -286,7 +286,7 @@ else return( (char *) realloc(Str,len+1));
 char *strlwr(char *str)
 {
 int count, len;
-len=strlen(str);
+len=StrLen(str);
 for (count=0; count < len; count++) str[count]=tolower(str[count]);
 return(str);
 }
@@ -294,7 +294,7 @@ return(str);
 char *strrep(char *str, char oldchar, char newchar)
 {
 int count, len;
-len=strlen(str);
+len=StrLen(str);
 for (count=0; count < len; count++) 
 {
 if (str[count]==oldchar) str[count]=newchar;
@@ -307,7 +307,7 @@ void StripTrailingWhitespace(char *String)
 int count,len;
 
 if (String==NULL) return;
-len=strlen(String);
+len=StrLen(String);
 for(count = len-1; (count >-1) && isspace(String[count]); count--) String[count]=0;
 }
 
@@ -315,7 +315,7 @@ for(count = len-1; (count >-1) && isspace(String[count]); count--) String[count]
 void StripLeadingWhitespace(char *String)
 {
 int count,len;
-len=strlen(String);
+len=StrLen(String);
 for(count = 0; (count <len -1) && isspace(String[count]); count++);
 memmove(String,String+count,len-count);
 String[len-count]=0;
@@ -476,7 +476,7 @@ int count, len;
 
 for (count=0; List[count] !=NULL; count++)
 {
-  len=strlen(List[count]);
+  len=StrLen(List[count]);
   if (len==0) continue;
   if (StrLen(Token) < len) continue;
 
@@ -490,7 +490,7 @@ for (count=0; List[count] !=NULL; count++)
   }
   else 
   {
-  	if (strlen(Token) != len) continue;
+  	if (StrLen(Token) != len) continue;
 	if (Flags & MATCH_TOKEN_CASE)
 	{
 		if(strcmp(Token,List[count])==0)  return(count);
@@ -509,7 +509,7 @@ int count, len;
 
 for (count=0; List[count] !=NULL; count++)
 {
-  len=strlen(List[count]);
+  len=StrLen(List[count]);
 
   if (
        (len >0) && 

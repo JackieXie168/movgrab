@@ -5,8 +5,6 @@
 #include "defines.h"
 
 
-#define ENCODE_HEX 0
-#define ENCODE_BASE64 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +18,7 @@ int demonize();
 void SwitchProgram(char *CommandLine);
 int Spawn(char *CommandLine);
 int SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr);
+int ForkWithIO(int StdIn, int StdOut, int StdErr);
 int PipeSpawnFunction(int *infd, int *outfd, int *errfd, BASIC_FUNC Func, void *Data);
 int PipeSpawn(int *infd, int *outfd, int *errfd, char *CommandLine);
 int FileExists(char *);
@@ -38,9 +37,6 @@ int MakeDirPath(char *Path, int DirMask);
 int SwitchUser(char *User);
 int SwitchGroup(char *Group);
 char *GetCurrUserHomeDir();
-char *HashMD5(char *RetStr, char *text, int len, int encoding);
-char *EncodeBase64(char *RetStr, char *text, int len);
-char *DecodeBase64(char *RetStr, int *len, char *text);
 char *GetNameValuePair(const char *Input, const char *PairDelim, const char *NameValueDelim, char **Name, char **Value);
 
 void SetVar(ListNode *Vars, char *Name, char *Data);
@@ -51,7 +47,6 @@ void CopyVars(ListNode *Dest,ListNode *Source);
 
 char *SubstituteVarsInString(char *Buffer, char *Fmt, ListNode *Vars, int Flags);
 int ExtractVarsFromString(char *Data, char *FormatStr, ListNode *Vars);
-void EncodeMD5(char *text, char *md5digest);
 char *GetRandomData(char *RetBuff, int len, char *AllowedChars);
 char *GetRandomHexStr(char *RetBuff, int len);
 char *GetRandomAlphabetStr(char *RetBuff, int len);

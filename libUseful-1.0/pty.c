@@ -73,16 +73,21 @@ tty_data.c_iflag=IGNBRK | IGNPAR;
 if (Flags & TTYFLAG_CANON) tty_data.c_iflag|= ICANON;
 else tty_data.c_iflag &= ~ICANON;
 
-if (Flags & TTYFLAG_CRLF_KEEP)
+if (! (Flags & TTYFLAG_CRLF_KEEP))
 {
 	//translate carriage-return to newline
 	if (Flags & TTYFLAG_CRLF) tty_data.c_iflag |= ICRNL;
 	else tty_data.c_iflag &= ~ICRNL;
 
 	//translate newline to carriage return
-	if (Flags & TTYFLAG_LFCR) tty_data.c_iflag |= INLCR;
-	tty_data.c_oflag=0;
+	if (Flags & TTYFLAG_LFCR) 
+	{
+		tty_data.c_iflag |= INLCR;
+	}
+	else tty_data.c_iflag &= ~INLCR;
 
+	//output flags
+	tty_data.c_oflag=0;
 	//postprocess and translate newline to cr-nl
 	if (Flags & TTYFLAG_LFCR) tty_data.c_oflag |= ONLCR | OPOST;
 }
@@ -109,12 +114,24 @@ case 19200: val=B19200; break;
 case 38400: val=B38400; break;
 case 57600: val=B57600; break;
 case 230400: val=B230400; break;
+#ifdef B460800
 case 460800: val=B460800; break;
+#endif
+#ifdef B500000
 case 500000: val=B500000; break;
-case 1000000: val=B1000000; break;
+#endif
+#ifdef B1000000
+case 10000000: val=B1000000; break;
+#endif
+#ifdef B1152000
 case 1152000: val=B1152000; break;
+#endif
+#ifdef B2000000
 case 2000000: val=B2000000; break;
+#endif
+#ifdef B4000000
 case 4000000: val=B4000000; break;
+#endif
 default: val=B115200; break;
 }
 cfsetispeed(&tty_data,val);
@@ -126,6 +143,8 @@ result=tcsetattr(tty,TCSANOW,&tty_data);
 
 DestroyString(Tempstr);
 }
+
+
 
 
 int OpenTTY(char *devname, int LineSpeed, int Flags)
@@ -151,13 +170,13 @@ char *Buffer=NULL;
 *pty=open("/dev/ptmx",O_RDWR);
 if (*pty > -1)
 {
-	 grantpt(*pty);
-	 unlockpt(*pty);
-   if ( (*tty=open((char *) ptsname(*pty),O_RDWR)) >-1)
-		{
-			InitTTY(*tty,0,0);
-		  return(1);
-		}
+	grantpt(*pty);
+	unlockpt(*pty);
+	if ( (*tty=open((char *) ptsname(*pty),O_RDWR)) >-1)
+	{
+		InitTTY(*tty,0,0);
+		return(1);
+	}
 	
 }
 

@@ -15,13 +15,11 @@ int FDIsWritable(int fd)
 {
 fd_set selectset;
 int result;
-struct timeval tv;
 
-tv.tv_sec=0;
-tv.tv_usec=10000;
+
 FD_ZERO(&selectset);
 FD_SET(fd, &selectset);
-result=select(fd+1,NULL, &selectset,NULL,&tv);
+result=select(fd+1,NULL, &selectset,NULL,NULL);
 if ((result==-1) && (errno==EBADF)) return(-1);
 if ((result  > 0) && (FD_ISSET(fd, &selectset))) return(TRUE);
 
@@ -53,6 +51,7 @@ int STREAMCheckForBytes(STREAM *Stream)
 {
   if (! Stream) return(0);
   if (Stream->InEnd > Stream->InStart) return(1);
+  if (Stream->in_fd==-1) return(0);
   return(FDCheckForBytes(Stream->in_fd));
 }
 
@@ -131,17 +130,17 @@ result=SSL_write((SSL *) S->Extra, Data + count, DataLen - count);
 }
 else
 {
-if (S->Timeout > 0)
-{
-   FD_ZERO(&selectset);
-   FD_SET(S->out_fd, &selectset);
-   tv.tv_sec=S->Timeout;
-   tv.tv_usec=0;
-   result=select(S->out_fd+1,NULL,&selectset,NULL,&tv);
+	if (S->Timeout > 0)
+	{
+		FD_ZERO(&selectset);
+		FD_SET(S->out_fd, &selectset);
+		tv.tv_sec=S->Timeout;
+		tv.tv_usec=0;
+		result=select(S->out_fd+1,NULL,&selectset,NULL,&tv);
 
-  if (result==-1)  return(STREAM_CLOSED);
-  if ((result == 0) || (! FD_ISSET(S->out_fd, &selectset))) return(STREAM_TIMEOUT);
-}
+		if (result==-1)  return(STREAM_CLOSED);
+		if ((result == 0) || (! FD_ISSET(S->out_fd, &selectset))) return(STREAM_TIMEOUT);
+	}
 
   result=write(S->out_fd, Data + count, DataLen - count);
 }
@@ -149,6 +148,7 @@ if (S->Timeout > 0)
   if (result < 1 && ((errno !=EINTR) && (errno !=EAGAIN)) ) break;
   if (result < 0) result=0;
   count+=result;
+  S->BytesWritten+=result;
 }
 
 return(count);
@@ -205,16 +205,16 @@ while (! AllDataWritten)
 		 len=0;			
      while (result > 0)
      {
-          if (Final) AllDataWritten=FALSE;
-          InBuff=SetStrLen(InBuff,len+result);
-          memcpy(InBuff+len,OutBuff,result);
-					len+=result;
-					if (result < olen) break;
+			if (Final) AllDataWritten=FALSE;
+			InBuff=SetStrLen(InBuff,len+result);
+			memcpy(InBuff+len,OutBuff,result);
+			len+=result;
+			if (result < olen) break;
 
-					if (Final) result=EOF;
-					else result=0;
-			    if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,0,OutBuff,olen);
-					else if (Mod->Write) result=Mod->Write(Mod,InBuff,0,OutBuff,olen);
+			if (Final) result=EOF;
+			else result=0;
+		   if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,0,OutBuff,olen);
+			else if (Mod->Write) result=Mod->Write(Mod,InBuff,0,OutBuff,olen);
      }
      Curr=GetNextListItem(Curr);
   }
@@ -471,7 +471,6 @@ if (Flags & O_TRUNC) ftruncate(fd,0);
 
 Stream=STREAMFromFD(fd);
 Stream->Path=CopyStr(Stream->Path,FilePath);
-
 STREAMSetTimeout(Stream,0);
 return(Stream);
 }
@@ -604,7 +603,11 @@ if (read_result==0)
 		read_result=read(S->in_fd, tmpBuff, S->BuffSize-S->InEnd);
 	}
 
-	if (read_result > 0) result=read_result;
+	if (read_result > 0) 
+	{
+		result=read_result;
+		S->BytesRead+=read_result;
+	}
 	else
 	{
         if ((read_result == -1) && (errno==EAGAIN)) read_result=STREAM_NODATA;

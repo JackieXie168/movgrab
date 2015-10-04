@@ -2,6 +2,7 @@
 #define LIBUSEFUL_STRING
 
 #include <stdarg.h>
+#include <string.h> //for strlen, used below in StrLen
 
 #define GETTOKEN_QUOTES 1
 #define GETTOKEN_MULTI_SEPARATORS 2

@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <sys/soundcard.h>
 #include <sys/ioctl.h>
 #include "sound.h"
 #include "file.h"
@@ -9,6 +8,45 @@
 
 #define OUTPUT 0
 #define INPUT 1
+
+
+/* For systems that lack 'soundcard.h' but still have some kind of sound */
+/* We define enough audio formats for us to use internally */
+#ifndef AFMT_MU_LAW 
+# define AFMT_MU_LAW    0x00000001
+#endif
+
+#ifndef AFMT_A_LAW 
+# define AFMT_A_LAW   0x00000002
+#endif 
+
+# define AFMT_IMA_ADPCM   0x00000004
+
+#ifndef AFMT_U8
+# define AFMT_U8      0x00000008
+#endif
+
+#ifndef AFMT_S8
+# define AFMT_S8      0x00000040
+#endif
+
+#ifndef AFMT_S16_LE
+# define AFMT_S16_LE    0x00000010  /* Little endian signed 16*/
+#endif
+
+#ifndef AFMT_S16_BE
+# define AFMT_S16_BE    0x00000010  /* Little endian signed 16*/
+#endif
+
+
+#ifndef AFMT_U16_BE
+# define AFMT_U16_LE    0x00000080  /* Little endian U16 */
+#endif
+
+#ifndef AFMT_U16_BE
+# define AFMT_U16_BE    0x00000100  /* Big endian U16 */
+#endif
+
 
 typedef struct
 {
@@ -74,7 +112,6 @@ if (Wav.BitsPerSample==16)
 {
 	AudioInfo->SampleSize=2;
 	AudioInfo->Format=AFMT_S16_LE;
-
 }
 else 
 {
@@ -129,7 +166,9 @@ return(AudioInfo);
 
 
 
+#ifdef HAVE_OSS
 
+#include <sys/soundcard.h>
 /*  ------------------------ OSS Functions  -------------------- */
 int OpenOSSDevice(char *Dev, int Type, TAudioInfo *Info)
 {
@@ -374,6 +413,8 @@ STREAMClose(S);
 return(TRUE);
 }
 
+#endif
+
 
 /*  ------------------------ ESound Functions  -------------------- */
 
@@ -481,7 +522,9 @@ printf("ESDP: %d %d fd=%d\n",esd_format,Info->SampleRate,fd);
 
 #endif
 
+#ifdef HAVE_OSS
 if (fd < 0) fd=OpenOSSOutput(Dev, Info);
+#endif
 
 return(fd);
 }
@@ -506,7 +549,9 @@ fd=esd_record_stream(esd_format, Info->SampleRate, NULL, "testing");
 
 #endif
 
+#ifdef HAVE_OSS
 if (fd < 0) fd=OpenOSSInput(Dev, Info);
+#endif
 
 return(fd);
 }
@@ -526,7 +571,11 @@ if (Flags & PLAYSOUND_NONBLOCK)
 if (pid==0)
 {
 result=ESDPlaySoundFile(Path, Vol);
+
+#ifdef HAVE_OSS
 if (! result) result=OSSPlaySoundFile(Path, Vol);
+#endif
+
 if (Flags & PLAYSOUND_NONBLOCK) _exit(0);
 }
 
@@ -541,7 +590,10 @@ int val;
 if (StrLen(ReqDev)) device=CopyStr(device,ReqDev);
 else device=CopyStr(device,"/dev/mixer");
 
+#ifdef HAVE_OSS
 val=OSSAlterVolume(device, VolType, delta);
+#endif
+
 DestroyString(device);
 return(val);
 

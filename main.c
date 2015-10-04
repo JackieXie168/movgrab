@@ -30,13 +30,13 @@
 
 
 char *FileTypes[]={".flv",".mp3",".mp4",".mov",".wma",".m4a",".m4v",".wmv",".avi",".3gp",NULL};
-char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","almostkilled","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","izlese","berkeley","yale","sdnhm","uchannel","princeton","uctv.tv","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","metatube","motionfeeds",NULL};
-char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.vbox7.com","www.blip.tv","www.ted.com","www.myvideo.de","www.clipshack.com","www.mytopclip.com","www.redbalcony.com","www.mobango.com","www.izlese.org","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","University of California Television: http://www.uctv.tv/","Reuters: http://www.reuters.com/","clipfish.de","Liveleak: http://www.liveleak.com","Academic Earth: http://www.academicearth.org","Photobucket: http://www.photobucket.com","VideoEmo: http://www.vidoevo.com/","Videos Facebook: http://www.videosfacebook.net","Aljazeera: english.aljazeera.net","mefeedia.com","myvido1.com","iViewTube: www.iviewtube.com","Washington Post: www.washingtonpost.com","CBS News: www.cbsnews.com","France24: www.france24.com","www.metatube.com","www.motionfeeds.com",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","dailymotion","break","ehow","vimeo","almostkilled","5min","vbox7","blip.tv","ted","myvideo","clipshack","mytopclip","redbalcony","mobango","berkeley","yale","sdnhm","uchannel","princeton","uctv.tv","reuters","clipfish.de","liveleak","academicearth","photobucket","videoemo","videosfacebook","aljazeera","mefeedia","myvido1","iviewtube","washingtonpost","cbsnews","france24","euronews","metatube","motionfeeds","izlese",NULL};
+char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.vbox7.com","www.blip.tv","www.ted.com","www.myvideo.de","www.clipshack.com","www.mytopclip.com","www.redbalcony.com","www.mobango.com","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","University of California Television: http://www.uctv.tv/","Reuters: http://www.reuters.com/","clipfish.de","Liveleak: http://www.liveleak.com","Academic Earth: http://www.academicearth.org","Photobucket: http://www.photobucket.com","VideoEmo: http://www.vidoevo.com/","Videos Facebook: http://www.videosfacebook.net","Aljazeera: english.aljazeera.net","mefeedia.com","myvido1.com","iViewTube: www.iviewtube.com","Washington Post: www.washingtonpost.com","CBS News: www.cbsnews.com","France24: www.france24.com","Euronews: www.euronews.net","www.metatube.com","www.motionfeeds.com","www.izlese.org",NULL};
 
-char *TestLinks[]={"","","http://www.youtube.com/watch?v=oP59tQf_njc","http://www.metacafe.com/watch/6063075/how_to_use_chopsticks/","http://www.dailymotion.com/video/x5790e_hubblecast-16-galaxies-gone-wild_tech","http://www.break.com/index/ninja-cat.html","http://www.ehow.com/video_6819748_creamy-thyme-scrambled-eggs-recipe.html","http://vimeo.com/channels/knowyourmeme","http://www.almostkilled.com/videos/Funny_TV_Ads/Crash_Testing_Video_Clip","http://www.5min.com/Video/Learn-About-Chocolate-516948033","http://www.vbox7.com/play:1417ad5a","http://blip.tv/file/4855647/","http://www.ted.com/talks/janine_benyus_shares_nature_s_designs.html","http://www.myvideo.de/watch/8045043#featuredvideo1","http://www.clipshack.com/Clip.aspx?key=F9F949CE15A12B50","http://www.mytopclip.com/videos/32501/flip-over-card-trick-revealed","http://www.redbalcony.com/?vid=28156","http://www.mobango.com/media_details/struck_in_tsunami/%21tKpzdHIo5E%3D/","http://www.izlese.org/hot-girl-hot-cars-911-turbo-vs-mercedes-s550-vs-rally-car.html","http://webcast.berkeley.edu/event_details.php?seriesid=457d7be1-0c22-4366-a287-691948ee8f37&p=1&ipp=15&category=","http://oyc.yale.edu/economics/game-theory/contents/sessions/session-1-introduction-five-first-lessons","http://www.sdnhm.org/webcasts/lectures/scottsampson.html","broken","http://www.princeton.edu/WebMedia/flash/lectures/20100428_publect_taibbi_tett.shtml","http://www.uctv.tv/search-details.aspx?showID=20888","http://www.reuters.com/news/video/story?videoId=193471398&videoChannel=4","http://www.clipfish.de/musikvideos/video/3527775/daft-punk-derezzed/","http://www.liveleak.com/view?i=a7b_1299633723","http://www.academicearth.org/lectures/interaction-with-physical-environment","http://gs147.photobucket.com/groups/r299/QM25Y4IJEP/?action=view&current=BlackSwan1.mp4","http://www.vidoevo.com/yvideo.php?i=NXhxdEU0cWuRpZktqUGc&j-majik-wickaman-feat-dee-freer-in-pieces-drum-bass-mix","http://www.videosfacebook.net/sueper-best-dance-songs-2-aaaa-1","http://english.aljazeera.net/programmes/countingthecost/2011/02/2011219142816937101.html","http://www.mefeedia.com/video/36135458","http://www.myvido1.com/QWxgGMihFZEl1aOJlTy0UP_bob-marley-don-039t-worry-be-happy","http://www.iviewtube.com/v/152128/insane-hail-storm-oklahoma-city","http://www.washingtonpost.com/business/on-leadership-modern-day-machiavellis-/2011/02/18/ABYgckH_video.html","http://www.cbsnews.com/video/watch/?id=7357739n","http://www.france24.com/en/20110219-beyond-business-cybercriminality-iphone-mobile-security","http://www.metatube.com/en/videos/cid2/Funny-Videos/53210/Rail-Jump-Fail/",NULL};
+char *TestLinks[]={"","","http://www.youtube.com/watch?v=oP59tQf_njc","http://www.metacafe.com/watch/6063075/how_to_use_chopsticks/","http://www.dailymotion.com/video/x5790e_hubblecast-16-galaxies-gone-wild_tech","http://www.break.com/index/ninja-cat.html","http://www.ehow.com/video_6819748_creamy-thyme-scrambled-eggs-recipe.html","http://vimeo.com/channels/knowyourmeme","http://www.almostkilled.com/videos/Funny_TV_Ads/Crash_Testing_Video_Clip","http://www.5min.com/Video/Learn-About-Chocolate-516948033","http://www.vbox7.com/play:1417ad5a","http://blip.tv/file/4855647/","http://www.ted.com/talks/janine_benyus_shares_nature_s_designs.html","http://www.myvideo.de/watch/8045043#featuredvideo1","http://www.clipshack.com/Clip.aspx?key=F9F949CE15A12B50","http://www.mytopclip.com/videos/32501/flip-over-card-trick-revealed","http://www.redbalcony.com/?vid=28156","http://www.mobango.com/media_details/struck_in_tsunami/%21tKpzdHIo5E%3D/","http://webcast.berkeley.edu/event_details.php?seriesid=457d7be1-0c22-4366-a287-691948ee8f37&p=1&ipp=15&category=","http://oyc.yale.edu/economics/game-theory/contents/sessions/session-1-introduction-five-first-lessons","http://www.sdnhm.org/webcasts/lectures/scottsampson.html","broken","http://www.princeton.edu/WebMedia/flash/lectures/20100428_publect_taibbi_tett.shtml","http://www.uctv.tv/search-details.aspx?showID=20888","http://www.reuters.com/news/video/story?videoId=193471398&videoChannel=4","http://www.clipfish.de/musikvideos/video/3527775/daft-punk-derezzed/","http://www.liveleak.com/view?i=a7b_1299633723","http://www.academicearth.org/lectures/interaction-with-physical-environment","http://gs147.photobucket.com/groups/r299/QM25Y4IJEP/?action=view&current=BlackSwan1.mp4","http://www.vidoevo.com/yvideo.php?i=NXhxdEU0cWuRpZktqUGc&j-majik-wickaman-feat-dee-freer-in-pieces-drum-bass-mix","http://www.videosfacebook.net/sueper-best-dance-songs-2-aaaa-1","http://english.aljazeera.net/programmes/countingthecost/2011/02/2011219142816937101.html","http://www.mefeedia.com/video/36135458","http://www.myvido1.com/QWxgGMihFZEl1aOJlTy0UP_bob-marley-don-039t-worry-be-happy","http://www.iviewtube.com/v/152128/insane-hail-storm-oklahoma-city","http://www.washingtonpost.com/business/on-leadership-modern-day-machiavellis-/2011/02/18/ABYgckH_video.html","http://www.cbsnews.com/video/watch/?id=7357739n","http://www.france24.com/en/20110219-beyond-business-cybercriminality-iphone-mobile-security","http://www.euronews.net/2011/06/01/who-says-mobile-phones-may-cause-brian-cancer/","http://www.metatube.com/en/videos/cid2/Funny-Videos/53210/Rail-Jump-Fail/","http://www.motionfeeds.com/10401/helsinki-travel-guide.html","http://www.izlese.org/hot-girl-hot-cars-911-turbo-vs-mercedes-s550-vs-rally-car.html",NULL};
 
 
-typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_IZLESE,TYPE_IZLES_ORG, TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,TYPE_VIDEOSFACEBOOK,TYPE_ALJAZEERA,TYPE_MEFEEDIA,TYPE_MYVIDO1,TYPE_IVIEWTUBE,TYPE_WASHINGTONPOST,TYPE_CBSNEWS,TYPE_FRANCE24,TYPE_METATUBE,TYPE_MOTIONFEEDS,
+typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,TYPE_VIDEOSFACEBOOK,TYPE_ALJAZEERA,TYPE_MEFEEDIA,TYPE_MYVIDO1,TYPE_IVIEWTUBE,TYPE_WASHINGTONPOST,TYPE_CBSNEWS,TYPE_FRANCE24,TYPE_EURONEWS,TYPE_METATUBE,TYPE_MOTIONFEEDS,TYPE_IZLESE, 
 /*Following ones are not real types, but used by internal processes */
 TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2,TYPE_BERKELEY_STAGE2, TYPE_CLIPSHACK_STAGE2, TYPE_CLIPSHACK_STAGE3, TYPE_VIDEOEMO_STAGE2,TYPE_MYVIDO1_STAGE2, TYPE_REFERENCE, TYPE_WASHINGTONPOST_JSON, TYPE_WASHINGTONPOST_STAGE2}TDT;
 
@@ -321,9 +321,10 @@ else Method=CopyStr(Method,"GET");
 
 if (Port==0) Port=80;
 
-Tempstr=FormatStr(Tempstr,"http://%s:%d/%s",Server,Port,Doc);
+Tempstr=MCopyStr(Tempstr,"http://",Server,"/",Doc,NULL);;
 //Info=HTTPInfoCreate(Server, Port, "","", Method, Tempstr, "",0);
 Info=HTTPInfoFromURL(Method, Tempstr);
+
 if (Flags & FLAG_HTTPS) Info->Flags |= HTTP_SSL|HTTP_SSL_REWRITE;
 if (Flags & FLAG_DEBUG3) Info->Flags |= HTTP_DEBUG;
 
@@ -335,6 +336,7 @@ if (BytesRange > 0)
 	Tempstr=FormatStr(Tempstr,"bytes=%d-",BytesRange);
 	SetVar(Info->CustomSendHeaders,"Range",Tempstr); 
 }
+
 Con=HTTPTransact(Info);
 if ((! Con) && (! (Flags & FLAG_QUIET))) 
 {
@@ -844,7 +846,7 @@ endpos=MediaCount;
 
 			Tempstr=FormatStr(Tempstr,"Title:%d",i);
 			Var=CopyStr(Var,GetVar(Vars,Tempstr));
-			fprintf(stderr,"	% 4d: % 4s  %s\n",i,ptr,Var);
+			fprintf(stderr,"	% 4d: %4s  %s\n",i,ptr,Var);
 			}
 			fprintf(stderr,"\n");
 			}
@@ -1210,7 +1212,6 @@ case TYPE_SDNHM:
 case TYPE_UCHANNEL:
 case TYPE_UCSDTV:
 case TYPE_IZLESE:
-case TYPE_IZLES_ORG:
 case TYPE_REUTERS:
 case TYPE_LIVELEAK:
 case TYPE_CLIPFISH_DE:
@@ -1228,6 +1229,12 @@ case TYPE_MOTIONFEEDS:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
 
  	RetVal=DownloadItem(Tempstr, Title,Post);
+break;
+
+
+case TYPE_EURONEWS:
+ Tempstr=SubstituteVarsInString(Tempstr,"http://video.euronews.net/$(ID).flv",Vars,0);
+ RetVal=DownloadItem(Tempstr, Title,Post);
 break;
 }
 
@@ -1646,7 +1653,7 @@ case TYPE_EHOW:
 	ptr=strstr(Tempstr,EHOW_ITEM2);
 	if (ptr)
 	{
-		EhowExtractShowPlayer(ptr, "item:flv",Vars);
+		EhowExtractShowPlayer(S,ptr,Vars);
 	}
 
 
@@ -1990,17 +1997,12 @@ break;
 #define IZLESE_TITLE2_END "</title>"
 
 case TYPE_IZLESE:
-case TYPE_IZLES_ORG:
-
-
 if (strstr(Tempstr,IZLESE_ITEM_START) && strstr(Tempstr,IZLESE_ITEM_END))
 {
 		GenericExtractFromLine(Tempstr, "item:flv",IZLESE_ITEM_START,IZLESE_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 ptr=GetVar(Vars,"item:flv");
 //put 'http' back on
 Tempstr=MCopyStr(Tempstr,"http",ptr,NULL);
-
-printf("IZ: %s\n",Tempstr);
 
 if (strstr(ptr,"youtube"))
 {
@@ -2302,6 +2304,25 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 break;
 
 
+case TYPE_EURONEWS:
+#define EURONEWS_ITEM_START "videofile:\""
+#define EURONEWS_ITEM_END "\""
+
+if (strstr(Tempstr,EURONEWS_ITEM_START) )
+{
+		GenericExtractFromLine(Tempstr, "ID",EURONEWS_ITEM_START,EURONEWS_ITEM_END,Vars,0);
+}
+
+
+if (strstr(Tempstr,GENERIC_TITLE_START))
+{
+		GenericExtractFromLine(Tempstr, "Title",GENERIC_TITLE_START,GENERIC_TITLE_END,Vars,0);
+}
+
+break;
+
+
+
 case TYPE_METATUBE:
 #define METATUBE_ITEM_START "flashvars.videoPath = \""
 #define METATUBE_ITEM_END "\";"
@@ -2321,12 +2342,14 @@ break;
 
 case TYPE_MOTIONFEEDS:
 #define MOTIONFEEDS_ITEM_LINE "param name=\"movie\" "
-#define MOTIONFEEDS_ITEM_START "file="
+#define MOTIONFEEDS_ITEM_START1 "file="
+#define MOTIONFEEDS_ITEM_START2 "value="
 #define MOTIONFEEDS_ITEM_END "&"
 
-if (strstr(Tempstr,MOTIONFEEDS_ITEM_START) )
+if (strstr(Tempstr,MOTIONFEEDS_ITEM_LINE) )
 {
-		GenericExtractFromLine(Tempstr, "item:flv",MOTIONFEEDS_ITEM_START,MOTIONFEEDS_ITEM_END,Vars,0);
+if (strstr(Tempstr,MOTIONFEEDS_ITEM_START1) ) GenericExtractFromLine(Tempstr, "item:flv",MOTIONFEEDS_ITEM_START1,MOTIONFEEDS_ITEM_END,Vars,0);
+else if (strstr(Tempstr,MOTIONFEEDS_ITEM_START2) ) GenericExtractFromLine(Tempstr, "item:reference",MOTIONFEEDS_ITEM_START2,MOTIONFEEDS_ITEM_END,Vars,0);
 }
 
 
@@ -2519,7 +2542,7 @@ fprintf(stderr,"\nThe '-t' argument is optional, Movgrab will try to guess the d
 fprintf(stderr,"The url should be that of the page that the movie would normally appear on. Movgrab examines the page for embed tags and other information that would normally cause the movie to play on that page.\n");
 
 fprintf(stderr,"\nDownload types are:\n");
-for (i=1; DownloadTypes[i] !=NULL; i++) fprintf(stderr,"%- 20s %s\n",DownloadTypes[i],DownloadNames[i]);
+for (i=1; DownloadTypes[i] !=NULL; i++) fprintf(stderr,"%-20s %s\n",DownloadTypes[i],DownloadNames[i]);
 
 fprintf(stderr,"\nIf a website is not in the list, try 'movgrab -t generic <url>'\n");
 fprintf(stderr,"\nFeel free to email me and tell me if you've used this software!\n");
@@ -2559,8 +2582,8 @@ for (i=1; i < argc; i++)
 	}
 	else if (strcmp(argv[i],"-a")==0)
 	{
-			ptr=GetToken(argv[++i],":",&Username,NULL);
-			ptr=GetToken(ptr,":",&Password,NULL);
+			ptr=GetToken(argv[++i],":",&Username,0);
+			ptr=GetToken(ptr,":",&Password,0);
 	}
 	else if (strcmp(argv[i],"-v")==0)
 	{
@@ -2774,6 +2797,10 @@ else if (strstr(Server,"france24"))
 {
  Type=TYPE_FRANCE24;
 }
+else if (strstr(Server,"euronews"))
+{
+ Type=TYPE_EURONEWS;
+}
 else if (strstr(Server,"metatube"))
 {
  Type=TYPE_METATUBE;
@@ -2815,7 +2842,7 @@ while (1)
 	if ((Flags & FLAG_STDIN) && (CountItemsInList(DownloadQueue)==0) )
 	{
 		Tempstr=STREAMReadLine(Tempstr,StdIn);
-		StripTrailingWhitespace(StdIn);
+		StripTrailingWhitespace(Tempstr);
 		AddItemToList(DownloadQueue,CopyStr(NULL,Tempstr));
 	}
 
@@ -2824,7 +2851,7 @@ while (1)
 	{
 		if (Flags & FLAG_TEST_SITES)
 		{
-			fprintf(stderr,"Checking %- 20s ",Curr->Tag);
+			fprintf(stderr,"Checking %-20s ",Curr->Tag);
 			fflush(NULL);
 		}
 

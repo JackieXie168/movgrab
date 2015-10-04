@@ -52,6 +52,7 @@ int STREAMAddDataProcessor(STREAM *S, TProcessingModule *Mod, const char *Args);
 int DataProcessorAvailable(const char *Class, const char *Name);
 int STREAMAddStandardDataProcessor(STREAM *S, const char *Class, const char *Name, const char *Args);
 void STREAMClearDataProcessors(STREAM *S);
+int STREAMDeleteDataProcessor(STREAM *S, char *Class, char *Name);
 
 
 #ifdef __cplusplus

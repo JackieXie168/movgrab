@@ -1,5 +1,6 @@
 #include "http.h"
 #include "DataProcessing.h"
+#include "Hash.h"
 
 ListNode *Cookies=NULL;
 char *g_UserAgent=NULL;
@@ -326,10 +327,9 @@ void HTTPParseCookie(HTTPInfoStruct *Info, char *Str)
 
 	endptr=strchr(startptr,';');
 	if (endptr==NULL) endptr=startptr+strlen(Str);
-	if (( *endptr==';') || (*endptr=='\r') ) endptr--;
+//	if (( *endptr==';') || (*endptr=='\r') ) endptr--;
 
 	Tempstr=CopyStrLen(Tempstr,startptr,endptr-startptr);
-
 
 	Curr=GetNextListItem(Cookies);
 	endptr=strchr(Tempstr,'=');
@@ -369,11 +369,10 @@ char *AppendCookies(char *InStr, ListNode *CookieList)
 		Tempstr=CatStr(Tempstr,"Cookie: ");
 		while ( Curr )
 		{
-		Tempstr=MCatStr(Tempstr," ",(char *)Curr->Item,NULL);
+		Tempstr=CatStr(Tempstr,(char *)Curr->Item);
 		Curr=GetNextListItem(Curr);
-		if (Curr) Tempstr=CatStr(Tempstr, ";");
+		if (Curr) Tempstr=CatStr(Tempstr, "; ");
 		}
-
 		Tempstr=CatStr(Tempstr,"\r\n");
 	}
 
@@ -595,6 +594,7 @@ int i;
 char *ptr;
 static int AuthCounter=0;
 
+STREAMClearDataProcessors(S);
 SendStr=CopyStr(SendStr,Info->Method);
 SendStr=CatStr(SendStr," ");
 
@@ -660,11 +660,15 @@ if (
 SendStr=CatStr(SendStr,"Accept: */*\r\n");
 
 Tempstr=CopyStr(Tempstr,"");
-if (DataProcessorAvailable("Compression","gzip")) Tempstr=CatStr(Tempstr,"gzip");
-if (DataProcessorAvailable("Compression","zlib")) 
+
+if (! (Info->Flags & HTTP_NOCOMPRESS))
 {
-if (StrLen(Tempstr)) Tempstr=CatStr(Tempstr,", deflate");
-else Tempstr=CatStr(Tempstr,"deflate");
+	if (DataProcessorAvailable("Compression","gzip")) Tempstr=CatStr(Tempstr,"gzip");
+	if (DataProcessorAvailable("Compression","zlib")) 
+	{
+		if (StrLen(Tempstr)) Tempstr=CatStr(Tempstr,", deflate");
+		else Tempstr=CatStr(Tempstr,"deflate");
+	}
 }
 
 if (StrLen(Tempstr)) SendStr=MCatStr(SendStr,"Accept-Encoding: ",Tempstr,"\r\n",NULL);
@@ -694,6 +698,7 @@ Curr=GetNextListItem(Curr);
 SendStr=AppendCookies(SendStr,Cookies);
 SendStr=CatStr(SendStr,"\r\n");
 
+Info->Flags |= HTTP_HEADERS_SENT;
 if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HTTPSEND: ------\n%s------\n\n",SendStr);
 STREAMWriteLine(SendStr,S);
 STREAMFlush(S);
@@ -785,6 +790,8 @@ if (StrLen(Tempstr)==0) break;
 HTTPParseHeader(S, Header,Tempstr);
 Tempstr=STREAMReadLine(Tempstr,S);
 }
+
+S->BytesRead=0;
 DestroyString(Tempstr);
 }
 
@@ -814,6 +821,7 @@ switch (RCode)
 	case 205:
 	case 206:
 	case 207:
+	case 400:
 	result=HTTP_OKAY;
   break;
 
@@ -840,12 +848,17 @@ switch (RCode)
 		if (HTTPInfo->Port==0) HTTPInfo->Port=80;
 	}
 
-	//Redirects must be get!
-	HTTPInfo->Method=CopyStr(HTTPInfo->Method,"GET");
 	HTTPInfo->Doc=MCopyStr(HTTPInfo->Doc,"/",ptr,NULL);
-	HTTPInfo->PostData=CopyStr(HTTPInfo->PostData,"");
-	HTTPInfo->PostContentType=CopyStr(HTTPInfo->PostContentType,"");
-	HTTPInfo->PostContentLength=0;
+
+	//303 Redirects must be get!
+	if (RCode==303) 
+	{
+			HTTPInfo->Method=CopyStr(HTTPInfo->Method,"GET");
+			HTTPInfo->PostData=CopyStr(HTTPInfo->PostData,"");
+			HTTPInfo->PostContentType=CopyStr(HTTPInfo->PostContentType,"");
+			HTTPInfo->PostContentLength=0;
+	}
+
 	if (! (HTTPInfo->Flags & HTTP_NOREDIRECT)) result=HTTP_REDIRECT;
 	}
 	break;
@@ -919,6 +932,8 @@ else
 	S=NULL;
 }
 
+Info->S=S;
+
 DestroyString(Proto);
 DestroyString(Host);
 return(S);
@@ -932,10 +947,8 @@ int result=HTTP_NOCONNECT;
 while (1)
 {
 	if (! Info->S) Info->S=HTTPConnect(Info);
-	else 
-	{
-		HTTPSendHeaders(Info->S,Info);
-	}
+	//else if (! (Info->Flags & HTTP_HEADERS_SENT)) HTTPSendHeaders(Info->S,Info);
+	else HTTPSendHeaders(Info->S,Info);
 
 	if (Info->S && STREAMIsConnected(Info->S))
 	{
@@ -996,11 +1009,6 @@ while (1)
 	else break;
 }
 
-if (result !=HTTP_OKAY)
-{
-STREAMClose(Info->S);
-Info->S=NULL;
-}
 return(Info->S);
 }
 

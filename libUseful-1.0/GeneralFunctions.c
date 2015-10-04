@@ -127,59 +127,71 @@ execv(argv[0],argv);
 //be the main program
 }
 
+int ForkWithIO(int StdIn, int StdOut, int StdErr)
+{
+int result, fd;
+
+result=fork();
+if (result==0)
+{
+	if (StdIn > -1) 
+	{
+		if (StdIn !=0) 
+		{
+			close(0);
+			dup(StdIn);
+		}
+	}
+	else
+	{
+		fd=open("/dev/null",O_RDONLY);
+		dup(fd);
+		close(fd);
+	}
+
+	if (StdOut > -1) 
+	{
+		if (StdOut !=1) 
+		{
+			close(1);
+			dup(StdOut);
+		}
+	}
+	else
+	{
+		fd=open("/dev/null",O_WRONLY);
+		dup(fd);
+		close(fd);
+	}
+
+	if (StdErr > -1) 
+	{
+		if (StdErr !=2) 
+		{
+		close(2);
+		dup(StdErr);
+		}
+	}
+}
+else
+{
+	fd=open("/dev/null",O_WRONLY);
+	dup(fd);
+	close(fd);
+}
+
+return(result);
+}
+
+
 
 int SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr)
 {
 int result, fd, i;
 
-result=fork();
+result=ForkWithIO(StdIn,StdOut,StdErr);
 if (result==0)
 {
-if (StdIn > -1) 
-{
-	if (StdIn !=0) 
-	{
-		close(0);
-		dup(StdIn);
-	}
-}
-else
-{
-fd=open("/dev/null",O_RDONLY);
-dup(fd);
-close(fd);
-}
-
-if (StdOut > -1) 
-{
-	if (StdOut !=1) 
-	{
-		close(1);
-		dup(StdOut);
-	}
-}
-else
-{
-fd=open("/dev/null",O_WRONLY);
-dup(fd);
-close(fd);
-}
-
-if (StdErr > -1) 
-{
-	if (StdErr !=2) 
-	{
-		close(2);
-		dup(StdErr);
-	}
-}
-else
-{
-fd=open("/dev/null",O_WRONLY);
-dup(fd);
-close(fd);
-}
-
 SwitchProgram(CommandLine);
 _exit(result);
 }
@@ -293,8 +305,8 @@ void SetTimeout(int timeout)
 struct sigaction SigAct;
 
 SigAct.sa_handler=&ColLibDefaultSignalHandler;
-SigAct.sa_flags=SA_ONESHOT | SA_INTERRUPT;
-SigAct.sa_restorer=NULL;
+SigAct.sa_flags=SA_RESETHAND;
+//SigAct.sa_restorer=NULL;
 
 sigaction(SIGALRM,&SigAct,NULL);
 alarm(timeout);
@@ -711,72 +723,13 @@ return(ptr);
 }
 
 
-#include "md5.h"
-#define MD5LEN 16
-char *HashMD5(char *Return, char *text, int len, int Encoding)
-{
-MD5_CTX context;
-int count;
-unsigned char *digestbuff=NULL;
-char *HashStr=NULL, *Tempstr=NULL;
-int i;
-
-HashStr=CopyStr(Return,"");
-digestbuff=SetStrLen(digestbuff,MD5LEN+1);
-memset(digestbuff,0,MD5LEN);
-MD5Init(&context);
-MD5Update(&context, text, len);
-MD5Final(digestbuff, &context);
-
-if (Encoding== ENCODE_BASE64)
-{
-	HashStr=SetStrLen(HashStr,42);
-	to64frombits(HashStr,digestbuff,16);
-}
-else
-{
-	for (i=0; i < MD5LEN; i++)
-	{
-	Tempstr=FormatStr(Tempstr,"%02x",digestbuff[i]);
-	HashStr=CatStr(HashStr,Tempstr);
-	}
-}
-
-DestroyString(digestbuff);
-DestroyString(Tempstr);
-return(HashStr);
-}
-
-
-char *EncodeBase64(char *Return, char *Text, int len)
-{
-char *RetStr;
-
-RetStr=SetStrLen(Return,len *2);
-to64frombits(RetStr,Text,len);
-
-return(RetStr);
-}
-
-char *DecodeBase64(char *Return, int *len, char *Text)
-{
-char *RetStr;
-
-RetStr=SetStrLen(Return,StrLen(Text) *2);
-*len=from64tobits(RetStr,Text);
-
-return(RetStr);
-}
-
-
-
 void SetVar(ListNode *Vars, char *Name, char *Data)
 {
 ListNode *Node;
 char *Tempstr=NULL;
 
 Tempstr=CopyStr(Tempstr,Name);
-strlwr(Tempstr);
+//strlwr(Tempstr);
 Node=ListFindNamedItem(Vars,Tempstr);
 if (Node) Node->Item=(void *) CopyStr((char *) Node->Item,Data);
 else AddNamedItemToList(Vars,Tempstr,CopyStr(NULL,Data));
@@ -790,7 +743,7 @@ ListNode *Node;
 char *Tempstr=NULL;
 
 Tempstr=CopyStr(Tempstr,Name);
-strlwr(Tempstr);
+//strlwr(Tempstr);
 Node=ListFindNamedItem(Vars,Tempstr);
 DestroyString(Tempstr);
 if (Node) return((char *) Node->Item);

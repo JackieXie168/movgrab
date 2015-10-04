@@ -461,7 +461,7 @@ libCryptoProcessorData *Data;
 EVP_CIPHER_CTX *ctx;
 char *ptr, *Tempstr=NULL;
 
-//if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
+if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
 ptr=OutData;
 
 Data=(libCryptoProcessorData *) ProcMod->Data;
@@ -470,6 +470,8 @@ ctx=Data->enc_ctx;
 len=OutLen;
 
 ProcMod->Flags = ProcMod->Flags & ~DPM_WRITE_FINAL;
+
+/*
 if (ProcMod->Flags & DPM_NOPAD_DATA)
 {
 	val=InLen % Data->BlockSize;
@@ -485,6 +487,7 @@ if (ProcMod->Flags & DPM_NOPAD_DATA)
 	result=EVP_EncryptUpdate(ctx, ptr, &len, Tempstr, val);
 }
 else 
+*/
 {
 result=EVP_EncryptUpdate(ctx, ptr, &len, InData, InLen);
 }
@@ -872,13 +875,15 @@ int len;
 
 STREAMFlush(S);
 
+if (! S->ProcessingModules) S->ProcessingModules=CreateEmptyList();
+Tempstr=MCopyStr(Tempstr,Mod->Name,NULL);
+AddNamedItemToList(S->ProcessingModules,Tempstr,Mod);
+
 len=S->InEnd - S->InStart;
 Tempstr=SetStrLen(Tempstr,len);
 memcpy(Tempstr,S->InputBuff + S->InStart,len);
 STREAMResetInputBuffers(S);
-if (! S->ProcessingModules) S->ProcessingModules=CreateEmptyList();
 
-AddItemToList(S->ProcessingModules,Mod);
 Curr=GetNextListItem(Mod->Values);
 while (Curr)
 {
@@ -891,6 +896,24 @@ STREAMReadThroughProcessors(S, Tempstr, len);
 DestroyString(Tempstr);
 return(TRUE);
 }
+
+
+int STREAMDeleteDataProcessor(STREAM *S, char *Class, char *Name)
+{
+ListNode *Curr;
+char *Tempstr=NULL;
+int len;
+
+STREAMFlush(S);
+
+Tempstr=MCopyStr(Tempstr,Class,":",Name,NULL);
+Curr=ListFindNamedItem(S->ProcessingModules,Tempstr);
+DeleteNodeFromList(Curr);
+
+DestroyString(Tempstr);
+return(TRUE);
+}
+
 
 
 int DataProcessorAvailable(const char *Class, const char *Name)

@@ -1,15 +1,14 @@
-# Generated automatically from Makefile.in by configure.
 CC = gcc
 VERSION = 0.0.1
 CFLAGS = -g -O2
-LIBS = -lz -lcrypto -lssl #-lesd
-FLAGS=$(CFLAGS) -fPIC  -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 -DHAVE_LIBSSL=1 -DHAVE_LIBCRYPTO=1 #-DHAVE_LIBESD=1  
+LIBS = -lesd 
+FLAGS=$(CFLAGS) -fPIC -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBESD=1 
 prefix=/usr/local
-OBJ=string.o list.o expect.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o md5c.o base64.o
+OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o md5c.o base64.o crc32.o Hash.o
 
 
 all: $(OBJ)
-	$(CC) -shared $(FLAGS) $(LIBS) -o libUseful-1.1.so $(OBJ)
+	$(CC) $(FLAGS) $(LIBS) -shared -o libUseful-1.0.so $(OBJ)
 	#ld -i -o libUseful-1.0.a $(OBJ)
 	ar rcs libUseful-1.0.a $(OBJ)
 
@@ -21,10 +20,6 @@ list.o: list.h list.c
 
 socket.o: socket.h socket.c
 	$(CC) $(FLAGS) -c socket.c
-
-expect.o: expect.h expect.c
-	$(CC) $(FLAGS) -c expect.c
-
 
 sound.o: sound.h sound.c
 	$(CC) $(FLAGS) -c sound.c
@@ -48,6 +43,9 @@ file.o: file.h file.c
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
 
+expect.o: expect.h expect.c
+	$(CC) $(FLAGS) -c expect.c
+
 GeneralFunctions.o: GeneralFunctions.h GeneralFunctions.c
 	$(CC) $(FLAGS) -c GeneralFunctions.c
 
@@ -57,6 +55,9 @@ DataProcessing.o: DataProcessing.h DataProcessing.c
 EncryptedFiles.o: EncryptedFiles.h EncryptedFiles.c
 	$(CC) $(FLAGS) -c EncryptedFiles.c
 
+Hash.o: Hash.h Hash.c
+	$(CC) $(FLAGS) -c Hash.c
+
 ConnectManager.o: ConnectManager.h ConnectManager.c
 	$(CC) $(FLAGS) -c ConnectManager.c
 
@@ -65,6 +66,9 @@ md5c.o: md5c.c md5-global.h md5.h
 
 base64.o: base64.c base64-config.h base64.h
 	$(CC) $(FLAGS) -c base64.c
+
+crc32.o: crc32.c crc32.h
+	$(CC) $(FLAGS) -c crc32.c
 
 
 clean:

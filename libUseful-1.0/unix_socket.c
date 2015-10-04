@@ -1,4 +1,5 @@
 #include "unix_socket.h"
+#include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 

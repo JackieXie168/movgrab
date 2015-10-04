@@ -67,6 +67,7 @@ int ProcessIncommingBytes(DownloadContext *);
 //int DownloadToDot(int sock, FILE *SaveFile);
 int DownloadToDot(STREAM *Connection, STREAM *SaveFile);
 int DownloadToTermStr(STREAM *Connection, STREAM *SaveFile, char *TermStr);
+void ParseConnectDetails(char *Str, char **Type, char **Host, int *Port, char **User, char **Pass, char **InitDir);
 
 
 /* IP Address and host lookup functions */

@@ -47,13 +47,15 @@ typedef struct
 {
 char *InputBuff;
 char *OutputBuff;
-int BuffSize;
-int InStart, InEnd;
-int OutStart, OutEnd;
 int Timeout;
 int in_fd, out_fd;
 int Type;
 int Flags;
+unsigned int BuffSize;
+unsigned int InStart, InEnd;
+unsigned int OutStart, OutEnd;
+unsigned int BytesRead;
+unsigned int BytesWritten;
 char *Path;
 void *Extra;
 ListNode *Values;

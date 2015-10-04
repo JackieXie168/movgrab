@@ -1,5 +1,6 @@
 #include "includes.h"
 
+#include <arpa/inet.h>
 
 #ifdef HAVE_LIBSSL
 #include <openssl/crypto.h>
@@ -344,8 +345,7 @@ char *GetRemoteIP(int sock)
 struct sockaddr_in sa;
 int salen, result;
 
-
-salen=sizeof(sa);
+salen=sizeof(struct sockaddr_in);
 result=getpeername(sock,(struct sockaddr *) &sa, &salen);
 if  (result==-1)  
 {
@@ -438,7 +438,8 @@ return(result);
 
 int STREAMDoPostConnect(STREAM *S, int Flags)
 {
-int result=TRUE, *ptr;
+int result=TRUE;
+char *ptr;
 
 //if (Flags & CONNECT_SOCKS_PROXY) result=DoSocksProxyTunnel(S);
 if (Flags & CONNECT_SSL) DoSSLClientNegotiation(S, Flags);
@@ -498,55 +499,68 @@ return(TRUE);
 }
 
 
+
+void ParseHostDetails(char *Data,char **Host,int *Port,char **User)
+{
+char *ptr=NULL;
+
+ptr=strrchr(Data,'@');
+if (ptr)
+{
+ *User=CopyStrLen(*User,Data,ptr-Data);
+ptr++;
+}
+else ptr=Data;
+
+ptr=GetToken(ptr,":",Host,0);
+if (StrLen(ptr)) *Port=atoi(ptr);
+}
+
+
+void ParseConnectDetails(char *Str, char **Type, char **Host, int *Port, char **User, char **Pass, char **InitDir)
+{
+char *ptr, *ptr2, *Token=NULL, *Tmp=NULL;
+
+ptr=GetToken(Str," ",&Token,0);
+while (ptr)
+{
+if (strcmp(Token,"-password")==0)
+{
+ptr=GetToken(ptr," ",Pass,0);
+}
+else
+{
+ptr2=GetToken(Token,":",Type,0);
+while (*ptr2=='/') ptr2++;
+ptr2=GetToken(ptr2,"/",&Tmp,0);
+
+ParseHostDetails(Tmp,Host,Port,User);
+
+//Now we break Tmp up into host, port and path
+
+if (StrLen(ptr2)) *InitDir=MCopyStr(*InitDir,"/",ptr2,NULL);
+}
+
+ptr=GetToken(ptr," ",&Token,0);
+}
+
+DestroyString(Token);
+DestroyString(Tmp);
+}
+
+
+
 void ParseConnectHop(char *Line, int *Type,  char **Host, char **User, char **Password, char **KeyFile, int *Port)
 {
-char *ptr, *ptr2, *Token=NULL;
-char *ConfTokens[]={"-port","-password","-keyfile",NULL};
-typedef enum {TOK_PORT,TOK_PASSWORD,TOK_KEYFILE} LIBUSEFUL_CONNECTARGS;
+char *ptr, *ptr2, *Token=NULL, *Trash=NULL;
 int result;
 
+ParseConnectDetails(Line, &Token, Host, Port, User, Password, &Trash);
 ptr=GetToken(Line,":",&Token,GETTOKEN_QUOTES);
 *Type=MatchTokenFromList(Token,HopTypes,0);
 
-ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-
-while (ptr)
-{
-result=MatchTokenFromList(Token,ConfTokens,0);
-
-switch (result)
-{
-  case TOK_PORT:
-ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-	*Port=atoi(Token);
-  break;
-
-  case TOK_PASSWORD:
-ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-	*Password=CopyStr(*Password,Token);
-  break;
-
-  case TOK_KEYFILE:
-ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-	*KeyFile=CopyStr(*KeyFile,Token);
-  break;
-
-  default:
-	ptr2=strchr(Token,'@');
-	if (ptr2) 
-	{
-		*ptr2='\0';
-		ptr2++;
-		*User=CopyStr(*User,Token);
-	} else ptr2=Token;
-
-	*Host=CopyStr(*Host,ptr2);
-}
-
-ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
-}
-
-
+DestroyString(Token);
+DestroyString(Trash);
 }
 
 
@@ -604,7 +618,7 @@ switch (val)
 
 		if (S->in_fd==-1) 
 		{
-			Tempstr=CatStr(Tempstr, " 2> /tmp/stderr.out");
+			Tempstr=CatStr(Tempstr, " 2> /dev/null");
 			PseudoTTYSpawn(&S->in_fd,Tempstr);
 			S->out_fd=S->in_fd;
 			if (S->in_fd > -1)

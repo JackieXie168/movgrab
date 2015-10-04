@@ -23,6 +23,7 @@
 #include "DataProcessing.h"
 #include "EncryptedFiles.h"
 #include "ConnectManager.h"
+#include "Hash.h"
 #include "sound.h"
 #include "pty.h"
 #include "Log.h"
