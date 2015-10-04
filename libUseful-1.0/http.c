@@ -48,9 +48,11 @@ DestroyString(Info->RedirectPath);
 DestroyString(Info->ContentType);
 DestroyString(Info->Timestamp);
 DestroyString(Info->PostData);
+DestroyString(Info->PostContentType);
 DestroyString(Info->IfModifiedSince);
 DestroyString(Info->Proxy);
 
+DestroyList(Info->CustomSendHeaders,DestroyString);
 if (Info->Authorization) HTTPAuthDestroy(Info->Authorization);
 if (Info->ProxyAuthorization) HTTPAuthDestroy(Info->ProxyAuthorization);
 free(Info);
@@ -88,6 +90,7 @@ Chunk->Buffer=SetStrLen(Chunk->Buffer,len);
 memcpy(Chunk->Buffer+Chunk->BuffLen,InBuff,InLen);
 Chunk->BuffLen=len;
 ptr=Chunk->Buffer;
+
 if (Chunk->ChunkSize==0)
 {
 	vptr=ptr;
@@ -96,22 +99,29 @@ if (Chunk->ChunkSize==0)
 	ptr=strchr(vptr,'\n');
 	if (ptr)
 	{
-  *ptr='\0';
-	ptr++;
+	  *ptr='\0';
+		ptr++;
 	}
+	else ptr=Chunk->Buffer;
 	Chunk->ChunkSize=strtol(vptr,NULL,16);
+
 	if (Chunk->ChunkSize==0) return(0);
 }
 
 val=(Chunk->Buffer +len) - ptr;
 
+if (ptr)
+{
 if (val > Chunk->ChunkSize) val=Chunk->ChunkSize;
-if (val > InLen) val=InLen;
+if (val > OutLen) val=OutLen;
 
 memcpy(OutBuff,ptr,val);
 Chunk->BuffLen=(Chunk->Buffer+len) - (ptr + val);
 memmove(Chunk->Buffer, ptr+val, Chunk->BuffLen);
+
 Chunk->ChunkSize-=val;
+}
+
 if (Chunk->ChunkSize < 0) Chunk->ChunkSize=0;
 
 return(val);
@@ -196,9 +206,6 @@ switch (*ptr)
 {
 
 		case ' ':
-		 RetStr=AddCharToStr(RetStr,'+'); 
-		break;
-
 		case '(':
 		case ')':
 		case '[':
@@ -263,6 +270,7 @@ HTTPInfoStruct *Info;
 Info=(HTTPInfoStruct *) calloc(1,sizeof(HTTPInfoStruct));
 HTTPInfoSetValues(Info, Host, Port, Logon, Password, Method, Doc, ContentType, ContentLength);
 
+Info->CustomSendHeaders=CreateEmptyList();
 if (StrLen(g_Proxy)) Info->Proxy=CopyStr(Info->Proxy,g_Proxy);
 if (g_Flags) Info->Flags=g_Flags;
 
@@ -299,6 +307,7 @@ void HTTPParseCookie(HTTPInfoStruct *Info, char *Str)
 		if (strncmp(Curr->Item,Tempstr,len)==0)
 		{
 			Curr->Item=CopyStr(Curr->Item,Tempstr);
+			DestroyString(Tempstr);
 			return;
 		}
 		Curr=GetNextListItem(Curr);
@@ -306,6 +315,7 @@ void HTTPParseCookie(HTTPInfoStruct *Info, char *Str)
 
 	if (! Cookies) Cookies=CreateEmptyList();
 	AddItemToList(Cookies,(void *)CopyStr(NULL,Tempstr));
+
 DestroyString(Tempstr);
 }
 
@@ -393,7 +403,14 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 	{
 		if (strcasecmp(Token,"Location")==0)
 		{
-			Info->RedirectPath=CopyStr(Info->RedirectPath,ptr);
+			if (
+						(strncasecmp(ptr,"http:",5)==0) ||
+						(strncasecmp(ptr,"https:",6)==0) 
+					)
+			{
+				Info->RedirectPath=CopyStr(Info->RedirectPath,ptr);
+			}
+			else Info->RedirectPath=FormatStr(Info->RedirectPath,"http://%s:%d%s",Info->Host,Info->Port,ptr);
 		}
 		else if (strcasecmp(Token,"Content-length")==0)
 		{
@@ -405,8 +422,12 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 		}
 		else if (strcasecmp(Token,"WWW-Authenticate")==0) HTTPHandleWWWAuthenticate(Info,ptr);
 
-		else if (strcmp(Token,"Set-Cookie")==0) HTTPParseCookie(Info,ptr);
-		else if (strcmp(Token,"Date")==0) Info->Timestamp=CopyStr(Info->Timestamp,ptr);
+		else if (strcasecmp(Token,"Set-Cookie")==0) HTTPParseCookie(Info,ptr);
+		else if (strcasecmp(Token,"Date")==0) Info->Timestamp=CopyStr(Info->Timestamp,ptr);
+		else if (strcasecmp(Token,"Connection")==0) 
+		{
+				if (strcasecmp(ptr,"Close")==0) Info->Flags &= ~HTTP_KEEPALIVE;
+		}
 		else if (
 			(strcasecmp(Token,"Transfer-Encoding")==0)
 		)
@@ -438,6 +459,7 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 	}
 
 DestroyString(Token);
+DestroyString(Tempstr);
 }
 
 void HTTPParseResponseLine(STREAM *S, HTTPInfoStruct *Info, char *Header)
@@ -472,7 +494,6 @@ char *ptr;
 	}  
   }
 
-
 }
 
 
@@ -482,7 +503,7 @@ char *SendStr=NULL, *Tempstr=NULL;
 char *HA1=NULL, *HA2=NULL, *ClientNonce=NULL, *Digest=NULL;
 int i, AuthCounter;
 
-if (! AuthInfo) return;
+if (! AuthInfo) return(RetStr);
 
 SendStr=CatStr(RetStr,"");
 
@@ -522,6 +543,7 @@ DestroyString(HA1);
 DestroyString(HA2);
 DestroyString(ClientNonce);
 DestroyString(Digest);
+DestroyString(Tempstr);
 
 return(SendStr);
 }
@@ -587,6 +609,13 @@ SendStr=CatStr(SendStr,Buffer);
 */
 
 if (StrLen(Info->IfModifiedSince)) SendStr=MCatStr(SendStr,"If-Modified-Since: ",Info->IfModifiedSince,"\r\n",NULL);
+
+if (
+		 (strcasecmp(Info->Method,"DELETE") !=0) &&
+		 (strcasecmp(Info->Method,"HEAD") !=0) &&
+		 (strcasecmp(Info->Method,"PUT") !=0) 
+	)
+{
 SendStr=CatStr(SendStr,"Accept: */*\r\n");
 
 Tempstr=CopyStr(Tempstr,"");
@@ -599,12 +628,13 @@ else Tempstr=CatStr(Tempstr,"deflate");
 
 if (StrLen(Tempstr)) SendStr=MCatStr(SendStr,"Accept-Encoding: ",Tempstr,"\r\n",NULL);
 else SendStr=CatStr(SendStr,"Accept-Encoding:\r\n");
+}
 
 if (Info->Flags & HTTP_KEEPALIVE) 
 {
 //if (Info->Flags & HTTP_VER1_0) 
 SendStr=CatStr(SendStr,"Connection: Keep-Alive\r\n");
-SendStr=CatStr(SendStr,"Content-Length: 0\r\n");
+//SendStr=CatStr(SendStr,"Content-Length: 0\r\n");
 }
 else
 {
@@ -729,7 +759,6 @@ int RCode;
 if (HTTPInfo->ResponseCode)
 {
 RCode=atoi(HTTPInfo->ResponseCode);
-
 switch (RCode)
 {
 	case 200:
@@ -811,7 +840,10 @@ Flags=Info->Flags;
 
 if (StrLen(Info->Proxy))
 {
-	if (! Info->ProxyAuthorization) Info->ProxyAuthorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	if (! Info->ProxyAuthorization) 
+	{
+		Info->ProxyAuthorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	}
 	HTTPParseURL(Info->Proxy, &Proto, &Host, &Port, &Info->ProxyAuthorization->Logon, &Info->ProxyAuthorization->Password);
 	
 	if (strcasecmp(Proto,"https")==0) 

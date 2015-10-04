@@ -4,10 +4,6 @@
 #include <stdio.h>
 #include "defines.h"
 
-#define LOGFILE_FLUSH 1
-#define LOGFILE_SYSLOG 2
-#define LOGFILE_LOGPID 4
-#define LOGFILE_LOGUSER 8
 
 #define ENCODE_HEX 0
 #define ENCODE_BASE64 1
@@ -16,13 +12,16 @@
 extern "C" {
 #endif
 
-
+void WritePidFile(char *ProgName);
 int HexStrToBytes(char **Buffer, char *HexStr);
 char *BytesToHexStr(char *Buffer, char *Bytes, int len);
 int demonize();
-int Spawn(char *);
+
+void SwitchProgram(char *CommandLine);
+int Spawn(char *CommandLine);
+int SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr);
 int PipeSpawnFunction(int *infd, int *outfd, int *errfd, BASIC_FUNC Func, void *Data);
-int PipeSpawn(int *infd, int *outfd, int *errfd, char *Command);
+int PipeSpawn(int *infd, int *outfd, int *errfd, char *CommandLine);
 int FileExists(char *);
 int LogToFile(char *,char *,...);
 int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval);
@@ -68,7 +67,7 @@ char *HtmlDeQuote(char *RetStr, char *Data);
 
 double ParseHumanReadableDataQty(char *Data, int Type);
 char *GetHumanReadableDataQty(double Size, int Type);
-
+char *FindFileInPath(char *InBuff, char *File, char *Path);
 
 
 #ifdef __cplusplus

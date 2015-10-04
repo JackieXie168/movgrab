@@ -1,6 +1,25 @@
 #include "includes.h"
 #include "base64.h"
 
+void WritePidFile(char *ProgName) 
+{ 
+char *Tempstr=NULL; 
+STREAM *S; 
+ 
+Tempstr=FormatStr(Tempstr,"/var/run/%s.pid",ProgName);
+S=STREAMOpenFile(Tempstr,O_CREAT | O_WRONLY); 
+fchmod(S->in_fd,0644); 
+if (flock(S->in_fd,LOCK_EX|LOCK_NB) !=0) 
+{ 
+STREAMClose(S); 
+exit(1); 
+} 
+ 
+Tempstr=FormatStr(Tempstr,"%d\n",getpid()); 
+STREAMWriteLine(Tempstr,S); 
+STREAMFlush(S); 
+} 
+
 
 void CloseOpenFiles()
 {
@@ -87,21 +106,90 @@ return(1);
 }
 
 
-int Spawn(char *ProgName)
+void SwitchProgram(char *CommandLine)
 {
-int result;
+char **argv, *ptr;
+char *Token=NULL;
+int i;
+
+argv=(char **) calloc(101,sizeof(char *));
+ptr=CommandLine;
+for (i=0; i < 100; i++)
+{
+ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
+if (! ptr) break;
+argv[i]=CopyStr(argv[i],Token);
+}
+
+/* we are the child so we continue */
+execv(argv[0],argv);
+//no point trying to free stuff here, we will no longer
+//be the main program
+}
+
+
+int SpawnWithIO(char *CommandLine, int StdIn, int StdOut, int StdErr)
+{
+int result, fd, i;
 
 result=fork();
-
-
 if (result==0)
 {
-/* we are the child so we continue */
-result=execl(ProgName,NULL);
-return(result);
+if (StdIn > -1) 
+{
+	if (StdIn !=0) 
+	{
+		close(0);
+		dup(StdIn);
+	}
+}
+else
+{
+fd=open("/dev/null",O_RDONLY);
+dup(fd);
+close(fd);
+}
+
+if (StdOut > -1) 
+{
+	if (StdOut !=1) 
+	{
+		close(1);
+		dup(StdOut);
+	}
+}
+else
+{
+fd=open("/dev/null",O_WRONLY);
+dup(fd);
+close(fd);
+}
+
+if (StdErr > -1) 
+{
+	if (StdErr !=2) 
+	{
+		close(2);
+		dup(StdErr);
+	}
+}
+else
+{
+fd=open("/dev/null",O_WRONLY);
+dup(fd);
+close(fd);
+}
+
+SwitchProgram(CommandLine);
+_exit(result);
 }
 else return(result);
+}
 
+
+int Spawn(char *ProgName)
+{
+return(SpawnWithIO(ProgName, 0,1,2));
 }
 
 
@@ -238,7 +326,7 @@ time_t val;
 struct tm *TMS;
 static char *Buffer=NULL;
 char *Tempstr=NULL;
-#define DATE_BUFF_LEN 40
+#define DATE_BUFF_LEN 255
 
 val=Secs;
 
@@ -256,12 +344,14 @@ else setenv("TZ",Tempstr,TRUE);
 tzset();
 }
 
-Buffer=SetStrLen(Buffer,DATE_BUFF_LEN);
+val=StrLen(DateFormat)+ DATE_BUFF_LEN;
+Buffer=SetStrLen(Buffer,val);
 strftime(Buffer,DATE_BUFF_LEN,DateFormat,TMS);
 
 DestroyString(Tempstr);
 return(Buffer);
 }
+
 
 
 char *GetDateStr(char *DateFormat, char *TimeZone)
@@ -638,20 +728,18 @@ MD5Init(&context);
 MD5Update(&context, text, len);
 MD5Final(digestbuff, &context);
 
-switch (Encoding)
+if (Encoding== ENCODE_BASE64)
 {
-case ENCODE_HEX:
-for (i=0; i < MD5LEN; i++)
-{
-Tempstr=FormatStr(Tempstr,"%02x",digestbuff[i]);
-HashStr=CatStr(HashStr,Tempstr);
+	HashStr=SetStrLen(HashStr,42);
+	to64frombits(HashStr,digestbuff,16);
 }
-break;
-
-case ENCODE_BASE64:
-HashStr=SetStrLen(HashStr,42);
-to64frombits(HashStr,digestbuff,16);
-break;
+else
+{
+	for (i=0; i < MD5LEN; i++)
+	{
+	Tempstr=FormatStr(Tempstr,"%02x",digestbuff[i]);
+	HashStr=CatStr(HashStr,Tempstr);
+	}
 }
 
 DestroyString(digestbuff);
@@ -1038,7 +1126,7 @@ if (*ptr=='<')
 	while (isspace(*ptr)) ptr++;
 
 	len=0;
-	while ((*ptr != '>') && (! isspace(*ptr)))
+	while ((*ptr != '>') && (! isspace(*ptr)) && (*ptr !='\0'))
 	{
 		*TagType=AddCharToBuffer(*TagType,len,*ptr);
 		len++;
@@ -1249,3 +1337,27 @@ return(Str);
 }
 
 
+char *FindFileInPath(char *InBuff, char *File, char *Path)
+{
+char *Tempstr=NULL, *CurrPath=NULL, *RetStr=NULL, *ptr;
+
+RetStr=CopyStr(InBuff,"");
+
+ptr=GetToken(Path,":",&CurrPath,0);
+while (ptr)
+{
+Tempstr=MCopyStr(Tempstr,CurrPath,"/",File,NULL);
+if (access(Tempstr,F_OK)==0) 
+{
+RetStr=CopyStr(RetStr,Tempstr);
+break;
+}
+
+ptr=GetToken(ptr,":",&CurrPath,0);
+}
+
+DestroyString(Tempstr);
+DestroyString(CurrPath);
+
+return(RetStr);
+}

@@ -18,10 +18,11 @@ int IsSockConnected(int sock)
 struct sockaddr_in sa;
 int salen, result;
 
-
+if (sock==-1) return(FALSE);
 salen=sizeof(sa);
 result=getpeername(sock,(struct sockaddr *) &sa, &salen);
 if (result==0) return(TRUE);
+if (errno==ENOTCONN) return(SOCK_CONNECTING);
 return(FALSE);
 }
 
@@ -347,15 +348,17 @@ int STREAMIsConnected(STREAM *S)
 {
 int result=FALSE;
 
-if (IsSockConnected(S->in_fd))
+if (! S) return(FALSE);
+result=IsSockConnected(S->in_fd);
+if (result==TRUE)
 {
-if (S->Flags & SF_CONNECTING)
-{
-S->Flags |= SF_CONNECTED;
-S->Flags &= (~SF_CONNECTING);
+	if (S->Flags & SF_CONNECTING)
+	{
+		S->Flags |= SF_CONNECTED;
+		S->Flags &= (~SF_CONNECTING);
+	}
 }
-result=TRUE;
-}
+if ((result==SOCK_CONNECTING) && (! (S->Flags & SF_CONNECTING))) result=FALSE;
 return(result);
 }
 
@@ -392,10 +395,13 @@ return(result);
 
 int STREAMDoPostConnect(STREAM *S, int Flags)
 {
-int result=TRUE;
+int result=TRUE, *ptr;
 
 //if (Flags & CONNECT_SOCKS_PROXY) result=DoSocksProxyTunnel(S);
 if (Flags & CONNECT_SSL) DoSSLClientNegotiation(S, Flags);
+
+ptr=GetRemoteIP(S->in_fd);
+if (ptr) STREAMSetValue(S,"PeerIP",ptr);
 
 return(result);
 }
@@ -498,55 +504,6 @@ ptr=GetToken(ptr,"\\S",&Token,GETTOKEN_QUOTES);
 }
 
 
-}
-
-
-int STREAMExpectAndReply(STREAM *S, char *Expect, char *Reply)
-{
-int match=0, len=0, inchar;
-
-len=StrLen(Expect);
-inchar=STREAMReadChar(S);
-while (inchar !=EOF)
-{
-  if (inchar > 0)
-  {
-	//if the current value does not equal where we are in the string
-	//we have to consider whether it is the first character in the string
-	if (Expect[match]!=inchar) match=0;
-
-	if (Expect[match]==inchar)
-	{
-		match++;
-		if (match==len)
-		{
-			if (Reply) STREAMWriteLine(Reply,S);
-			return(TRUE);
-		}
-	}
-
-  }
-inchar=STREAMReadChar(S);
-}
-
-return(FALSE);
-}
-
-
-int STREAMExpectSilence(STREAM *S)
-{
-int inchar;
-char *Tempstr=NULL;
-int len=0;
-
-inchar=STREAMReadChar(S);
-while (inchar  > 0)
-{
-	Tempstr=AddCharToBuffer(Tempstr,len,inchar);
-	len++;
-	inchar=STREAMReadChar(S);
-}
-DestroyString(Tempstr);
 }
 
 
@@ -695,8 +652,6 @@ return(result);
 }
 
 
-#define NOCONNECT -1
-
 /*
 int STREAMInternalLastHop(STREAM *S,char *DesiredHost,int DesiredPort, char *LastHop)
 {
@@ -723,7 +678,7 @@ int STREAMConnectToHost(STREAM *S, char *DesiredHost, int DesiredPort,int Flags)
 {
 ListNode *Curr;
 char *Token=NULL, *ptr;
-int result=NOCONNECT;
+int result=FALSE;
 int HopNo=0;
 ListNode *LastHop=NULL;
 

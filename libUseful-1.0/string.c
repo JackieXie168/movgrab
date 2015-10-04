@@ -39,7 +39,8 @@ int si, ci, slen, clen, olen=0;
 
 slen=StrLen(String);
 clen=StrLen(QuoteChars);
-Tempstr=CopyStr(Tempstr,"");
+
+Tempstr=CopyStr(Buffer,"");
 
 for (si=0; si < slen; si++)
 {
@@ -259,6 +260,20 @@ return(actb_ptr);
 }
 
 
+inline char *AddBytesToBuffer(char *Dest, int DestLen, char *Bytes, int NoOfBytes)
+{
+char *actb_ptr=NULL;
+
+//if (Dest==NULL || ((DestLen % 100)==0)) 
+actb_ptr=(char *) realloc((void *) Dest,DestLen + NoOfBytes +10);
+//else actb_ptr=Dest;
+
+memcpy(actb_ptr+DestLen,Bytes,NoOfBytes);
+
+return(actb_ptr);
+}
+
+
 
 char *SetStrLen(char *Str,int len)
 {
@@ -393,6 +408,8 @@ while (ptr && (*ptr != '\0'))
 return(ReturnStr);
 }
 
+#define ESC 0x1B
+
 char *DeQuoteStr(char *Buffer, const char *Line)
 {
 char *out, *in;
@@ -409,12 +426,18 @@ while(in && (*in != '\0') )
 		in++;
 		switch (*in)
 		{
+		  case 'e': 
+			out=AddCharToBuffer(out,olen,ESC);
+			olen++;
+			break;
+
+
 		   case 'n': 
 			out=AddCharToBuffer(out,olen,'\n');
 			olen++;
 			break;
 
-		   case 'r': 
+		  case 'r': 
 			out=AddCharToBuffer(out,olen,'\r');
 			olen++;
 			break;
@@ -612,7 +635,7 @@ return(ptr);
 
 int GetTokenFindSeparator(char *Pattern, char *String, const char **SepStart, const char **SepEnd, int Flags)
 {
-char *start_ptr, *end_ptr;
+char *start_ptr=NULL, *end_ptr=NULL;
 char *Sep=NULL, *SepPtr, *ptr;
 
 start_ptr=String;

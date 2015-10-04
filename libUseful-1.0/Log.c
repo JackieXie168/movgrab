@@ -79,20 +79,24 @@ free(LogFile);
 
 void LogFileInternalDoRotate(TLogFile *LogFile)
 {
-	struct stat FStat;
-	char *Tempstr=NULL;
+  struct stat FStat;
+  char *Tempstr=NULL;
 
-	stat(LogFile->Path,&FStat);
-	if (FStat.st_size > LogFile->MaxSize)
-	{
-		Tempstr=MCopyStr(Tempstr,LogFile->Path,"-",NULL);
-		rename(LogFile->Path,Tempstr);
-		STREAMClose(LogFile->S);
-		LogFile->S=STREAMOpenFile(LogFile->Path,O_CREAT | O_APPEND | O_WRONLY);
-	}
+  if (LogFile->MaxSize > 0)
+  {
+  fstat(LogFile->S->out_fd,&FStat);
+  if (FStat.st_size > LogFile->MaxSize)
+  {
+    Tempstr=MCopyStr(Tempstr,LogFile->Path,"-",NULL);
+    rename(LogFile->Path,Tempstr);
+    STREAMClose(LogFile->S);
+    LogFile->S=STREAMOpenFile(LogFile->Path,O_CREAT | O_APPEND | O_WRONLY);
+  }
+  }
 
-	DestroyString(Tempstr);
+  DestroyString(Tempstr);
 }
+
 
 
 int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval)

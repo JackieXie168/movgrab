@@ -16,6 +16,7 @@
 #include "socket.h"
 #include "unix_socket.h"
 #include "string.h"
+#include "expect.h"
 #include "list.h"
 #include "file.h"
 #include "GeneralFunctions.h"

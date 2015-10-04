@@ -78,8 +78,6 @@ int IsIPAddress(char *);
 
 int STREAMAddConnectionHop(STREAM *S, char *Value);
 void STREAMAddConnectionHopList(STREAM *S, char *HopList);
-int STREAMExpectAndReply(STREAM *S, char *Expect, char *Reply);
-int STREAMExpectSilence(STREAM *S);
 
 
 #ifdef __cplusplus

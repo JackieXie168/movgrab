@@ -7,6 +7,8 @@
 #include "string.h"
 #include "pty.h"
 
+ListNode *TTYAttribs=NULL;
+
 void HangUpLine(int tty)
 {
 int result;
@@ -24,17 +26,58 @@ sleep(5);
 tcsetattr(tty,TCSANOW,&oldtty_data);
 }
 
+void ResetTTY(int tty)
+{
+struct termios *tty_data;
+char *Tempstr=NULL;
+ListNode *Curr;
+
+Tempstr=FormatStr(Tempstr,"%d",tty);
+Curr=ListFindNamedItem(TTYAttribs,Tempstr);
+if (Curr)
+{
+	tty_data=(struct termios *) Curr->Item;
+	tcsetattr(tty,TCSANOW,tty_data);
+	DeleteNodeFromList(Curr);
+	free(tty_data);
+}
+
+DestroyString(Tempstr);
+}
 
 void InitTTY(int tty, int LineSpeed, int Flags)
 {
-struct termios tty_data;
-int result;
+struct termios tty_data, *old_tty_data;
+int result, val;
+char *Tempstr=NULL;
+ListNode *Curr;
 
+Tempstr=FormatStr(Tempstr,"%d",tty);
+if (! TTYAttribs) TTYAttribs=CreateEmptyList();
+Curr=ListFindNamedItem(TTYAttribs,Tempstr);
+
+if (! Curr)
+{
+old_tty_data=(struct termios *) calloc(1,sizeof(struct termios));
+AddNamedItemToList(TTYAttribs,Tempstr,old_tty_data);
+}
+else old_tty_data=(struct termios *) Curr->Item;
+
+tcgetattr(tty,old_tty_data);
 tcgetattr(tty,&tty_data);
+
 tty_data.c_iflag=IGNBRK | IGNPAR;
+if (Flags & TTYFLAG_CANON) tty_data.c_iflag|= ICANON;
+else tty_data.c_iflag &= ~ICANON;
+
 if (Flags & TTYFLAG_CRLF) tty_data.c_iflag |= ICRNL;
+else tty_data.c_iflag &= ~ICRNL;
+
 if (Flags & TTYFLAG_LFCR) tty_data.c_iflag |= INLCR;
-tty_data.c_oflag=0 ;
+tty_data.c_oflag=0;
+
+if (Flags & TTYFLAG_LFCR) tty_data.c_oflag |= ONLCR | OPOST;
+
 tty_data.c_cflag=CREAD | CS8 | HUPCL;
 if (Flags & TTYFLAG_SOFTWARE_FLOW) 
 {
@@ -42,18 +85,30 @@ tty_data.c_iflag |= IXON | IXOFF;
 }
 if (Flags & TTYFLAG_HARDWARE_FLOW) tty_data.c_cflag |=CRTSCTS;
 if (Flags & TTYFLAG_ECHO) tty_data.c_cflag |= ECHO;
-tty_data.c_lflag=0;
+tty_data.c_lflag=ISIG;
 tty_data.c_cc[VMIN]=1;
 tty_data.c_cc[VTIME]=0;
 
 if (LineSpeed > 0)
 {
-cfsetispeed(&tty_data,LineSpeed);
-cfsetospeed(&tty_data,LineSpeed);
+switch (LineSpeed)
+{
+case 2400: val=B2400; break;
+case 4800: val=B4800; break;
+case 9600: val=B9600; break;
+case 19200: val=B19200; break;
+case 38400: val=B38400; break;
+case 57600: val=B57600; break;
+default: val=B115200; break;
+}
+cfsetispeed(&tty_data,val);
+cfsetospeed(&tty_data,val);
 }
 
 tcflush(tty,TCIFLUSH);
 result=tcsetattr(tty,TCSANOW,&tty_data);
+
+DestroyString(Tempstr);
 }
 
 

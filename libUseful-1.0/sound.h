@@ -13,7 +13,11 @@ unsigned int DataSize;
 #define VOLUME_LEAVEALONE -1
 #define PLAYSOUND_NONBLOCK 1
 
-int PlaySoundFile(char *Path, int Vol, int Flags);
+
+int SoundPlayFile(char *Path, int Vol, int Flags);
 int SoundAlterVolume(char *Device, char *Channel, int delta);
+int SoundOpenOutput(char *Dev, TAudioInfo *Info);
+int SoundOpenInput(char *Dev, TAudioInfo *Info);
+
 
 #endif

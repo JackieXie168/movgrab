@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <syslog.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "defines.h"
 #include "string.h"

@@ -5,6 +5,11 @@
 #include "defines.h"
 #include "file.h"
 
+#define LOGFILE_FLUSH 1
+#define LOGFILE_SYSLOG 2
+#define LOGFILE_LOGPID 4
+#define LOGFILE_LOGUSER 8
+
 extern char *G_LogFilePath;
 
 int LogFileSetValues(char *FileName, int Flags, int MaxSize, int FlushInterval);

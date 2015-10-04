@@ -14,8 +14,10 @@ extern "C" {
 #define STREAM_TIMEOUT -3
 #define STREAM_DATA_ERROR -4
 
-#define SF_AUTH 1
-#define SF_SYMLINK_OK 2
+#define FLUSH_FULL 0
+#define FLUSH_LINE 1
+#define SF_AUTH 2
+#define SF_SYMLINK_OK 4
 #define SF_CONNECTING 8
 #define SF_CONNECTED 16
 #define SF_HANDSHAKE_DONE 32
@@ -35,9 +37,6 @@ extern "C" {
 #define STREAM_TYPE_SSL 5
 #define STREAM_TYPE_HTTP 6
 #define STREAM_TYPE_CHUNKED_HTTP 7
-
-#define FLUSH_FULL 0
-#define FLUSH_LINE 1
 
 #define O_LOCK O_NOCTTY
 

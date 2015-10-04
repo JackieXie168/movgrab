@@ -66,8 +66,9 @@ char *Tempstr=NULL;
 
 ptr=Header;
 if (strncmp(ptr,"ENCR ",5)==0) ptr+=5;
-Tempstr=FormatStr(Tempstr,"%s key='%s'",ptr,Key);
+Tempstr=MCopyStr(Tempstr,ptr," key='",Key,"'",NULL);
 
+fprintf(stderr,"SASDP: [%s]\n",Tempstr);
 STREAMAddStandardDataProcessor(S,"crypto","",Tempstr);
 DestroyString(Tempstr);
 }

@@ -292,7 +292,7 @@ return(InsertNamedItemIntoList(InsertNode, NULL, Item));
 }
 
 
-void InsertItemIntoSortedList(ListNode *List, void *Item, int (*LessThanFunc)(void *, void *, void *))
+ListNode *InsertItemIntoSortedList(ListNode *List, void *Item, int (*LessThanFunc)(void *, void *, void *))
 {
 ListNode *Curr, *Prev;
 
@@ -304,7 +304,7 @@ Prev=Curr;
 Curr=GetNextListItem(Prev);
 }
 
-InsertItemIntoList(Prev,Item);
+return(InsertItemIntoList(Prev,Item));
 }
 
 
@@ -347,6 +347,7 @@ if (Next !=NULL) Next->Prev=Prev;
 Contents=Node->Item;
 
 DecrNoOfItems(Node);
+DestroyString(Node->Tag);
 free(Node);
 return(Contents);
 }

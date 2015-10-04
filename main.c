@@ -1,6 +1,6 @@
 //Movgrab. A downloader for movie websites.
 //Written by Colum Paget.
-//Copyright 2009 Colum Paget.
+//Copyright 2010 Colum Paget.
 
 //
 
@@ -25,14 +25,13 @@
 #include <string.h>
 
 
-
 char *FileTypes[]={".flv",".mp3",".mp4",".mov",".wma",".m4a",".wmv",".avi",".3gp",NULL};
-char *DownloadTypes[]={"none","generic","bbc","youtube","metacafe","google","dailymotion","break","ehow","vimeo","almostkilled","5min","ign","dalealplay","vbox7","blip.tv","3gpdb","ted","myvideo","clipshack","crazymotion","mytopclip","redbalcony","berkeley","yale","sdnhm","uchannel","princeton","ucsd.tv",NULL};
-char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","BBC IPlayer: http://www.bbc.co.uk/iplayer","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Google Video: http://video.google.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.ign.com","www.dalealplay.com","www.vbox7.com","www.blip.tv","www.3gpdb.com","www.ted.com","www.myvideo.de","www.clipshack.com","crazymotion.net","www.mytopclip.com","www.redbalcony.com","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","University of California Television",NULL};
+char *DownloadTypes[]={"none","generic","youtube","metacafe","google","dailymotion","break","ehow","vimeo","almostkilled","5min","ign","vbox7","blip.tv","3gpdb","ted","myvideo","clipshack","crazymotion","mytopclip","redbalcony","mobango","izlese","izles", "izles.org","berkeley","yale","sdnhm","uchannel","princeton","ucsd.tv","reuters","clipfish.de","liveleak","academicearth","photobucket","vidoevo",NULL};
+char *DownloadNames[]={"none","Generic: Search in page for http://*.flv, http://*.mp3, http//*.mp4 etc, etc, etc","YouTube: http://www.youtube.com","Metacafe: http://www.metacafe.com","Google Video: http://video.google.com","Daily Motion: http://www.dailymotion.com","www.break.com","www.ehow.com","www.vimeo.com","www.almostkilled.com","www.5min.com","www.ign.com","www.vbox7.com","www.blip.tv","www.3gpdb.com","www.ted.com","www.myvideo.de","www.clipshack.com","crazymotion.net","www.mytopclip.com","www.redbalcony.com","www.mobango.com","www.izlese.org","www.izles.net","www.izles.org","Berkeley University: http://webcast.berkeley.edu","Yale University: http://oyc.yale.edu","San Diago Natural History Museum: http://www.sdnhm.org/webcasts/index.html","UChannel: http://uc.princeton.edu","Princeton University: http://www.princeton.edu/WebMedia/","University of California Television","Reuters","clipfish.de","Liveleak","Academic Earth","Photobucket","VidoEmo/VidoEvo",NULL};
 
-typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_BBC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_GOOGLE_VIDEO, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_IGN, TYPE_DALEALPLAY, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_3GPDB,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_CRAZYMOTION, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV,
+typedef enum {TYPE_NONE, TYPE_GENERIC, TYPE_YOUTUBE, TYPE_METACAFE, TYPE_GOOGLE_VIDEO, TYPE_DAILYMOTION, TYPE_BREAK_COM, TYPE_EHOW,  TYPE_VIMEO, TYPE_ALMOST_KILLED, TYPE_FIVE_MIN, TYPE_IGN, TYPE_VBOX7,TYPE_BLIP_TV,TYPE_3GPDB,TYPE_TED, TYPE_MYVIDEO, TYPE_CLIPSHACK, TYPE_CRAZYMOTION, TYPE_MYTOPCLIP,TYPE_REDBALCONY, TYPE_MOBANGO,TYPE_IZLESE,TYPE_IZLES, TYPE_IZLES_ORG, TYPE_BERKELEY, TYPE_YALE, TYPE_SDNHM, TYPE_UCHANNEL, TYPE_PRINCETON, TYPE_UCSDTV, TYPE_REUTERS, TYPE_CLIPFISH_DE, TYPE_LIVELEAK, TYPE_LIVELEAK_STAGE2, TYPE_ACADEMIC_EARTH,TYPE_PHOTOBUCKET,TYPE_VIDEOEMO,
 /*Following ones are not real types, but used by internal processes */
-TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2,TYPE_3GPDB_STAGE2,TYPE_BERKELEY_STAGE2, TYPE_BBC_STAGE2, TYPE_YOUTUBE_REF, TYPE_CLIPSHACK_STAGE2, TYPE_CLIPSHACK_STAGE3}TDT;
+TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2,TYPE_3GPDB_STAGE2,TYPE_BERKELEY_STAGE2, TYPE_YOUTUBE_REF, TYPE_CLIPSHACK_STAGE2, TYPE_CLIPSHACK_STAGE3, TYPE_VIDEOEMO_STAGE2}TDT;
 
 #define FLAG_QUIET 1
 #define FLAG_BACKGROUND 2
@@ -44,6 +43,13 @@ TYPE_METACAFE_JS_REDIR, TYPE_METACAFE_FINAL, TYPE_VIMEO_STAGE2, TYPE_EHOW_STAGE2
 #define FLAG_HTTPS 128
 #define FLAG_TEST  256
 #define FLAG_STDIN 512
+#define FLAG_POST  1024
+#define FLAG_DL_RETRY  2048
+
+#define EXTRACT_DEQUOTE  1
+#define EXTRACT_WITHIN_QUOTES 2
+#define EXTRACT_NOSPACES 4
+
 
 int Flags=0;
 char *ItemSelectionArg=NULL;
@@ -53,12 +59,199 @@ char *SaveFilePath=NULL;
 int Type=TYPE_NONE, DefaultPort=80;
 ListNode *DownloadQueue=NULL;
 STREAM *StdIn=NULL;
-
+char *Username=NULL, *Password=NULL;
+int DLWaitInterval=10, DLWaitPeriod=60;
 
 int DownloadItem(char *URL, char *Path, int Post);
 void DownloadPage(char *Path, int Type, char *Title, int Post);
 
+int CheckForKeyboardInput()
+{
+char *Tempstr=NULL;
+int result=FALSE;
 
+if (STREAMCheckForBytes(StdIn)) 
+{
+	Tempstr=STREAMReadLine(Tempstr,StdIn);
+	StripTrailingWhitespace(Tempstr);
+	if (StrLen(Tempstr))
+	{
+		AddItemToList(DownloadQueue,CopyStr(NULL,Tempstr));
+		if (! (Flags & FLAG_QUIET)) fprintf(stderr,"\r\nQUEUED: %s\n",Tempstr);
+		result=TRUE;
+	}
+}
+DestroyString(Tempstr);
+
+return(result);
+}
+
+
+
+
+//This function Extracts Text from a line that's found between two specified
+//chunks of text 'ItemStart' and 'ItemEnd'
+char *GenericExtractFromLine(char *Line, char *ItemName, char *ItemStart, char *ItemEnd, ListNode *Vars, int Flags)
+{
+char *ptr, *ptr2, *Token=NULL, *Item=NULL;
+int GTF=0;
+
+		if (Flags & EXTRACT_WITHIN_QUOTES) GTF=GETTOKEN_QUOTES;
+
+		if (StrLen(ItemStart)) ptr=GetToken(Line,ItemStart,&Token,0);
+		else ptr=Line;
+
+		ptr=GetToken(ptr,ItemEnd,&Token,GTF);
+		
+		//check if the start string occurs more than once in the Token that we've grabbed
+		if (StrLen(ItemStart)) ptr2=strstr(Token,ItemStart);
+		else ptr2=NULL;
+
+		while (ptr2)
+		{
+		ptr2+=StrLen(ItemStart);
+		memmove(Token,ptr2,Token+StrLen(Token)-ptr2+1);
+		//because of memmove we can strstr in Token again	
+		ptr2=strstr(Token,ItemStart);
+		}
+		if (Flags & EXTRACT_DEQUOTE) Item=HTTPUnQuote(Item,Token);
+		else Item=CopyStr(Item,Token);
+		StripLeadingWhitespace(Item);
+		StripTrailingWhitespace(Item);
+		StripQuotes(Item);
+
+		if (Flags & EXTRACT_NOSPACES)
+		{
+			ptr2=strchr(Item,' ');
+			while (ptr2)
+			{
+				*ptr2='+';
+				ptr2=strchr(ptr2,' ');
+			}
+		}
+
+		SetVar(Vars,ItemName,Item);
+
+DestroyString(Token);
+DestroyString(Item);
+
+return(ptr);
+}
+	
+
+//---------------- Functions to do with files and file names ----------
+
+//Strip out characters that make it difficult to specify a file on the 
+//command line, such as '&' or ';' '>' that mean something to the shell
+char *MakeFilesystemSafeName(char *Buffer, char *Path)
+{
+char *Str=NULL;
+char BadChars[]="'\"()/?*&<>; ";
+char *ptr;
+
+Str=CopyStr(Buffer,"");
+ptr=Path;
+while (ptr && (*ptr != '\0'))
+{
+	if (strchr(BadChars,*ptr)) Str=AddCharToStr(Str,'_');
+	else Str=AddCharToStr(Str,*ptr);
+	ptr++;
+}
+return(Str);
+}
+
+
+//guess the extension of a file, some sites don't have extensions
+//on their filenames
+char *GuessExtn(char *ContentType, char *ID)
+{
+char *ptr=NULL;
+
+if (ID) ptr=strchr(ID,'.');
+if (!ptr) ptr=".flv";
+
+
+if (ContentType)
+{
+if (strcmp(ContentType,"audio/mp3")==0) ptr=".mp3";
+else if (strcmp(ContentType,"audio/mpeg")==0) ptr=".mp3";
+else if (strcmp(ContentType,"video/x-flv")==0) ptr=".flv";
+else if (strcmp(ContentType,"video/flv")==0) ptr=".flv";
+else if (strcmp(ContentType,"video/mp4")==0) ptr=".mp4";
+else if (strcmp(ContentType,"video/3gpp")==0) ptr=".3gp";
+}
+
+return(ptr);
+}
+
+
+//Open the file we are going to save the move to. Check in the user 
+//filename preference stored in the global variable 'SaveFilePath'
+//If that's set to '-' then open stdout and write to that, if it's
+//set to anything else, then use that as the filename. Otherwise
+//build the filename from available info.
+//URL is used to provide a unique MD5 so that two downloads from
+//different sites with the same title don't overwrite each other
+STREAM *OpenSaveFile(char *Title, char *URL, int *FileSize)
+{
+char *Tempstr=NULL, *Path=NULL, *MD5=NULL, *Extn=NULL, *ptr;
+STREAM *S;
+struct stat FStat;
+
+*FileSize=0;
+
+
+if (StrLen(SaveFilePath))
+{
+	if (strcmp(SaveFilePath,"-")==0)
+	{
+		return(STREAMFromFD(1));
+	}
+	else Tempstr=CopyStr(Tempstr,SaveFilePath);
+}
+else if (StrLen(Title)) ptr=Title;
+else 
+{
+		ptr=strrchr(URL,'?');
+		if (ptr) *ptr='\0';
+
+
+		ptr=strrchr(URL,'/');
+		if (ptr) ptr++;
+		else ptr=URL;
+}
+
+
+Tempstr=MakeFilesystemSafeName(Tempstr, ptr);
+ptr=strrchr(Tempstr,'.');
+if (ptr) *ptr='\0';
+
+
+MD5=HashMD5(MD5,URL,StrLen(URL),0);
+Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
+
+S=STREAMOpenFile(Tempstr,O_CREAT | O_RDWR);
+if (! STREAMLock(S,LOCK_EX|LOCK_NB)) 
+{
+if (! (Flags & FLAG_QUIET)) fprintf(stderr,"Already downloading this item!\n");
+fflush(NULL);
+exit(0);
+}
+STREAMSeek(S,0,SEEK_END);
+
+//Filesize can be used to resume a part download
+fstat(S->in_fd,&FStat);
+*FileSize=FStat.st_size;
+
+DestroyString(Tempstr);
+DestroyString(Extn);
+DestroyString(MD5);
+
+return(S);
+}
+
+
+//---- Functions relating to connecting to hosts and downloading webpages ----
 
 STREAM *ConnectAndSendHeaders(char *Server, char *Doc, int Port, int Post, int BytesRange)
 {
@@ -74,13 +267,14 @@ else Method=CopyStr(Method,"GET");
 
 if (Port==0) Port=80;
 
-Tempstr=MCopyStr(Tempstr,"/",Doc,NULL);
-Info=HTTPInfoCreate(Server, Port, "","", Method, Tempstr, "",0);
+Tempstr=FormatStr(Tempstr,"http://%s:%d/%s",Server,Port,Doc);
+//Info=HTTPInfoCreate(Server, Port, "","", Method, Tempstr, "",0);
+Info=HTTPInfoFromURL(Method, Tempstr);
 if (Flags & FLAG_HTTPS) Info->Flags |= HTTP_SSL|HTTP_SSL_REWRITE;
+if (Flags & FLAG_DEBUG3) Info->Flags |= HTTP_DEBUG;
 
 if (BytesRange > 0)
 {
-	Info->CustomSendHeaders=CreateEmptyList();
 	Tempstr=FormatStr(Tempstr,"bytes=%d-",BytesRange);
 	SetVar(Info->CustomSendHeaders,"Range",Tempstr); 
 }
@@ -92,7 +286,7 @@ DestroyString(Method);
 return(Con);
 }
 
-
+//Dispaly progress of download
 void DisplayProgress(char *FullTitle, unsigned int bytes_read, unsigned int DocSize,time_t Now, int PrintName)
 {
 float Percent, f1, f2;
@@ -103,17 +297,7 @@ static unsigned int PrevBytesRead=0;
 
 if ((Now-SpeedStart) == 0) return;
 
-if (STREAMCheckForBytes(StdIn)) 
-{
-	Title=STREAMReadLine(Title,StdIn);
-	StripTrailingWhitespace(Title);
-	if (StrLen(Title))
-	{
-		AddItemToList(DownloadQueue,CopyStr(NULL,Title));
-		if (! (Flags & FLAG_QUIET)) fprintf(stderr,"\r\nQUEUED: %s\n",Title);
-		PrintName=TRUE;
-	}
-}
+if (CheckForKeyboardInput()) PrintName=TRUE;
 
 
 Title=CopyStrLen(Title,FullTitle,30);
@@ -161,225 +345,53 @@ DestroyString(Title);
 }
 
 
-char *MakeFilesystemSafeName(char *Buffer, char *Path)
+STREAM *ConnectAndRetryUntilDownload(char *Server, char *Doc, int Port, int DLFlags, int BytesRead)
 {
-char *Str=NULL;
-char BadChars[]="/?* ";
-char *ptr;
+STREAM *Con;
+int i=0,j,NoOfWaits;
+char *Tempstr=NULL, *ptr;
 
-Str=CopyStr(Buffer,"");
-ptr=Path;
-while (ptr && (*ptr != '\0'))
+NoOfWaits=DLWaitPeriod / DLWaitInterval;
+if (NoOfWaits==0) NoOfWaits++;
+if ((DLWaitInterval > 0) && (NoOfWaits < 2)) NoOfWaits++;
+
+do
 {
-	if (strchr(BadChars,*ptr)) Str=AddCharToStr(Str,'_');
-	else Str=AddCharToStr(Str,*ptr);
-	ptr++;
-}
-return(Str);
-}
+	Con=ConnectAndSendHeaders(Server, Doc, Port, DLFlags & FLAG_POST,BytesRead);
+	if (! (DLFlags & FLAG_DL_RETRY))  break;
 
-
-//guess the extension of a file, some sites don't have extensions
-//on their filenames
-char *GuessExtn(char *ContentType, char *ID)
-{
-char *ptr=NULL;
-
-if (ID) ptr=strchr(ID,'.');
-if (!ptr) ptr=".flv";
-
-if (ContentType)
-{
-if (strcmp(ContentType,"audio/mp3")==0) ptr=".mp3";
-else if (strcmp(ContentType,"audio/mpeg")==0) ptr=".mp3";
-else if (strcmp(ContentType,"video/x-flv")==0) ptr=".flv";
-else if (strcmp(ContentType,"video/flv")==0) ptr=".flv";
-else if (strcmp(ContentType,"video/mp4")==0) ptr=".mp4";
-else if (strcmp(ContentType,"video/3gpp")==0) ptr=".3gp";
-}
-
-return(ptr);
-}
-
-
-//Open the file we are going to save the move to. Check in the user 
-//filename preference stored in the global variable 'SaveFilePath'
-//If that's set to '-' then open stdout and write to that, if it's
-//set to anything else, then use that as the filename. Otherwise
-//build the filename from available info.
-//URL is used to provide a unique MD5 so that two downloads from
-//different sites with the same title don't overwrite each other
-STREAM *OpenSaveFile(char *Path, char *URL, int *FileSize)
-{
-char *Tempstr=NULL, *MD5=NULL, *Extn=NULL, *ptr;
-STREAM *S;
-struct stat FStat;
-
-*FileSize=0;
-
-if (StrLen(SaveFilePath))
-{
-	if (strcmp(SaveFilePath,"-")==0)
-	{
-		return(STREAMFromFD(1));
-	}
-	else Tempstr=CopyStr(Tempstr,SaveFilePath);
-}
-else
-{
-	MD5=HashMD5(MD5,URL,StrLen(URL),0);
-	Tempstr=MakeFilesystemSafeName(Tempstr, Path);
-	ptr=strrchr(Tempstr,'.');
-	if (ptr)
-	{
-		Extn=CopyStr(Extn,ptr);
-		*ptr='\0';
-	}
-
-Tempstr=MCatStr(Tempstr,"-",MD5,Extn,NULL);
-}
-
-S=STREAMOpenFile(Tempstr,O_CREAT | O_RDWR);
-if (! STREAMLock(S,LOCK_EX|LOCK_NB)) 
-{
-if (! (Flags & FLAG_QUIET)) fprintf(stderr,"Already downloading this item!\n");
-fflush(NULL);
-exit(0);
-}
-STREAMSeek(S,0,SEEK_END);
-
-//Filesize can be used to resume a part download
-fstat(S->in_fd,&FStat);
-*FileSize=FStat.st_size;
-
-DestroyString(Tempstr);
-DestroyString(Extn);
-DestroyString(MD5);
-
-return(S);
-}
-
-
-
-void BBCDownloadItem(char *URL, ListNode *Vars)
-{
-STREAM *Con, *S;
-char *Tempstr=NULL, *Server=NULL, *Doc=NULL, *Args=NULL, *Title=NULL, *ptr;
-HTTPInfoStruct *Info;
-unsigned int BytesRead=0, TotalLength=0, val, result, Port=80;
-time_t LastProgressDisplay, Now;
-
-#define CHUNK_SIZE 0x1000000
-
-if (Flags & FLAG_TEST) 
-{
-	fprintf(stderr,"TEST MODE: would have downloaded %s\n",URL);
-	return;
-}
-
-Title=CopyStr(Title,GetVar(Vars,"Title"));
-HTTPSetUserAgent("Apple iPhone v1.1.4 CoreMedia v1.0.0.4A102");
-
-ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
-if (Port==0) Port=DefaultPort;
-Doc=MCopyStr(Doc,"/",ptr,NULL);
-Info=HTTPInfoCreate(Server, Port, "","", "GET", Doc, "",0);
-if (Flags & FLAG_DEBUG3) Info->Flags |= HTTP_DEBUG;
-if (Flags & FLAG_HTTPS)
-{
- Info->Flags |= HTTP_SSL;
- Info->Port =443;
-}
-Info->CustomSendHeaders=CreateEmptyList();
-SetVar(Info->CustomSendHeaders,"Range", "bytes=0-1");
-Con=HTTPTransact(Info);
-
-if (Con)
-{
-if (atoi(GetVar(Con->Values,"HTTP:ResponseCode"))==206)
-{
-//Got 'Partial Content', download chunks
-Tempstr=CopyStr(Tempstr,GetVar(Con->Values,"HTTP:Content-Range"));
-ptr=strrchr(Tempstr,'/');
-ptr++;
-TotalLength=atoi(ptr);
-Tempstr=SetStrLen(Tempstr,4096);
-
-val=0;
-Tempstr=SetStrLen(Tempstr,4096);
-while (val < Info->ContentLength)
-{
-result=STREAMReadBytes(Con,Tempstr,4096);
-val+=result;
-}
-
-STREAMClose(Con);
-Info->S=NULL;
-
-ptr=strrchr(Doc,'?');
-if (ptr) *ptr='\0';
-SetVar(Vars,"Extn",GuessExtn(GetVar(Con->Values,"HTTP:Content-type"),Doc));
-Tempstr=SubstituteVarsInString(Tempstr,"$(Title)$(Extn)",Vars,0);
-S=OpenSaveFile(Tempstr,URL,&BytesRead);
-
-LastProgressDisplay=0;
-DisplayProgress(Title,BytesRead,TotalLength,Now,TRUE); 
-while (BytesRead < TotalLength)
-{
-	val=BytesRead + CHUNK_SIZE;
-	if (val > TotalLength) val=TotalLength;
-	Args=FormatStr(Args,"bytes=%d-%d",BytesRead,val);
-	SetVar(Info->CustomSendHeaders,"Range",Args); 
-	Con=HTTPTransact(Info);
 	if (Con)
 	{
-		val=0;
-		Tempstr=SetStrLen(Tempstr,4096);
-		result=STREAMReadBytes(Con,Tempstr,4096);
-		while (val < Info->ContentLength)
-		{
-			val+=result;
-			BytesRead+=result;
-			STREAMWriteBytes(S,Tempstr,result);
-			result=STREAMReadBytes(Con,Tempstr,4096);
-			time(&Now);
-			if (Now != LastProgressDisplay)
-			{
-				DisplayProgress(Title,BytesRead,TotalLength,Now,FALSE); 
-				LastProgressDisplay=Now;
-			}
-		}
+		ptr=GetVar(Con->Values,"HTTP:Content-Type");
+		if (strncmp(ptr,"text/",5) !=0) break;
 
-		time(&Now);
-		DisplayProgress(Title,BytesRead,TotalLength,Now,FALSE); 
+		Tempstr=STREAMReadLine(Tempstr,Con);
+		while (Tempstr) Tempstr=STREAMReadLine(Tempstr,Con);
 		STREAMClose(Con);
-		Info->S=NULL;
-	}
-	else
-	{
-		if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: Failed to connect to bbc to download chunk!\n");
-		break;
-	}
-}
+		Con=NULL;
+		printf("Content is not video, possibly waiting on video conversion. Sleeping %d secs\n",DLWaitInterval);
 
-STREAMClose(S);
-}
-}
-else fprintf(stderr,"ERROR: Failed to connect to bbc!\n");
+		for (j=0; j < DLWaitInterval; j++)
+		{
+		sleep(1);
+		CheckForKeyboardInput();
+		}
+	}
+
+i++;
+} while (i < NoOfWaits);
 
 DestroyString(Tempstr);
-DestroyString(Server);
-DestroyString(Doc);
-DestroyString(Title);
-DestroyString(Args);
+
+return(Con);
 }
 
-
-int DownloadItem(char *URL, char *Title, int Post)
+//----- Download an actual Video ----------------------
+int DownloadItem(char *URL, char *Title, int DLFlags)
 {
 STREAM *S, *Con;
 char *Tempstr=NULL, *Token=NULL, *ptr;
-char *Server=NULL, *Doc=NULL, *FileName=NULL;
+char *Server=NULL, *Doc=NULL, *FileName=NULL, *ContentType=NULL;
 int result, DocSize=0, BytesRead=0;
 int len, Port;
 int RetVal=FALSE;
@@ -389,34 +401,25 @@ time_t Now, LastProgressDisplay;
 
 if (Flags & FLAG_TEST) 
 {
-fprintf(stderr,"TEST MODE: would have downloaded %s\n",URL);
-return;
+	fprintf(stderr,"TEST MODE: would have downloaded %s\n",URL);
+	return;
 }
 
 
 if (Flags & (FLAG_DEBUG1 | FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"Next URL: %s\n",URL);
+
 ptr=HTTPParseURL(URL,&Tempstr,&Server,&Port,NULL,NULL);
 if (Port==0) Port=DefaultPort;
 Doc=CopyStr(Doc,ptr);
 
-if (StrLen(Title)) FileName=CopyStr(FileName,Title);
-else 
-{
-		ptr=strrchr(Doc,'/');
-		if (ptr) ptr++;
-		else ptr=Doc;
+S=OpenSaveFile(Title,URL,&BytesRead);
 
-		FileName=FormatStr(FileName,"%s-%s",Server,ptr);	
-		ptr=strrchr(FileName,'?');
-		if (ptr) *ptr='\0';
-}
-
-S=OpenSaveFile(FileName,URL,&BytesRead);
-
-Con=ConnectAndSendHeaders(Server, Doc, Port, Post,BytesRead);
+Con=ConnectAndRetryUntilDownload(Server, Doc, Port, DLFlags, BytesRead);
 if (Con)
 {
-Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), FileName));
+ptr=strrchr(Doc,'?');
+if (ptr) *ptr='\0';
+Extn=CopyStr(Extn,GuessExtn(GetVar(Con->Values,"HTTP:Content-Type"), Doc));
 
 Token=CopyStr(Token,GetVar(Con->Values,"HTTP:Content-Range"));
 if (StrLen(Token))
@@ -449,33 +452,64 @@ else
 
 STREAMClose(Con);
 
-Tempstr=MCopyStr(Tempstr,S->Path,".",Extn,NULL);
+Tempstr=MCopyStr(Tempstr,S->Path,Extn,NULL);
 rename(S->Path,Tempstr);
 }
 else 
 {
-if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: Connection failed to %s\n",Server);
+if (! (Flags & FLAG_QUIET)) 
+{
+fprintf(stderr,"ERROR: Connection failed to %s\n",Server);
+fprintf(stderr,"ERROR: Connection failed to get %s (%s)\n",Doc,Title);
+}
+unlink(S->Path);
 }
 
 STREAMClose(S);
+DestroyString(ContentType);
 DestroyString(Tempstr);
 DestroyString(Extn);
 DestroyString(Token);
 DestroyString(Server);
-DestroyString(FileName);
 DestroyString(Doc);
 
 return(RetVal);
 }
 
+
+/*
+
+//Still trying to figure this out
+
+void YoutubeLogin(char *Username, char *Password)
+{
+STREAM *S;
+char *Tempstr=NULL;
+
+S=HTTPGet("https://www.google.com/accounts/ServiceLogin?uilel=3&service=youtube&passive=true");
+
+Tempstr=STREAMReadLine(Tempstr,S);
+while (Tempstr)
+{
+			NextPath=MCopyStr(NextPath,"https://www.google.com/accounts/ServiceLoginAuth?service=youtube&Email=",Username,"&Passwd=",Password,"&signIn=Sign in","&continue=http://www.youtube.com/signin?action_handle_signin=true&next=",Token,NULL);
+   		Post=TRUE;
+}
+}
+*/
+
+
+
+//-------- Go through the processes involved in getting a video file
 void GrabMovie(char *Path, int MovType)
 {
 int i;
 char *Proto=NULL, *Server=NULL, *Doc=NULL, *Tempstr=NULL, *Title=NULL;
+char *NextPath=NULL;
 char *ptr, *Token=NULL;
 int Post=FALSE, Port;
 
 Type=MovType;
+NextPath=CopyStr(NextPath,Path);
 ptr=HTTPParseURL(Path,&Proto,&Server,&Port,NULL,NULL);
 Doc=CopyStr(Doc,ptr);
 if (strcasecmp(Proto,"https")==0) 
@@ -497,13 +531,16 @@ else if (Type==TYPE_YOUTUBE)
 {
 
 	//hmm.. have we been given the http//www.youtube.com/v/ format?
-	if (strncmp(Doc,"v/",2)==0)
+	if (strncmp(Doc,"v/",2)==0) Token=MCopyStr(Token,"watch?v=",Doc+2,NULL);
+	else Token=CopyStr(Token,Doc);
+
+	//Do we have authentication info?
+	if (StrLen(Username) && StrLen(Password))
 	{
-		//have to do this in 2 stages, as we can't copy from doc into doc
-		Token=FormatStr(Token,"http://%s:%d/watch?v=%s",Server,Port,Doc+2,NULL);
-		Doc=CopyStr(Doc,Token);
+
 	}
-  else Doc=CopyStr(Doc,(char *) Path);
+	else NextPath=MCopyStr(NextPath,Server,"/",Token,NULL);
+
 }
 else if (Type==TYPE_METACAFE)
 {
@@ -522,10 +559,9 @@ else if (Type==TYPE_METACAFE)
 	//			Tempstr=MCopyStr(Tempstr,"http://www.youtube.com/watch?v=",ptr,NULL);
 	//			GrabMovie(Tempstr);
 
-				Type=TYPE_YOUTUBE_REF;
-				Doc=MCopyStr(Doc,"http://www.youtube.com/watch?v=",ptr,NULL);
+				Type=TYPE_YOUTUBE;
+				NextPath=MCopyStr(NextPath,"http://www.youtube.com/watch?v=",ptr,NULL);
 	
-				return;
 			}
 		}
 		else if (! (Flags & FLAG_QUIET)) fprintf(stderr,"Movie is not genuinely stored on metacafe, it is embedded from elsewhere, but it's not youtube, so I don't know how to download it. Sorry.\n");
@@ -542,9 +578,9 @@ else if (Type==TYPE_METACAFE)
 		STREAMClose(S);
 
 		//But we have to do it twice, probably something to do with cookies
-		Doc=FormatStr(Doc,"http://%s:%d/f/index.php?inputType=filter&controllerGroup=user&filters=0&Continue=Continue+-+I%27m+over+18&prevURL=%s",Server,Port,Path);
+		NextPath=FormatStr(NextPath,"http://%s:%d/f/index.php?inputType=filter&controllerGroup=user&filters=0&Continue=Continue+-+I%27m+over+18&prevURL=%s",Server,Port,Path);
 		}
-		else Doc=CopyStr(Doc,Path);
+		else NextPath=CopyStr(NextPath,Path);
 	}
 }
 else if (Type==TYPE_DAILYMOTION)
@@ -555,32 +591,10 @@ else if (Type==TYPE_DAILYMOTION)
 		//	HTTPMethod("POST",Tempstr,"","");
 
 		Tempstr=HTTPQuote(Tempstr,Doc);
-		Doc=FormatStr(Doc,"http://%s:%d/family_filter?urlback=/",Server,Port,Tempstr,"&form_name=dm_pageitem_familyfilter&accept=I+am+over+18+-+set+Family+Filter+OFF");
-   Post=TRUE;
+		NextPath=FormatStr(NextPath,"http://%s:%d/family_filter?urlback=/",Server,Port,Tempstr,"&form_name=dm_pageitem_familyfilter&accept=I+am+over+18+-+set+Family+Filter+OFF");
+   Post=FLAG_POST;
 	}
-	else Doc=CopyStr(Doc,Path);
-}
-else if (Type==TYPE_BBC)
-{
-	#define BBC_EPISODE_PATH "iplayer/episode/"
-	#define BBC_CONSOLE_PATH "iplayer/console/"
-	
-	if (strncmp(Doc,BBC_EPISODE_PATH,StrLen(BBC_EPISODE_PATH))==0)
-	{
-	GetToken(Doc+StrLen(BBC_EPISODE_PATH),"/",&Tempstr,0);
-	Doc=FormatStr(Doc,"%s://%s:%d/iplayer/playlist/%s",Proto,Server,Port,Tempstr,NULL);
-	}
-	else if (strncmp(Doc,BBC_CONSOLE_PATH,StrLen(BBC_CONSOLE_PATH))==0)
-	{
-	GetToken(Doc+StrLen(BBC_CONSOLE_PATH),"/",&Tempstr,0);
-	Doc=FormatStr(Doc,"%s://%s:%d/iplayer/playlist/%s",Proto,Server,Port,Tempstr,NULL);
-	}
-	else 
-	{
-	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"ERROR: BBC iPlayer mode needs the episode path, starting http://www.bbc.co.uk/iplayer/episode/\n");
-	exit(1);
-	}
-	
+	else NextPath=CopyStr(NextPath,Path);
 }
 else if (Type==TYPE_PRINCETON)
 {
@@ -592,18 +606,38 @@ else if (Type==TYPE_PRINCETON)
 		ptr=strrchr(Title,'.');
 		if (ptr) *ptr='\0';
 	}
- 	Doc=CopyStr(Doc,Path);
+ 	NextPath=CopyStr(NextPath,Path);
+}
+else if (Type==TYPE_CLIPFISH_DE)
+{
+	ptr=strstr(Doc,"video/");
+	if (ptr)
+	{
+		ptr+=6;
+ 		Tempstr=CopyStr(Tempstr,ptr);
+		ptr=strchr(Tempstr,'/');
+		if (ptr)
+		{
+			 *ptr='\0';
+			ptr++;
+			Title=CopyStr(Title,ptr);
+			ptr=strchr(Title,'/');
+			if (ptr) *ptr='\0';
+		}
+		NextPath=MCopyStr(NextPath,"http://www.clipfish.de/video_n.php?p=0|DE&vid=",Tempstr,NULL);
+	}
 }
 else
 {
- Doc=CopyStr(Doc,Path);
+ NextPath=CopyStr(NextPath,Path);
 }
 
-DownloadPage(Doc, Type,Title,Post);
+DownloadPage(NextPath, Type,Title,Post);
 
 DestroyString(Tempstr);
 DestroyString(Server);
 DestroyString(Doc);
+DestroyString(NextPath);
 DestroyString(Token);
 DestroyString(Title);
 DestroyString(Proto);
@@ -611,25 +645,8 @@ DestroyString(Proto);
 
 
 
-void DoVBOX7(char *ID, char *Title)
-{
-char *Dir=NULL, *Tempstr=NULL;
-int i;
-
-Dir=CopyStrLen(Dir,ID,2);
-
-for (i=2; i < 20; i++)
-{
-	if (i==0) Tempstr=FormatStr(Tempstr,"http://media.vbox7.com/s/%s/%s.flv",Dir,ID);
-  else Tempstr=FormatStr(Tempstr,"http://media%02d.vbox7.com/s/%s/%s.flv",i,Dir,ID);
-  if (DownloadItem(Tempstr, Title, FALSE)) break;
-}
-
-DestroyString(Dir);
-DestroyString(Tempstr);
-}
-
-
+//For websites with multiple videos on a page (not multiple formats of the
+//same video, but actual different videos) decide which one to get
 void GetDownloadSelectionList(char *Arg,ListNode *Vars,ListNode *Results)
 { 
 char *Tempstr=NULL, *Var=NULL, *ptr;
@@ -695,6 +712,23 @@ DestroyString(Tempstr);
 DestroyString(Var);
 }
 
+void AddToFormatsList(ListNode *Vars, char *Format)
+{
+char *Tempstr=NULL;
+
+	Tempstr=CopyStr(Tempstr,GetVar(Vars,"formats"));
+	if (! strstr(Tempstr,Format))
+	{
+		Tempstr=CatStr(Tempstr,"flv:320x240 ");
+		StripTrailingWhitespace(Tempstr);
+		SetVar(Vars,"formats",Tempstr);
+	}
+
+	DestroyString(Tempstr);
+}
+
+
+//------------ Functions specific to getting data from certain sites -----
 
 void DoGetBerkeley(ListNode *Vars)
 {
@@ -706,19 +740,172 @@ GetDownloadSelectionList(ItemSelectionArg,Vars,SelectionList);
 Curr=GetNextListItem(SelectionList);
 while (Curr)
 {
-	DownloadItem(Curr->Item,Curr->Tag,FALSE);
+	DownloadItem(Curr->Item,Curr->Tag,0);
 	Curr=GetNextListItem(Curr);
 }
 
 DestroyList(SelectionList,DestroyString);
 }
 
+void DoVBOX7(char *ID, char *Title)
+{
+char *Dir=NULL, *Tempstr=NULL;
+int i;
+
+Dir=CopyStrLen(Dir,ID,2);
+
+for (i=2; i < 20; i++)
+{
+	if (i==0) Tempstr=FormatStr(Tempstr,"http://media.vbox7.com/s/%s/%s.flv",Dir,ID);
+  else Tempstr=FormatStr(Tempstr,"http://media%02d.vbox7.com/s/%s/%s.flv",i,Dir,ID);
+  if (DownloadItem(Tempstr, Title, 0)) break;
+}
+
+DestroyString(Dir);
+DestroyString(Tempstr);
+}
+
+
+char *ExtractMetacafeMediaURL(char *RetStr, char *Data, char *Start, char *End)
+{
+char *Tempstr=NULL, *Token=NULL, *ptr;
+
+
+		ptr=strstr(Data,Start);
+		ptr+=StrLen(Start);
+		ptr=GetToken(ptr,End,&Token,0);
+		Tempstr=HTTPUnQuote(Tempstr,Token);
+		RetStr=MCopyStr(RetStr,Tempstr,"?__gda__=",NULL);
+		ptr=GetToken(Data,"gdaKey=",&Token,0);
+		ptr=GetToken(ptr,"&",&Token,0);
+		RetStr=CatStr(RetStr,Token);
+	
+DestroyString(Tempstr);
+DestroyString(Token);
+
+
+return(RetStr);
+}
+
+void DecodeYouTubeFormats(char *Formats, ListNode *Vars)
+{
+char *UnQuoted=NULL, *Token=NULL, *Tempstr=NULL, *ptr;
+
+			UnQuoted=DeQuoteStr(UnQuoted, Formats);
+			ptr=GetToken(UnQuoted,"|",&Token,0);
+			while (ptr)
+			{
+				switch (atoi(Token))
+				{
+						case 5:
+						ptr=GenericExtractFromLine(ptr, "item:flv:320x240","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"flv:320x240 ");
+						break;
+
+						case 13:
+						ptr=GenericExtractFromLine(ptr, "item:3gp","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"3gp ");
+						break;
+
+						case 17:
+						ptr=GenericExtractFromLine(ptr, "item:3gp","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"3gp ");
+						break;
+
+						case 18:
+						ptr=GenericExtractFromLine(ptr, "item:mp4-480x360","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"mp4:480x360 ");
+						break;
+
+						case 22:
+						ptr=GenericExtractFromLine(ptr, "item:mp4-1280x720","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"mp4:1280x720 ");
+						break;
+
+						case 34:
+						ptr=GenericExtractFromLine(ptr, "item:flv:h264-320x240","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"flv:h264-320x240 ");
+						break;
+
+						case 35:
+						ptr=GenericExtractFromLine(ptr, "item:flv:h264-480x368","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"flv:h264-480x368 ");
+						break;
+
+						case 37:
+						ptr=GenericExtractFromLine(ptr, "item:mp4-1920x1080","", ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+						AddToFormatsList(Vars,"mp4:1920-1080 ");
+						break;
+				}
+			ptr=GetToken(ptr,"|",&Token,0);
+			}
+
+DestroyString(UnQuoted);
+DestroyString(Tempstr);
+DestroyString(Token);
+}
+
+
+char *DecodeDailyMotionFormats(char *Formats, ListNode *Vars)
+{
+char *Token=NULL, *ptr;
+
+			printf("DMF: %s\n",Formats);
+			ptr=GetToken(Formats,"||",&Token,0);
+			while (ptr)
+			{
+			if (strstr(Token,"FLV-320x240")) 
+			{
+					SetVar(Vars,"item:flv:320x240",Token);
+					AddToFormatsList(Vars,"flv:320x240 ");
+			}
+			else if (strstr(Token,"FLV-80x60")) 
+			{
+					SetVar(Vars,"item:flv:80x60",Token);
+					AddToFormatsList(Vars,"flv:80x60 ");
+			}
+			else if (strstr(Token,"ON2-848x480"))
+			{
+					SetVar(Vars,"item:on2:848x480",Token);
+					AddToFormatsList(Vars,"on2:848x480 ");
+			}
+			else if (strstr(Token,"ON2-320x240")) 
+			{
+					SetVar(Vars,"item:on2:320x240",Token);
+					AddToFormatsList(Vars,"on2:320x240 ");
+			}
+			else if (strstr(Token,"H264-848x480")) 
+			{
+					SetVar(Vars,"item:h264:848x480",Token);
+					AddToFormatsList(Vars,"h264:848x480 ");
+			}
+			else if (strstr(Token,"H264-512x384")) 
+			{
+					SetVar(Vars,"item:h264:512x384",Token);
+					AddToFormatsList(Vars,"h264:512x384 ");
+			}
+			else if (strstr(Token,"H264-1280x720")) 
+			{
+					SetVar(Vars,"item:h264:1280x720",Token);
+					AddToFormatsList(Vars,"h264:1280x720 ");
+			}
+
+			ptr=GetToken(ptr,"||",&Token,0);
+			}
+
+DestroyString(Token);
+
+return(ptr);
+}
+
+
+//----- Actually get data from server
+
 void GetNextURL(int Type, char *Server, int Post, ListNode *Vars)
 {
 char *Tempstr=NULL, *Title=NULL, *ptr;
 
 Title=CopyStr(Title,GetVar(Vars,"Title"));
-if (! StrLen(Title)) Title=CopyStr(Title,GetVar(Vars,"ID"));
 
 switch (Type)
 {
@@ -727,12 +914,12 @@ GrabMovie(GetVar(Vars,"ID"),TYPE_YOUTUBE);
 break;
 
 case TYPE_YOUTUBE:
-  Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/get_video?video_id=$(ID)&t=$(Extra)",Vars,0);
+	Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
   DownloadItem(Tempstr, Title,Post);
 break;
 
 case TYPE_BREAK_COM:
-  Tempstr=SubstituteVarsInString(Tempstr,"$(BreakPathStart)/$(Extra)/$(ID).flv",Vars,0);
+  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)?$(EXTRA)",Vars,0);
   DownloadItem(Tempstr, Title,Post);
 break;
 
@@ -748,13 +935,13 @@ break;
 
 case TYPE_METACAFE:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
-  DownloadItem(Tempstr, Title,FALSE);
+  DownloadItem(Tempstr, Title,0);
 break;
 
 
 case TYPE_METACAFE_JS_REDIR:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)&$(METACAFE_OVER_18)",Vars,0);
- DownloadPage(Tempstr,TYPE_METACAFE,Title,FALSE);
+ DownloadPage(Tempstr,TYPE_METACAFE,Title,0);
 break;
 
 
@@ -770,26 +957,22 @@ break;
 
 case TYPE_3GPDB:
  Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
-  DownloadPage(Tempstr,TYPE_3GPDB_STAGE2,Title,FALSE);
+  DownloadPage(Tempstr,TYPE_3GPDB_STAGE2,Title,0);
 break;
 
-case TYPE_GOOGLE_VIDEO:
-case TYPE_ALMOST_KILLED:
-case TYPE_FIVE_MIN:
-case TYPE_IGN:
-case TYPE_BLIP_TV:
-case TYPE_3GPDB_STAGE2:
-case TYPE_GENERIC:
-case TYPE_CRAZYMOTION:
-case TYPE_MYTOPCLIP:
-case TYPE_REDBALCONY:
-case TYPE_PRINCETON:
-case TYPE_SDNHM:
-case TYPE_UCHANNEL:
-case TYPE_UCSDTV:
- Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+case TYPE_MOBANGO:
+ Tempstr=SubstituteVarsInString(Tempstr,"http://media.mobango.com/$(ID)",Vars,0);
   DownloadItem(Tempstr, Title,Post);
 break;
+
+case TYPE_LIVELEAK:
+ DownloadPage(GetVar(Vars,"ID"),TYPE_LIVELEAK_STAGE2,Title,FLAG_POST);
+break;
+
+case TYPE_VIDEOEMO:
+ DownloadPage(GetVar(Vars,"ID"),TYPE_VIDEOEMO_STAGE2,Title,0);
+break;
+
 
 
 case TYPE_TED:
@@ -802,11 +985,6 @@ case TYPE_MYVIDEO:
   DownloadItem(Tempstr, Title,Post);
 break;
 
-case TYPE_DALEALPLAY:
- Tempstr=SubstituteVarsInString(Tempstr,"http://videos.dalealplay.com/contenidos1/$(ID)",Vars,0);
-  DownloadItem(Tempstr, Title,Post);
-break;
-
 case TYPE_VBOX7:
 	DoVBOX7(GetVar(Vars,"ID"), Title);
 break;
@@ -814,26 +992,12 @@ break;
 
 case TYPE_VIMEO:
  Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/load/clip:$(ID)/embed?param_fullscreen=1&param_clip_id=$(ID)&param_show_byline=0&param_server=vimeo.com&param_color=cc6600&param_show_portrait=0&param_show_title=1",Vars,0);
- DownloadPage(Tempstr,TYPE_VIMEO_STAGE2,Title,TRUE);
+ DownloadPage(Tempstr,TYPE_VIMEO_STAGE2,Title,FLAG_POST);
 break;
 
 case TYPE_VIMEO_STAGE2:
  Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/moogaloop/play/clip:$(ID)/$(Extra)/$(Extra2)/?q=sd&type=embed",Vars,0);
  DownloadItem(Tempstr,Title,FALSE);
-break;
-
-
-case TYPE_BBC:
-	srand(getpid() + time(NULL));
-	Tempstr=FormatStr(Tempstr,"%012d", rand() % 99999999);
-	SetVar(Vars,"rand",Tempstr);
-  Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/mediaselector/4/mtis/stream/$(ID)?r=$(rand)",Vars,0);
-  DownloadPage(Tempstr,TYPE_BBC_STAGE2, Title,Post);
-break;
-
-case TYPE_BBC_STAGE2:
-  Tempstr=CopyStr(Tempstr,GetVar(Vars,"ID"));
-  BBCDownloadItem(Tempstr,Vars);
 break;
 
 
@@ -861,6 +1025,38 @@ case TYPE_CLIPSHACK_STAGE3:
  DownloadItem(Tempstr,Title,FALSE);
 break;
 
+case TYPE_GOOGLE_VIDEO:
+case TYPE_ALMOST_KILLED:
+case TYPE_FIVE_MIN:
+case TYPE_IGN:
+case TYPE_BLIP_TV:
+case TYPE_3GPDB_STAGE2:
+case TYPE_GENERIC:
+case TYPE_CRAZYMOTION:
+case TYPE_MYTOPCLIP:
+case TYPE_REDBALCONY:
+case TYPE_PRINCETON:
+case TYPE_SDNHM:
+case TYPE_UCHANNEL:
+case TYPE_UCSDTV:
+case TYPE_IZLESE:
+case TYPE_IZLES:
+case TYPE_IZLES_ORG:
+case TYPE_REUTERS:
+case TYPE_LIVELEAK_STAGE2:
+case TYPE_CLIPFISH_DE:
+case TYPE_ACADEMIC_EARTH:
+case TYPE_PHOTOBUCKET:
+ Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+
+ DownloadItem(Tempstr, Title,Post);
+break;
+
+case TYPE_VIDEOEMO_STAGE2:
+ Tempstr=SubstituteVarsInString(Tempstr,"$(ID)",Vars,0);
+ DownloadItem(Tempstr, Title,Post|FLAG_DL_RETRY);
+break;
+
 
 
 }
@@ -871,102 +1067,21 @@ DestroyString(Title);
 
 
 
-
-char *ExtractMetacafeMediaURL(char *RetStr, char *Data, char *Start, char *End)
-{
-char *Tempstr=NULL, *Token=NULL, *ptr;
-
-
-		ptr=strstr(Data,Start);
-		ptr+=StrLen(Start);
-		ptr=GetToken(ptr,End,&Token,0);
-		Tempstr=HTTPUnQuote(Tempstr,Token);
-		RetStr=MCopyStr(RetStr,Tempstr,"?__gda__=",NULL);
-		ptr=GetToken(Data,"gdaKey=",&Token,0);
-		ptr=GetToken(ptr,"&",&Token,0);
-		RetStr=CatStr(RetStr,Token);
-	
-DestroyString(Tempstr);
-DestroyString(Token);
-
-
-return(RetStr);
-}
-
-#define EXTRACT_DEQUOTE  1
-#define EXTRACT_NOSPACES 2
-
-char *GenericExtractFromLine(char *Line, char *ItemName, char *ItemStart, char *ItemEnd, ListNode *Vars, int Flags)
-{
-char *ptr, *ptr2, *Token=NULL, *Item=NULL;
-
-		ptr=GetToken(Line,ItemStart,&Token,0);
-		ptr=GetToken(ptr,ItemEnd,&Token,0);
-		
-		//check if the start string occurs more than once in the Token that we've grabbed
-		ptr2=strstr(Token,ItemStart);
-		while (ptr2)
-		{
-		ptr2+=StrLen(ItemStart);
-		memmove(Token,ptr2,Token+StrLen(Token)-ptr2+1);
-		//because of memmove we can strstr in Token again	
-		ptr2=strstr(Token,ItemStart);
-		}
-		if (Flags & EXTRACT_DEQUOTE) Item=HTTPUnQuote(Item,Token);
-		else Item=CopyStr(Item,Token);
-		StripLeadingWhitespace(Item);
-		StripTrailingWhitespace(Item);
-		StripQuotes(Item);
-
-		if (Flags & EXTRACT_NOSPACES)
-		{
-			ptr=strchr(Item,' ');
-			while (ptr)
-			{
-				*ptr='+';
-				ptr=strchr(ptr,' ');
-			}
-		}
-
-		SetVar(Vars,ItemName,Item);
-
-DestroyString(Token);
-DestroyString(Item);
-
-return(ptr);
-}
-	
-
 //this function compares the video formats found on the page to the list of
 //preferences expressed by the user with the '-f' flag, and contained in the
 //global variable 'FormatPreference'
 int SelectDownloadFormat(ListNode *Vars, char *FormatPreference, int WebsiteType)
 {
 ListNode *Curr;
-char *ptr, *Fmt=NULL, *p_ItemFormat;
-int RetVal;
+char *ptr, *Tempstr=NULL, *Fmt=NULL, *Selected=NULL, *p_ItemFormat;
+int RetVal=-1;
 
-RetVal=WebsiteType;
-
-if (Flags & (FLAG_DEBUG1 | FLAG_DEBUG2 | FLAG_DEBUG3)) 
+ptr=GetVar(Vars,"formats");
+StripTrailingWhitespace(ptr);
+ptr=GetToken(ptr,"\\S",&Tempstr,0);
+if (StrLen(ptr))
 {
-
-fprintf(stderr,"\nSelecting preferred format from: %s\n",FormatPreference);
-fprintf(stderr,"\nFound on website: ");
-Curr=GetNextListItem(Vars);
-while (Curr)
-{
-	if (
-				(strncmp(Curr->Tag,"item:",5)==0) &&
-				(StrLen((char *) Curr->Item))
-		)
-	{
-	p_ItemFormat=Curr->Tag+5;
-	printf("%s, ",p_ItemFormat);
-	}
-Curr=GetNextListItem(Curr);
-}
-printf("\n");
+fprintf(stderr, "Multiple Formats are available for this Movie:\n	%s\n\n",GetVar(Vars,"formats"));
 }
 
 
@@ -984,13 +1099,24 @@ printf("\n");
 				{
 					p_ItemFormat=Curr->Tag+5;
 
-				if (strncmp(p_ItemFormat,Fmt,StrLen(Fmt))==0)
+				if (
+							 (! StrLen(Fmt)) ||
+							 (strncmp(p_ItemFormat,Fmt,StrLen(Fmt))==0)
+					)
 				{
-					SetVar(Vars,"ID",(char *) Curr->Item);
 					if (Flags & (FLAG_DEBUG1 | FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"... YES!\n\n");
-					if (strcmp(Fmt,"yt-flv")==0) RetVal=TYPE_YOUTUBE_REF;
-					DestroyString(Fmt);
-					return(RetVal);
+
+					//Only use it if 'RetVal' is set
+					if (RetVal==-1)
+					{
+						SetVar(Vars,"ID",(char *) Curr->Item);
+						Selected=CopyStr(Selected,Fmt);
+
+						if (strcmp(Fmt,"yt-flv")==0) RetVal=TYPE_YOUTUBE_REF;
+						else RetVal=WebsiteType;
+					}
+
+					break;
 				}
 				}
 				Curr=GetNextListItem(Curr);
@@ -999,13 +1125,15 @@ printf("\n");
 			ptr=GetToken(ptr,",",&Fmt,0);
 	}
 
-fprintf(stderr,"No suitable download format found from '%s'\n\n",FormatPreference);
+if (RetVal!=-1) fprintf(stderr,"Selected format %s\n",Selected);
+else fprintf(stderr,"No suitable download format found from '%s'\n\n",FormatPreference);
 
 
+DestroyString(Selected);
+DestroyString(Tempstr);
 DestroyString(Fmt);
 return(RetVal);
 }
-
 
 
 
@@ -1017,11 +1145,12 @@ char *Tempstr=NULL, *Token=NULL, *VarName=NULL;
 ListNode *Vars=NULL;
 char *ptr, *ptr2;
 int MediaCount=0, i;
-//Standard file types list breaks berkerly downloads
+//Standard file types list breaks berkely downloads
 char *BerkeleyFileTypes[]={".mp4",".m4a",".mp3",NULL};
 
 #define GENERIC_TITLE_START "<title>"
 #define GENERIC_TITLE_END "</title>"
+
 
 
 Vars=CreateEmptyList();
@@ -1046,7 +1175,7 @@ switch (Type)
 case TYPE_YOUTUBE:
 //#define YOUTUBE_PTR "new SWFObject(\"/player2.swf?"
 
-#define YOUTUBE_PTR "var swfArgs = {"
+//#define YOUTUBE_PTR "var swfArgs = {"
 #define YOUTUBE_DIV "video_id\":"
 #define YOUTUBE_DIV2 "fmt_url_map\": \""
 #define YOUTUBE_TITLE "<meta name=\"title\" content=\""
@@ -1063,17 +1192,23 @@ case TYPE_YOUTUBE:
 	}
 
 
+/*
 	if (strstr(Tempstr,YOUTUBE_DIV))
 	{
 		GenericExtractFromLine(Tempstr, "item:flv",YOUTUBE_DIV, ",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		GenericExtractFromLine(Tempstr, "Extra","\"t\": ",",", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+  	Tempstr=SubstituteVarsInString(Tempstr,"http://$(Server):$(Port)/get_video?video_id=$(ID)&t=$(Extra)",Vars,0);
+		SetVar(Vars,"item:flv",Tempstr);
 	}
+	*/
 
 	if (strstr(Tempstr,YOUTUBE_DIV2))
 	{
 		if (StrLen(GetVar(Vars,"item:flv"))==0) 
 		{
-			GenericExtractFromLine(Tempstr, "item:flv",YOUTUBE_DIV2, "\"", Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+			GenericExtractFromLine(Tempstr, "yt:url_fmt",YOUTUBE_DIV2, "\"", Vars,0);
+			Tempstr=CopyStr(Tempstr,GetVar(Vars,"yt:url_fmt"));
+			DecodeYouTubeFormats(Tempstr,Vars);
 		}
 	}
 
@@ -1166,7 +1301,8 @@ case TYPE_3GPDB_STAGE2:
 	if (ptr)
 	{
 		GenericExtractFromLine(Tempstr, "item:mp4","href=\"","\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		Type=TYPE_3GPDB_STAGE2;
+	Type=TYPE_3GPDB_STAGE2;
+		AddToFormatsList(Vars,"mp4 ");
 	}
 
 	ptr=strstr(Tempstr,_3GPDB_3GP);
@@ -1174,6 +1310,7 @@ case TYPE_3GPDB_STAGE2:
 	{
 		GenericExtractFromLine(Tempstr, "item:3gp","href=\"","\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		Type=TYPE_3GPDB_STAGE2;
+		AddToFormatsList(Vars,"3gp ");
 	}
 
 
@@ -1188,30 +1325,36 @@ break;
 
 case TYPE_BREAK_COM:
 #define BREAK_ITEM "sGlobalFileName='"
-#define BREAK_EXTRA "sGlobalContentFilePath='"
-#define BREAK_PATH "videoPath = \""
+#define BREAK_EXTRA "flashVars.icon = \""
 #define BREAK_WMV "+sGlobalContentFilePath+'/'+sGlobalFileName+'.wmv"
 #define BREAK_FLV "+sGlobalContentFilePath+'/'+sGlobalFileName+'.flv"
+#define BREAK_TITLE "id=\"vid_title\" content=\""
 
-
-	ptr=strstr(Tempstr,BREAK_PATH);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "BreakPathStart",BREAK_PATH,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-	}
 
 	ptr=strstr(Tempstr,BREAK_ITEM);
 	if (ptr)
 	{
 		GenericExtractFromLine(Tempstr, "item:flv",BREAK_ITEM,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		ptr=GetVar(Vars,"item:flv");
+		if (ptr) ptr=CatStr(ptr,".flv");
 	}
 
 	ptr=strstr(Tempstr,BREAK_EXTRA);
 	if (ptr)
 	{
-		GenericExtractFromLine(Tempstr, "Extra",BREAK_EXTRA,"'",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-	}	
+		GenericExtractFromLine(Tempstr, "Extra",BREAK_EXTRA,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	}
+	
+	ptr=strstr(Tempstr,BREAK_TITLE);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "Title",BREAK_TITLE,"\"",Vars,0);
+	}
+
+
 break;
+
+
 
 case TYPE_EHOW:
 #define EHOW_ITEM "flashvars=&quot;id="
@@ -1330,6 +1473,8 @@ break;
 case TYPE_IGN:
 #define IGN_ITEM "downloadURL=http://"
 #define IGN_ITEM_END "[/ignvideo]"
+#define IGN_ITEM_2 "mediaIdHash[\""
+#define IGN_ITEM_2_END "\"]"
 #define IGN_ITEM_LOW "vp_lowResFlash = '"
 #define IGN_ITEM_HIGH "vp_hiResFlash = '"
 
@@ -1338,6 +1483,13 @@ case TYPE_IGN:
 	{
 		GenericExtractFromLine(Tempstr, "item:flv",IGN_ITEM,IGN_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 	}
+
+	ptr=strstr(Tempstr,IGN_ITEM_2);
+	if (ptr && (StrLen(GetVar(Vars,"item:flv"))==0))
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",IGN_ITEM_2,IGN_ITEM_2_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+	}
+
 
 	ptr=strstr(Tempstr,IGN_ITEM_LOW);
 	if (ptr)
@@ -1352,21 +1504,12 @@ case TYPE_IGN:
 	}
  break;
 
-case TYPE_DALEALPLAY:
-#define DALEALPLAY_ITEM "href=\"http://www.dalealplay.com/video.swf?file="
-	ptr=strstr(Tempstr,DALEALPLAY_ITEM);
-	if (ptr)
-	{
-		GenericExtractFromLine(Tempstr, "item:flv",DALEALPLAY_ITEM,"&",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-	}
- break;
-
 
 case TYPE_DAILYMOTION:
 #define DAILYMOTION_ITEM "addVariable(\"video\", \""
 #define DAILYMOTION_ITEM_END "&"
-#define DAILYMOTION_TITLE_START "<h1 class=\"dmco_title\">"
-#define DAILYMOTION_TITLE_END "</h1>"
+#define DAILYMOTION_TITLE_START "<h1 class=\"dmco_title\"><span class=\"title\" title=\""
+#define DAILYMOTION_TITLE_END "\""
 #define DAILYMOTION_EXTRA "addVariable(\"uid\", \""
 
 
@@ -1380,31 +1523,7 @@ case TYPE_DAILYMOTION:
 	{
 		GenericExtractFromLine(Tempstr, "DailyMotionItems",DAILYMOTION_ITEM,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 		ptr=GetVar(Vars,"DailyMotionItems");
-		if (ptr)
-		{
-			ptr2=GetToken(ptr,"||",&Token,0);
-			while (ptr2)
-			{
-			if (strstr(Token,"FLV-320x240")) SetVar(Vars,"item:flv:320x240",Token);
-			else if (strstr(Token,"FLV-80x60")) SetVar(Vars,"item:flv:80x60",Token);
-			else if (strstr(Token,"ON2-848x480")) SetVar(Vars,"item:on2:848x480",Token);
-			else if (strstr(Token,"ON2-320x240")) SetVar(Vars,"item:on2:320x240",Token);
-			else if (strstr(Token,"H264-848x480")) SetVar(Vars,"item:h264:848x480",Token);
-			else if (strstr(Token,"H264-512x384")) SetVar(Vars,"item:h264:512x384",Token);
-			else if (strstr(Token,"H264-1280x720")) SetVar(Vars,"item:h264:1280x720",Token);
-			ptr2=GetToken(ptr2,"||",&Token,0);
-			}
-
-
-			ptr=strstr(ptr," key=");
-			if (ptr) *ptr='?';
-			if (ptr) 
-			{
-				ptr=strstr(ptr,"@@");
-				if (ptr) *ptr='\0';
-			}
-		}
-
+		DecodeDailyMotionFormats(ptr,Vars);
 	}
 
 	if (strstr(Tempstr,DAILYMOTION_EXTRA))
@@ -1427,81 +1546,6 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 {
 		GenericExtractFromLine(Tempstr, "Title",GENERIC_TITLE_START,GENERIC_TITLE_END,Vars,EXTRACT_DEQUOTE);
 }
-break;
-
-case TYPE_BBC:
-#define BBC_TV_PROG_LINE "item kind=\"programme\""
-#define BBC_RADIO_PROG_LINE "item kind=\"radioProgramme\""
-#define BBC_ITEM "identifier=\""
-#define BBC_COMMIT "<alternate id=\"default\" />"
-
-	ptr=GetVar(Vars,"ID");
-	if (StrLen(ptr)==0)
-	{
-		ptr=strstr(Tempstr,BBC_TV_PROG_LINE);
-		if (ptr)
-		{
-			SetVar(Vars,"Extn",".mp4");
-			GenericExtractFromLine(Tempstr, "tmp:mp4",BBC_ITEM,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		}
-
-		ptr=strstr(Tempstr,BBC_RADIO_PROG_LINE);
-		if (ptr)
-		{
-			SetVar(Vars,"Extn",".mp3");
-			GenericExtractFromLine(Tempstr, "tmp:mp3",BBC_ITEM,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-		}
-
-		ptr=strstr(Tempstr,BBC_COMMIT);
-		if (ptr)
-		{
-			ptr=GetVar(Vars,"tmp:mp3");
-			if (StrLen(ptr)) SetVar(Vars,"item:mp3",ptr);
-			SetVar(Vars,"tmp:mp3","");
-
-			ptr=GetVar(Vars,"tmp:mp4");
-			if (StrLen(ptr)) SetVar(Vars,"item:mp4",ptr);
-			SetVar(Vars,"tmp:mp4","");
-
-			ptr=GetVar(Vars,"tmp:Title");
-			if (StrLen(ptr)) SetVar(Vars,"Title",ptr);
-			SetVar(Vars,"tmp:Title","");
-		}
-
-
-		ptr=strstr(Tempstr,"<title>");
-		if (ptr)
-		{
-			GenericExtractFromLine(Tempstr, "tmp:Title","<title>","</title>",Vars,EXTRACT_DEQUOTE);
-		}
-
-
-	}
-break;
-
-case TYPE_BBC_STAGE2:
-#define BBC_SERVICE_LINE "service=\""
-#define IPHONE_MP4 "iplayer_streaming_http_mp4"
-#define IPHONE_WMA "iplayer_intl_stream_wma_ws"
-
-if (strstr(Tempstr,BBC_SERVICE_LINE))
-{
-			GenericExtractFromLine(Tempstr, "tmp:Service",BBC_SERVICE_LINE,"\"",Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
-}
-
-if (strstr(Tempstr,"href="))
-{
-	Token=CopyStr(Token,GetVar(Vars,"tmp:Service"));
-	if (strcmp(Token,IPHONE_MP4)==0)
-	{
-			GenericExtractFromLine(Tempstr, "item:mp4","href=\"","\"",Vars,0);
-	}
-	else if (strcmp(Token,IPHONE_WMA)==0)
-	{
-			GenericExtractFromLine(Tempstr, "item:wma","href=\"","\"",Vars,0);
-	}
-}
-
 break;
 
 case TYPE_TED:
@@ -1625,6 +1669,68 @@ if (strstr(Tempstr,GENERIC_TITLE_START))
 
 break;
 
+case TYPE_MOBANGO:
+#define MOBANGO_ITEM_START "so.addVariable('flvfile','"
+#define MOBANGO_ITEM_END "'"
+
+#define MOBANGO_TITLE_START "name=\"flname\" value=\""
+#define MOBANGO_TITLE_END "\""
+
+if (strstr(Tempstr,MOBANGO_ITEM_START))
+{
+		GenericExtractFromLine(Tempstr, "item:flv",MOBANGO_ITEM_START,MOBANGO_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+}
+
+
+if (strstr(Tempstr,MOBANGO_TITLE_START))
+{
+		GenericExtractFromLine(Tempstr, "Title",MOBANGO_TITLE_START,MOBANGO_TITLE_END,Vars,EXTRACT_DEQUOTE);
+}
+
+break;
+
+
+#define IZLESE_ITEM_START "file=http"
+#define IZLESE_ITEM_END "&cid="
+#define IZLESE_TITLE_START "<h1>"
+#define IZLESE_TITLE_END "</h1>"
+#define IZLESE_TITLE2_START "<title>"
+#define IZLESE_TITLE2_END "</title>"
+
+case TYPE_IZLESE:
+case TYPE_IZLES:
+case TYPE_IZLES_ORG:
+
+
+if (strstr(Tempstr,IZLESE_ITEM_START) && strstr(Tempstr,IZLESE_ITEM_END))
+{
+		GenericExtractFromLine(Tempstr, "item:flv",IZLESE_ITEM_START,IZLESE_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+ptr=GetVar(Vars,"item:flv");
+//put 'http' back on
+Tempstr=MCopyStr(Tempstr,"http",ptr,NULL);
+if (strstr(ptr,"youtube"))
+{
+		SetVar(Vars,"item:flv","");
+		SetVar(Vars,"item:yt-flv",Tempstr);
+}
+else SetVar(Vars,"item:flv",Tempstr);
+}
+
+
+if (strstr(Tempstr,IZLESE_TITLE_START))
+{
+		GenericExtractFromLine(Tempstr, "Title",IZLESE_TITLE_START,IZLESE_TITLE_END,Vars,EXTRACT_DEQUOTE);
+}
+
+if (strstr(Tempstr,IZLESE_TITLE2_START))
+{
+		GenericExtractFromLine(Tempstr, "Title",IZLESE_TITLE2_START,IZLESE_TITLE2_END,Vars,EXTRACT_DEQUOTE);
+}
+
+
+break;
+
+
 case TYPE_CLIPSHACK:
 #define CLIPSHACK_ITEM_START "playerconfig.aspx?key="
 #define CLIPSHACK_TITLE_START "<span id=\"lblTitle\">"
@@ -1661,6 +1767,135 @@ if (strstr(Tempstr,CLIPSHACK_STAGE3_START))
 }
 break;
 
+
+#define REUTERS_FLV_ITEM_START "'flv':"
+#define REUTERS_MP4_ITEM_START "'mpeg':"
+#define REUTERS_TITLE "'headline':"
+
+case TYPE_REUTERS:
+	ptr=strstr(Tempstr,REUTERS_FLV_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",REUTERS_FLV_ITEM_START,",",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+		AddToFormatsList(Vars,"flv ");
+	}
+
+	ptr=strstr(Tempstr,REUTERS_MP4_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:mp4",REUTERS_MP4_ITEM_START,",",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+		AddToFormatsList(Vars,"mp4 ");
+	}
+
+
+	ptr=strstr(Tempstr,REUTERS_TITLE);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "Title",REUTERS_TITLE,",",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+	}
+break;
+
+
+#define AE_FLV_ITEM_START "flashVars.flvURL = "
+#define AE_YT_ITEM_START "flashVars.ytID = "
+
+case TYPE_ACADEMIC_EARTH:
+	ptr=strstr(Tempstr,AE_FLV_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",AE_FLV_ITEM_START,";",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+		AddToFormatsList(Vars,"flv ");
+	}
+
+	ptr=strstr(Tempstr,AE_YT_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:yt-flv",AE_YT_ITEM_START,";",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+		Tempstr=MCopyStr(Tempstr,"http://youtube.com/watch?v=",GetVar(Vars,"item:yt-flv"),NULL);
+		SetVar(Vars,"item:yt-flv",Tempstr);
+		AddToFormatsList(Vars,"yt-flv ");
+	}
+
+break;
+
+
+#define PHOTOBUCKET_START "flashvars=&quot;file="
+#define PHOTOBUCKET_END "&quot;"
+
+case TYPE_PHOTOBUCKET:
+	ptr=strstr(Tempstr,PHOTOBUCKET_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:mp4",PHOTOBUCKET_START,PHOTOBUCKET_END,Vars, EXTRACT_DEQUOTE);
+		AddToFormatsList(Vars,"mp4 ");
+	}
+break;
+
+
+#define CLIPFISH_ITEM_START "&url="
+case TYPE_CLIPFISH_DE:
+	ptr=strstr(Tempstr,CLIPFISH_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",CLIPFISH_ITEM_START,"&",Vars,EXTRACT_WITHIN_QUOTES | EXTRACT_NOSPACES);
+	}
+break;
+
+#define LIVELEAK_ITEM_START "'config','"
+#define LIVELEAK_ITEM_END "');"
+case TYPE_LIVELEAK:
+	ptr=strstr(Tempstr,LIVELEAK_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "ID",LIVELEAK_ITEM_START,LIVELEAK_ITEM_END,Vars,EXTRACT_DEQUOTE);
+	}
+break;
+
+
+#define LIVELEAK2_ITEM_START "<file>"
+#define LIVELEAK2_ITEM_END "'</"
+case TYPE_LIVELEAK_STAGE2:
+	ptr=strstr(Tempstr,LIVELEAK_ITEM_START);
+	if (ptr)
+	{
+		GenericExtractFromLine(Tempstr, "item:flv",LIVELEAK2_ITEM_START,LIVELEAK2_ITEM_END,Vars,EXTRACT_DEQUOTE);
+	}
+break;
+
+#define VIDEOEMO_ITEM_START "href=\"http://www.vidoevo.com/videodownload.php?e="
+#define VIDEOEMO_ITEM_END "\""
+
+case TYPE_VIDEOEMO:
+	if (strstr(Tempstr,VIDEOEMO_ITEM_START))
+	{
+		GenericExtractFromLine(Tempstr, "ID","href=\"",VIDEOEMO_ITEM_END,Vars,EXTRACT_DEQUOTE);
+	}
+
+//Fall through, we might be on the second page already!
+//break;
+
+#define VIDEOEMO2_ITEM_START "Format of Video"
+#define VIDEOEMO2_TITLE_START "<h2 class=\"title\">"
+#define VIDEOEMO2_TITLE_END "</h2>"
+
+case TYPE_VIDEOEMO_STAGE2:
+	if (strstr(Tempstr,VIDEOEMO2_ITEM_START))
+	{
+		if (strstr(Tempstr,"flv")) GenericExtractFromLine(Tempstr, "item:flv","href=",">",Vars,EXTRACT_DEQUOTE);
+		if (strstr(Tempstr,"mp4")) GenericExtractFromLine(Tempstr, "item:mp4","href=",">",Vars,EXTRACT_DEQUOTE);
+		if (strstr(Tempstr,"3gp")) GenericExtractFromLine(Tempstr, "item:3gp","href=",">",Vars,EXTRACT_DEQUOTE);
+
+		//if we found a download link, then we are at stage2 already!
+		Type=TYPE_VIDEOEMO_STAGE2;
+	}
+
+if (strstr(Tempstr,VIDEOEMO2_TITLE_START))
+{
+		GenericExtractFromLine(Tempstr, "Title",VIDEOEMO2_TITLE_START,VIDEOEMO2_TITLE_END,Vars,EXTRACT_DEQUOTE);
+}
+
+
+break;
 
 
 
@@ -1740,7 +1975,10 @@ break;
 	if (Flags & (FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"\n------- END DOCUMENT ------\n\n");
 
 
-if ((Type != TYPE_BERKELEY) && StrLen(GetVar(Vars,"ID"))==0) Type=SelectDownloadFormat(Vars,FormatPreference,Type);
+if ((Type != TYPE_BERKELEY) && StrLen(GetVar(Vars,"ID"))==0)
+{
+ Type=SelectDownloadFormat(Vars,FormatPreference,Type);
+}
 
 
 ptr=GetVar(Vars,"ID");
@@ -1771,6 +2009,7 @@ if (Flags & (FLAG_DEBUG1 | FLAG_DEBUG2 | FLAG_DEBUG3)) fprintf(stderr,"Next URL:
 ptr=HTTPParseURL(Path,&Tempstr,&Server,&Port,NULL,NULL);
 Doc=CopyStr(Doc,ptr);
 if (Port==0) Port=DefaultPort;
+
 S=ConnectAndSendHeaders(Server, Doc, Port, Post,0);
 
 if (S)
@@ -1790,7 +2029,7 @@ void PrintUsage()
 {
 int i;
 
-fprintf(stderr,"\nMovgrab: version 1.0\n");
+fprintf(stderr,"\nMovgrab: version %s\n",VERSION);
 fprintf(stderr,"Author: Colum Paget\n");
 fprintf(stderr,"Email: colums.projects@gmail.com\n");
 fprintf(stderr,"Blogs: \n");
@@ -1802,6 +2041,7 @@ fprintf(stderr,"\n'-v'		increases verbosity/debug level\n");
 fprintf(stderr,"'-v -v'		prints out all webpages encountered\n");
 fprintf(stderr,"'-v -v -v'	maximum debugging\n");
 fprintf(stderr,"'-T'			Test mode, don't do final download\n");
+fprintf(stderr,"'-a'		Authentication info in Username:Password format.\n");
 fprintf(stderr,"'-q'		QUIET. No progress/informative output.\n");
 fprintf(stderr,"'-b'		Background. Fork into background and nohup\n");
 fprintf(stderr,"'-p'		address of HTTP proxy server in URL format.\n");
@@ -1848,7 +2088,7 @@ return(result);
 void ParseCommandLine(int argc, char *argv[], ListNode *DL_List, int *OverrideType)
 {
 int i, DebugLevel=0;
-
+char *ptr;
 
 ProgName=CopyStr(ProgName,argv[0]);
 CmdLine=argv[0];
@@ -1858,6 +2098,11 @@ for (i=1; i < argc; i++)
 	if (strcmp(argv[i],"-p")==0)
 	{
 		HTTPSetProxy(argv[++i]);
+	}
+	else if (strcmp(argv[i],"-a")==0)
+	{
+			ptr=GetToken(argv[++i],":",&Username,NULL);
+			ptr=GetToken(ptr,":",&Password,NULL);
 	}
 	else if (strcmp(argv[i],"-v")==0)
 	{
@@ -1920,10 +2165,6 @@ else if (strcmp(Server,"www.break.com")==0)
 {
  Type=TYPE_BREAK_COM;
 }
-else if (strstr(Server,"blip.tv"))
-{
- Type=TYPE_BLIP_TV;
-}
 else if (strcmp(Server,"www.3gpdb.com")==0)
 {
  Type=TYPE_3GPDB;
@@ -1931,10 +2172,6 @@ else if (strcmp(Server,"www.3gpdb.com")==0)
 else if (strcmp(Server,"www.ehow.com")==0)
 {
  Type=TYPE_EHOW;
-}
-else if (strstr(Server,"vimeo.com"))
-{
- Type=TYPE_VIMEO;
 }
 else if (strcmp(Server,"www.almostkilled.com")==0)
 {
@@ -1948,47 +2185,10 @@ else if (strcmp(Server,"www.5min.com")==0)
 {
  Type=TYPE_FIVE_MIN;
 }
-else if (strstr(Server,"ign.com"))
-{
- Type=TYPE_IGN;
-}
-else if (strstr(Server,"dalealplay.com"))
-{
- Type=TYPE_DALEALPLAY;
-}
-else if (strstr(Server,"vbox7.com"))
-{
- Type=TYPE_VBOX7;
-}
-else if (strcmp(Server,"www.bbc.co.uk")==0)
-{
-// HTTPSetUserAgent("Apple iPhone v1.1.4 CoreMedia v1.0.0.4A102");
-	HTTPSetUserAgent("Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.1.20) Gecko/20081217 Firefox/2.0.0.20");
- Type=TYPE_BBC;
-}
+
 else if (strcmp(Server,"www.ted.com")==0)
 {
  Type=TYPE_TED;
-}
-else if (strstr(Server,"myvideo"))
-{
- Type=TYPE_MYVIDEO;
-}
-else if (strstr(Server,"redbalcony.com"))
-{
- Type=TYPE_REDBALCONY;
-}
-else if (strstr(Server,"crazymotion.net"))
-{
- Type=TYPE_CRAZYMOTION;
-}
-else if (strstr(Server,"clipshack.com"))
-{
- Type=TYPE_CLIPSHACK;
-}
-else if (strstr(Server,"mytopclip.com"))
-{
- Type=TYPE_MYTOPCLIP;
 }
 else if (strcmp(Server,"webcast.berkeley.edu")==0)
 {
@@ -2010,12 +2210,86 @@ else if (strcmp(Server,"www.princeton.edu")==0)
 {
  Type=TYPE_PRINCETON;
 }
+else if (strcmp(Server,"www.academicearth.org")==0)
+{
+ Type=TYPE_ACADEMIC_EARTH;
+}
+else if (strstr(Server,"photobucket.com"))
+{
+ Type=TYPE_PHOTOBUCKET;
+}
+else if (strstr(Server,"ign.com"))
+{
+ Type=TYPE_IGN;
+}
+else if (strstr(Server,"vbox7.com"))
+{
+ Type=TYPE_VBOX7;
+}
+else if (strstr(Server,"myvideo"))
+{
+ Type=TYPE_MYVIDEO;
+}
+else if (strstr(Server,"redbalcony.com"))
+{
+ Type=TYPE_REDBALCONY;
+}
+else if (strstr(Server,"mobango.com"))
+{
+ Type=TYPE_MOBANGO;
+}
+else if (strstr(Server,"izlese.org"))
+{
+ Type=TYPE_IZLESE;
+}
+else if (strstr(Server,"izles.net"))
+{
+ Type=TYPE_IZLES;
+}
+else if (strstr(Server,"izles.org"))
+{
+ Type=TYPE_IZLES_ORG;
+}
+else if (strstr(Server,"crazymotion.net"))
+{
+ Type=TYPE_CRAZYMOTION;
+}
+else if (strstr(Server,"clipshack.com"))
+{
+ Type=TYPE_CLIPSHACK;
+}
+else if (strstr(Server,"mytopclip.com"))
+{
+ Type=TYPE_MYTOPCLIP;
+}
+else if (strstr(Server,"liveleak"))
+{
+ Type=TYPE_LIVELEAK;
+}
+else if (strstr(Server,"blip.tv"))
+{
+ Type=TYPE_BLIP_TV;
+}
+else if (strstr(Server,"vimeo.com"))
+{
+ Type=TYPE_VIMEO;
+}
+else if (strstr(Server,"vidoevo.com"))
+{
+ Type=TYPE_VIDEOEMO;
+}
+else if (strstr(Server,"reuters"))
+{
+ Type=TYPE_REUTERS;
+}
+else if (strstr(Server,"clipfish.de"))
+{
+ Type=TYPE_CLIPFISH_DE;
+}
 else if (strstr(Server,"ucsd.tv"))
 {
  Type=TYPE_UCSDTV;
 }
-
-
 
 
 return(Type);
@@ -2032,8 +2306,9 @@ StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,0);
 
 DownloadQueue=CreateEmptyList();
-HTTPSetUserAgent("Movgrab 1.0.2");
-FormatPreference=CopyStr(FormatPreference,"flv,mp4,mov,mpg,mpeg,wmv,avi,3gp,yt-flv,mp3,m4a,wma");
+Tempstr=MCopyStr(Tempstr,"Movgrab ",VERSION,NULL);
+HTTPSetUserAgent(Tempstr);
+FormatPreference=CopyStr(FormatPreference,"mp4,flv,mov,mpg,mpeg,wmv,avi,3gp,yt-flv,mp3,m4a,wma");
 
 ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
 

@@ -55,6 +55,7 @@ if (Mod)
    DestroyString(Mod->Name);
    DestroyString(Mod->Args);
    DestroyString(Mod->Buffer);
+	 DestroyList(Mod->Values,DestroyString);
    free(Mod);
 }
 }
@@ -93,9 +94,11 @@ char *Name=NULL, *Value=NULL, *ptr;
 char *Salt=NULL;
 
 *IVLen=0;
+fprintf(stderr,"IEC1: [%s] \n",Args);
 ptr=GetNameValuePair(Args,"\\S","=",&Name,&Value);
 while (ptr)
 {
+fprintf(stderr,"IEC: [%s] [%s]\n",Name,Value);
   if (StrLen(Name))
   {
   if (strcasecmp(Name,"Cipher")==0)
@@ -312,7 +315,11 @@ return(wrote);
 int CryptoDevProcessorClose(TProcessingModule *ProcMod)
 {
 #ifdef HAVE_CRYPTODEV
-	free(ProcMod->Data);
+	if (ProcMod->Data)
+	{
+		free(ProcMod->Data);
+		ProcMod->Data=NULL;
+	}
 #endif
 return(TRUE);
 }
@@ -389,11 +396,11 @@ switch(val)
 	case CI_AES_256:
 		Data->Cipher=EVP_aes_256_cbc();
 		break;
-
-
 }
 
 
+if (Data->Cipher)
+{
 Data->enc_ctx=(EVP_CIPHER_CTX *) calloc(1,sizeof(EVP_CIPHER_CTX));
 Data->dec_ctx=(EVP_CIPHER_CTX *) calloc(1,sizeof(EVP_CIPHER_CTX));
 EVP_CIPHER_CTX_init(Data->enc_ctx);
@@ -411,6 +418,7 @@ result=TRUE;
 DataProcessorSetValue(ProcMod,"Cipher",Tempstr);
 Tempstr=FormatStr(Tempstr,"%d",Data->BlockSize);
 DataProcessorSetValue(ProcMod,"BlockSize",Tempstr);
+}
 
 DestroyString(Tempstr);
 #endif
@@ -455,6 +463,7 @@ libCryptoProcessorData *Data;
 EVP_CIPHER_CTX *ctx;
 char *ptr, *Tempstr=NULL;
 
+//fprintf(stderr,"LCPW: %s %d\n",InData,InLen);
 //if (ProcMod->Flags & DPM_WRITE_FINAL) return(0);
 ptr=OutData;
 
@@ -466,19 +475,26 @@ len=OutLen;
 ProcMod->Flags = ProcMod->Flags & ~DPM_WRITE_FINAL;
 if (ProcMod->Flags & DPM_NOPAD_DATA)
 {
-val=InLen % Data->BlockSize;
-Tempstr=CopyStrLen(Tempstr,InData,InLen);
-if (val !=0) 
-{
-Tempstr=SetStrLen(Tempstr,InLen + (Data->BlockSize-val));
-memset(Tempstr+InLen,' ', (Data->BlockSize-val));
-val=InLen+(Data->BlockSize-val);
-}
-else val=InLen;
+printf("PAD!\n");
+	val=InLen % Data->BlockSize;
+	Tempstr=CopyStrLen(Tempstr,InData,InLen);
+	if (val !=0) 
+	{
+		Tempstr=SetStrLen(Tempstr,InLen + (Data->BlockSize-val));
+		memset(Tempstr+InLen,' ', (Data->BlockSize-val));
+		val=InLen+(Data->BlockSize-val);
+	}
+	else val=InLen;
 
-result=EVP_EncryptUpdate(ctx, ptr, &len, Tempstr, val);
+	result=EVP_EncryptUpdate(ctx, ptr, &len, Tempstr, val);
+fprintf(stderr,"WRITE: %s %d -> %d\n",Tempstr,val,len);
 }
-else result=EVP_EncryptUpdate(ctx, ptr, &len, InData, InLen);
+else 
+{
+result=EVP_EncryptUpdate(ctx, ptr, &len, InData, InLen);
+fprintf(stderr,"WRITE: %s %d -> %d (%d)\n",InData,InLen,len,OutLen);
+}
+
 
 if (! result) wrote=0;
 else wrote=len;
@@ -657,9 +673,7 @@ DestroyString(Value);
 return(result);
 }
 
-
-
-int zlibProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+int zlibProcessorInternalWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen, int Flush)
 {
 int wrote=0;
 #ifdef HAVE_LIBZ
@@ -675,17 +689,31 @@ ZData->z_out.next_in=(char *) InData;
 ZData->z_out.avail_out=OutLen;
 ZData->z_out.next_out=OutData;
 
-if (InLen > 0) deflate(& ZData->z_out, Z_NO_FLUSH);
-else
+if (Flush)
 {
 	deflate(& ZData->z_out, Z_FINISH);
 	ProcMod->Flags |= DPM_WRITE_FINAL;
 }
+else deflate(& ZData->z_out, Z_NO_FLUSH);
 
 wrote=OutLen-ZData->z_out.avail_out;
 #endif
 return(wrote);
 }
+
+
+
+int zlibProcessorWrite(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+{
+return(zlibProcessorInternalWrite(ProcMod, InData, InLen, OutData, OutLen, FALSE));
+}
+
+int zlibProcessorFlush(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
+{
+return(zlibProcessorInternalWrite(ProcMod, InData, InLen, OutData, OutLen, TRUE));
+}
+
+
 
 
 int zlibProcessorRead(TProcessingModule *ProcMod, const char *InData, int InLen, char *OutData, int OutLen)
@@ -731,12 +759,14 @@ int zlibProcessorClose(TProcessingModule *ProcMod)
 zlibData *ZData;
 
 ZData=(zlibData *) ProcMod->Data;
-
-deflateEnd(&ZData->z_in);
-inflateEnd(&ZData->z_out);
+if (ZData)
+{
+inflateEnd(&ZData->z_in);
+deflateEnd(&ZData->z_out);
 
 free(ZData);
-
+ProcMod->Data=NULL;
+}
 #endif
 return(TRUE);
 }
@@ -746,7 +776,6 @@ return(TRUE);
 TProcessingModule *StandardDataProcessorCreate(const char *Class, const char *Name, const char *Args)
 {
 TProcessingModule *Mod=NULL;
-
 
 #ifdef HAVE_LIBSSL
 #ifdef HAVE_LIBCRYPTO
@@ -805,10 +834,12 @@ if (strcasecmp(Class,"compression")==0)
    if (strcasecmp(Name,"zlib")==0) Mod->Init=zlibProcessorInit;
    else Mod->Init=gzipProcessorInit;
    
+//fprintf(stderr,"SDP: %s %s\n",Class,Name);
    Mod->Write=zlibProcessorWrite;
    Mod->Read=zlibProcessorRead;
+   Mod->Flush=zlibProcessorFlush;
    Mod->Close=zlibProcessorClose;
-
+ 
    if (Mod && Mod->Init(Mod, Args)) return(Mod);
    else 
 	{
@@ -829,7 +860,7 @@ TProcessingModule *Mod;
 
 Mod=(TProcessingModule *) In;
 if (! Mod) return;
-//Mod->Close(Mod);
+Mod->Close(Mod);
 DestroyString(Mod->Name);
 DestroyString(Mod->Args);
 DestroyString(Mod->Buffer);
@@ -885,7 +916,8 @@ int STREAMAddStandardDataProcessor(STREAM *S, const char *Class, const char *Nam
 {
 TProcessingModule *Mod=NULL;
 
-Mod=StandardDataProcessorCreate(Class,Name,"");
+//fprintf(stderr,"SASDP: %s\n",Args);
+Mod=StandardDataProcessorCreate(Class,Name,Args);
 if (Mod) 
 {
 STREAMAddDataProcessor(S, Mod, Args);

@@ -31,6 +31,7 @@ char *VFormatStr(char *,const char *,va_list);
 char *FormatStr(char *,const char *,...);
 char *AddCharToStr(char *,char);
 inline char *AddCharToBuffer(char *Buffer, int BuffLen, char Char);
+inline char *AddBytesToBuffer(char *Buffer, int BuffLen, char *Bytes, int Len);
 char *SetStrLen(char *,int);
 char *strlwr(char *);
 char *strrep(char *,char, char);

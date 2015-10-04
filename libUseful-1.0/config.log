@@ -10,3 +10,10 @@ configure:722: checking whether gcc accepts -g
 configure:761: checking whether make sets ${MAKE}
 configure:788: checking how to run the C preprocessor
 configure:868: checking for ANSI C header files
+configure:988: checking for SSL_library_init in -lssl
+configure:1007: gcc -o conftest -g -O2   conftest.c -lssl   1>&5
+configure:1037: checking for deflate in -lz
+configure:1056: gcc -o conftest -g -O2   conftest.c -lz  -lssl  1>&5
+configure:1086: checking for EVP_CIPHER_CTX_init in -lcrypto
+configure:1105: gcc -o conftest -g -O2   conftest.c -lcrypto  -lz -lssl  1>&5
+configure:1137: checking for esd_open_sound in -lesd

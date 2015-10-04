@@ -34,7 +34,7 @@ ListNode *AddNamedItemToList(ListNode *, const char *Name, void *);
 ListNode *InsertItemIntoList(ListNode *,void *);
 ListNode *InsertNamedItemIntoList(ListNode *,const char *,void *);
 ListNode *OrderedListAddNamedItem(ListNode *Head, const char *Name, void *Item);
-void InsertItemIntoSortedList(ListNode *, void *, int (*LessThanFunc)(void *, void *, void *));
+ListNode *InsertItemIntoSortedList(ListNode *, void *, int (*LessThanFunc)(void *, void *, void *));
 void *DeleteNodeFromList(ListNode *);
 ListNode *ListAddNamedItemAfter(ListNode *ListStart,const char *Name,void *Item);
 ListNode *GetNextListItem(ListNode *);

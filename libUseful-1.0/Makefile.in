@@ -4,7 +4,7 @@ CFLAGS = @CFLAGS@
 LIBS = @LIBS@
 FLAGS=$(CFLAGS) -fPIC @DEFS@ 
 prefix=@prefix@
-OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o md5c.o base64.o
+OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o expect.o md5c.o base64.o
 
 
 all: $(OBJ)
@@ -42,6 +42,9 @@ file.o: file.h file.c
 
 inet.o: inet.h inet.c
 	$(CC) $(FLAGS) -c inet.c
+
+expect.o: expect.h expect.c
+	$(CC) $(FLAGS) -c expect.c
 
 GeneralFunctions.o: GeneralFunctions.h GeneralFunctions.c
 	$(CC) $(FLAGS) -c GeneralFunctions.c

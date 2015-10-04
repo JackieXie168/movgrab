@@ -88,5 +88,6 @@ int HTTPDownload(char *URL, char *Login, char *Password, STREAM *S);
 void HTTPSetUserAgent(char *AgentName);
 void HTTPSetProxy(char *Proxy);
 void HTTPSetFlags(int Flags);
+char *HTTPParseURL(char *URL, char **Proto, char **Host, int *Port, char **Login, char **Password);
 
 #endif

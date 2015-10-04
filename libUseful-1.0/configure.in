@@ -30,16 +30,11 @@ cf_have_libcrypto=$ac_cv_lib_crypto_EVP_CIPHER_CTX_init
 fi
 
 
-#AC_CHECK_LIB(esd,esd_open_sound,,)
-#cf_have_libesd=$ac_cv_lib_esd_esd_open_sound
-
-
 echo
 echo "*************  RESULTS **************"
 echo "Secure Sockets Support:		$cf_have_libssl" 
 echo "Cryptography Support:		$cf_have_libcrypto" 
 echo "Zlib compression Support:	$cf_have_libz" 
-echo "Esound Support:			$cf_have_libesd" 
 echo "*************************************"
 echo
 

@@ -12,15 +12,11 @@
 # config.status only pays attention to the cache file if you give it the
 # --recheck option to rerun configure.
 #
-ac_cv_func_atol=${ac_cv_func_atol=yes}
 ac_cv_header_stdc=${ac_cv_header_stdc=yes}
 ac_cv_lib_crypto_EVP_CIPHER_CTX_init=${ac_cv_lib_crypto_EVP_CIPHER_CTX_init=yes}
-ac_cv_lib_esd_esd_open_sound=${ac_cv_lib_esd_esd_open_sound=no}
-ac_cv_lib_esq_esq_open_sound=${ac_cv_lib_esq_esq_open_sound=no}
+ac_cv_lib_esd_esd_open_sound=${ac_cv_lib_esd_esd_open_sound=yes}
 ac_cv_lib_ssl_SSL_library_init=${ac_cv_lib_ssl_SSL_library_init=yes}
 ac_cv_lib_z_deflate=${ac_cv_lib_z_deflate=yes}
-ac_cv_lib_z_deflateInit=${ac_cv_lib_z_deflateInit=no}
-ac_cv_lib_z_deflateInit_=${ac_cv_lib_z_deflateInit_=yes}
 ac_cv_prog_CC=${ac_cv_prog_CC=gcc}
 ac_cv_prog_CPP=${ac_cv_prog_CPP='gcc -E'}
 ac_cv_prog_cc_cross=${ac_cv_prog_cc_cross=no}

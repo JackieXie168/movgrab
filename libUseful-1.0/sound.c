@@ -7,6 +7,8 @@
 #include "defines.h"
 #include "includes.h"
 
+#define OUTPUT 0
+#define INPUT 1
 
 typedef struct
 {
@@ -129,13 +131,19 @@ return(AudioInfo);
 
 
 /*  ------------------------ OSS Functions  -------------------- */
-int OpenOSSOutput(char *Dev, TAudioInfo *Info)
+int OpenOSSDevice(char *Dev, int Type, TAudioInfo *Info)
 {
 	int fd, i;
 	unsigned char *data;
 	int val;
-	
-	fd=open(Dev,O_WRONLY);
+
+	if (Type==OUTPUT) val=O_WRONLY;
+	else val=O_RDONLY;
+
+	if (StrLen(Dev)==0) fd=open("/dev/dsp",val);
+	else fd=open(Dev,val);
+
+	if (fd==-1) return(-1);
 	if (fd==-1) return(-1);
 
 
@@ -177,13 +185,22 @@ int OpenOSSOutput(char *Dev, TAudioInfo *Info)
 	return(fd);
 }
 
+int OpenOSSInput(char *Dev, TAudioInfo *Info)
+{
+return(OpenOSSDevice(Dev,INPUT,Info));
+}
 
+
+int OpenOSSOutput(char *Dev, TAudioInfo *Info)
+{
+return(OpenOSSDevice(Dev,OUTPUT,Info));
+}
 
 
 
 int OSSAlterVolumeType(char *device, int Type, int delta)
 {
-int val, mixfd=0;
+int left_val, right_val, val, mixfd=0;
 
 mixfd=open(device, O_RDWR);
 if (mixfd > -1)
@@ -222,11 +239,20 @@ switch (Type)
 	ioctl(mixfd,MIXER_READ(SOUND_MIXER_LINE1),&val);
 	break;
 }
-val &=255;
 
-val+=delta;
-if (val < 0) val=0;
-if (val > 255) val=255;
+left_val=val & 0xFF;
+right_val=(val & 0xFF00) >> 8;
+
+left_val+=delta;
+if (left_val < 0) left_val=0;
+if (left_val > 255) left_val=255;
+
+right_val+=delta;
+if (right_val < 0) right_val=0;
+if (right_val > 255) right_val=255;
+
+right_val=right_val << 8;
+val=right_val + left_val;
 
 switch (Type)
 {
@@ -266,7 +292,7 @@ switch (Type)
 close(mixfd);
 }
 
-return(val);
+return(left_val);
 }
 
 
@@ -350,8 +376,8 @@ return(TRUE);
 
 
 /*  ------------------------ ESound Functions  -------------------- */
-#ifdef HAVE_LIBESD
 
+#ifdef HAVE_LIBESD
 #include <esd.h>
 
 int ESDGetConnection()
@@ -432,7 +458,62 @@ return(FALSE);
 
 //---------------- Wrapper functions -------------//
 
-int PlaySoundFile(char *Path, int Vol, int Flags)
+
+int SoundOpenOutput(char *Dev, TAudioInfo *Info)
+{
+int fd=-1;
+
+#ifdef HAVE_LIBESD
+esd_format_t esd_format;
+
+esd_format=ESD_STREAM | ESD_PLAY;
+
+if (Info->Channels==2) esd_format |= ESD_STEREO;
+else esd_format |= ESD_MONO;
+
+if (Info->SampleSize==2) esd_format |= ESD_BITS16;
+else esd_format |= ESD_BITS8;
+
+
+fd=esd_play_stream(esd_format, Info->SampleRate, NULL, "testing");
+
+printf("ESDP: %d %d fd=%d\n",esd_format,Info->SampleRate,fd);
+
+#endif
+
+if (fd < 0) fd=OpenOSSOutput(Dev, Info);
+
+return(fd);
+}
+
+int SoundOpenInput(char *Dev, TAudioInfo *Info)
+{
+int fd=-1;
+
+#ifdef HAVE_LIBESD
+esd_format_t esd_format;
+
+esd_format=ESD_STREAM | ESD_RECORD;
+
+if (Info->Channels==2) esd_format |= ESD_STEREO;
+else esd_format |= ESD_MONO;
+
+if (Info->SampleSize==2) esd_format |= ESD_BITS16;
+else esd_format |= ESD_BITS8;
+
+
+fd=esd_record_stream(esd_format, Info->SampleRate, NULL, "testing");
+
+#endif
+
+if (fd < 0) fd=OpenOSSInput(Dev, Info);
+
+return(fd);
+}
+
+
+
+int SoundPlayFile(char *Path, int Vol, int Flags)
 {
 int result=0, pid=0;
 
@@ -465,4 +546,6 @@ DestroyString(device);
 return(val);
 
 }
+
+
 

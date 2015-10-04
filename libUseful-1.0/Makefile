@@ -2,10 +2,10 @@
 CC = gcc
 VERSION = 0.0.1
 CFLAGS = -g -O2
-LIBS = 
-FLAGS=$(CFLAGS) -fPIC  -DSTDC_HEADERS=1  
+LIBS = -lz
+FLAGS=$(CFLAGS) -fPIC  -DSTDC_HEADERS=1 
 prefix=/usr/local
-OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o md5c.o base64.o
+OBJ=string.o list.o expect.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcessing.o EncryptedFiles.o ConnectManager.o sound.o pty.o Log.o http.o inet.o md5c.o base64.o
 
 
 all: $(OBJ)
@@ -21,6 +21,10 @@ list.o: list.h list.c
 
 socket.o: socket.h socket.c
 	$(CC) $(FLAGS) -c socket.c
+
+expect.o: expect.h expect.c
+	$(CC) $(FLAGS) -c expect.c
+
 
 sound.o: sound.h sound.c
 	$(CC) $(FLAGS) -c sound.c

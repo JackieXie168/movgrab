@@ -1,6 +1,7 @@
 #include "includes.h"
 #include "DataProcessing.h"
 #include "pty.h"
+#include "expect.h"
 
 #ifdef HAVE_LIBSSL
 #include <openssl/crypto.h>
@@ -115,6 +116,7 @@ int result, count=0;
 struct timeval tv;
 
 if (! S) return(STREAM_CLOSED);
+if (S->out_fd==-1) return(STREAM_CLOSED);
 
 
 while (count < DataLen)
@@ -164,6 +166,7 @@ int len, olen, result=0;
 int AllDataWritten=FALSE;
 
 if (! S) return(-1);
+if (S->out_fd==-1) return(-1);
 
 len=S->OutEnd - S->OutStart;
 InBuff=SetStrLen(InBuff,len+1);
@@ -183,7 +186,7 @@ while (! AllDataWritten)
   {
      Mod=(TProcessingModule *) Curr->Item;
 
-     if (len==0) olen=1024;
+     if (len < (BUFSIZ / 2)) olen=BUFSIZ;
      else
      {
         olen=len*2;
@@ -194,6 +197,7 @@ while (! AllDataWritten)
 		 result=0;
      if (Final && Mod->Flush) result=Mod->Flush(Mod,InBuff,len,OutBuff,olen);
      else if (Mod->Write && ((len > 0) || Final)) result=Mod->Write(Mod,InBuff,len,OutBuff,olen);
+			
 
      if (result > 0)
      {
@@ -202,6 +206,12 @@ while (! AllDataWritten)
           memcpy(InBuff,OutBuff,result);
 					len=result;
      }
+		 else 
+		 {
+			//out of data for now
+			len=0;
+			break;
+		 }
 
      Curr=GetNextListItem(Curr);
   }
@@ -250,7 +260,7 @@ int STREAMReadThroughProcessors(STREAM *S, char *Bytes, int InLen)
 TProcessingModule *Mod;
 ListNode *Curr;
 char *InBuff=NULL, *OutBuff=NULL;
-int len, olen;
+int len=0, olen=0;
 
 len=InLen;
 
@@ -276,8 +286,11 @@ if (len==-1)
     break;
 }
 
-InBuff=SetStrLen(InBuff,len);
-memcpy(InBuff,OutBuff,len);
+if (len > 0)
+{
+	InBuff=SetStrLen(InBuff,len);
+	memcpy(InBuff,OutBuff,len);
+}
 
 Curr=GetNextListItem(Curr);
 }
@@ -497,7 +510,7 @@ return(fd);
 int STREAMReadCharsToBuffer(STREAM *S)
 {
 fd_set selectset;
-int result, diff, read_result, WaitForBytes=TRUE;
+int result, diff, read_result=0, WaitForBytes=TRUE;
 struct timeval tv;
 char *tmpBuff=NULL;
 int v1, v2,v3;
@@ -542,39 +555,56 @@ if ((S->Timeout > 0) && WaitForBytes)
    tv.tv_sec=S->Timeout;
    tv.tv_usec=0;
    result=select(S->in_fd+1,&selectset,NULL,NULL,&tv);
-  if (result==-1) return(STREAM_CLOSED);
-  if (result ==0)
-  {
-     errno=ETIMEDOUT;
-     return(STREAM_TIMEOUT);
-  }
+
+	switch (result)
+	{
+		case -1:
+		if (errno==EINTR) read_result=STREAM_TIMEOUT;
+		else read_result=STREAM_CLOSED;
+		break;
+
+		case 0:
+		errno=ETIMEDOUT;
+		read_result=STREAM_TIMEOUT;
+		break;
+
+		default:
+		 read_result=0;
+		break;
+	}
 
 }
 
-tmpBuff=SetStrLen(tmpBuff,S->BuffSize-S->InEnd);
+//must do this, as we need it to be 0 if we don't do the reads
+result=0;
 
+if (read_result==0)
+{
+	tmpBuff=SetStrLen(tmpBuff,S->BuffSize-S->InEnd);
 
-#ifdef HAVE_LIBSSL
-if (S->Flags & SF_SSL)
-{
-read_result=SSL_read((SSL *) S->Extra, tmpBuff, S->BuffSize-S->InEnd);
-}
-else
-#endif
-{
-read_result=read(S->in_fd, tmpBuff, S->BuffSize-S->InEnd);
-}
+	#ifdef HAVE_LIBSSL
+	if (S->Flags & SF_SSL)
+	{
+		read_result=SSL_read((SSL *) S->Extra, tmpBuff, S->BuffSize-S->InEnd);
+	}
+	else
+	#endif
+	{
+		read_result=read(S->in_fd, tmpBuff, S->BuffSize-S->InEnd);
+	}
 
-if (read_result > 0) result=read_result;
-else
-{
+	if (read_result > 0) result=read_result;
+	else
+	{
         if ((read_result == -1) && (errno==EAGAIN)) read_result=STREAM_NODATA;
         else read_result=STREAM_CLOSED;
         result=0;
+	}
 }
 
 result=STREAMReadThroughProcessors(S, tmpBuff, result);
-if (result==STREAM_DATA_ERROR) read_result=STREAM_DATA_ERROR;
+//if (result==STREAM_DATA_ERROR) read_result=STREAM_DATA_ERROR;
+if (result !=0) read_result=result;
 
 //We are not returning number of bytes read. We only return something if
 //there is a condition (like socket close) where the thing we are waiting for 
@@ -591,19 +621,19 @@ return(read_result);
 
 int STREAMReadBytes(STREAM *S, char *Buffer, int Buffsize)
 {
-char *ptr;
-int bytes=0, result, total=0;
+char *ptr=NULL;
+int bytes=0, result=0, total=0;
 
 ptr=Buffer;
 
 if (S->InStart >= S->InEnd) 
 {
   result=STREAMReadCharsToBuffer(S);
-  if (S->InStart >= S->InEnd)
+	if (S->InStart >= S->InEnd)
 	{
 	  if (result==STREAM_CLOSED) return(EOF);
 	  if (result==STREAM_TIMEOUT) return(STREAM_TIMEOUT);
-    if (result==STREAM_DATA_ERROR) return(STREAM_DATA_ERROR);
+	  if (result==STREAM_DATA_ERROR) return(STREAM_DATA_ERROR);
 	}
 }
 
@@ -621,21 +651,21 @@ bytes=S->InEnd - S->InStart;
 
 if (bytes < 1) 
 {
-//in testing, the best way to prevent doing constant checking for new bytes,
-//and so filling up the buffer, was to only check for new bytes if
-//we didn't have enough to satisfy another read like the one we just had
+	//in testing, the best way to prevent doing constant checking for new bytes,
+	//and so filling up the buffer, was to only check for new bytes if
+	//we didn't have enough to satisfy another read like the one we just had
 
-if (FDCheckForBytes(S->in_fd) < 1) 
-{
-	if (total==0) total=EOF;
-	break;
-}
-    result=STREAMReadCharsToBuffer(S);
-    if (result < 1)
-    {
-    if (total > 0) return(total);
-    else return(result);
-    }
+	if (FDCheckForBytes(S->in_fd) < 1) 
+	{
+		if (total==0) total=EOF;
+		break;
+	}
+	result=STREAMReadCharsToBuffer(S);
+	if (result < 1)
+	{
+		if (total > 0) return(total);
+		else return(result);
+	}
 }
 
 
@@ -804,7 +834,7 @@ while (inchar > 0)
 	//if ((len % 100)== 0) Tempptr=realloc(Tempptr,(len/100 +1) *100 +2);
 	//*(Tempptr+len)=inchar;
     	Tempptr=AddCharToBuffer(Tempptr,len,(char) inchar);
-	len++;
+			len++;
 
     if (inchar==Term) break;
     inchar=STREAMReadChar(S);

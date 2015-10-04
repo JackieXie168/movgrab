@@ -2,7 +2,7 @@
 # Generated automatically by configure.
 # Run this file to recreate the current configuration.
 # This directory was configured as follows,
-# on host bluebox1:
+# on host evo:
 #
 # ./configure 
 #
@@ -58,7 +58,7 @@ s%@includedir@%${prefix}/include%g
 s%@oldincludedir@%/usr/include%g
 s%@infodir@%${prefix}/info%g
 s%@mandir@%${prefix}/man%g
-s%@VERSION@%1.0.1%g
+s%@VERSION@%1.0.2%g
 s%@subdirs@%libUseful-1.0%g
 s%@CC@%gcc%g
 s%@SET_MAKE@%%g
