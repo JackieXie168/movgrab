@@ -1,6 +1,8 @@
-Movgrab is all one big 'C' program.
+Everything relating to adding sites is now in the files 'servicetypes.c' and 'servicetypes.h'.
 
-Near the top of the code are 3 arrays of strings:
+servicetypes.h contains an enumerated type of values that defines a TYPE_ for each download type. You must add a TYPE_ to this too.
+
+Everything else is in 'servicetypes.c'. Near the top of this file are 3 arrays of strings:
 
 DownloadTypes
 DownloadNames
@@ -8,7 +10,6 @@ TestLinks
 
 When you add a site, you add an entry to each of these. A 'type code' that is used to select it from the command line with the -t option, a longer 'DownloadName' for the download type/website and a link to a video page that can be used to test if this download method is working. All three must be added to the same place in their respective arrays, so if you insert a new download type as the tenth type, then it's entries must be at position ten in all these arrays.
 
-Next there is an enumerated type of values that defines a TYPE_ for each download type. You must add a TYPE_ to this too.
 
 Now find a function called 'ExtractItemInfo'. It contains a massive switch statement, with an entry for each of the download TYPE_ values. Most have a format like this:
 

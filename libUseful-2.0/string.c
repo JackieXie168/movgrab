@@ -192,6 +192,7 @@ char *VFormatStr(char *InBuff, const char *FmtStr, va_list args)
 {
 int inc=100, count=1, result;
 char *tempstr=NULL;
+va_list argscopy;
 
 tempstr=InBuff;
 
@@ -200,7 +201,13 @@ for (count=1; count < 100; count++)
 {
 	result=inc * count +1;
   tempstr=SetStrLen(tempstr, result);
-     result=vsnprintf(tempstr,result,FmtStr,args);
+
+		//the vsnprintf function DESTROYS the arg list that is passed to it.
+		//This is just plain WRONG, it's a long-standing bug. The solution is to
+		//us va_copy to make a new one every time and pass that in.
+		va_copy(argscopy,args);
+     result=vsnprintf(tempstr,result,FmtStr,argscopy);
+		va_end(argscopy);
 
   /* old style returns -1 to say couldn't fit data into buffer.. so we */
   /* have to guess again */
