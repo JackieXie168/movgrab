@@ -223,6 +223,42 @@ int FmtIDMatches(char *FmtID, char *CurrItem, char *ItemData)
 }
 
 
+void DisplayAvailableFormats(ListNode *Vars, char *Formats)
+{
+char *Token=NULL, *TokenID=NULL, *Tempstr=NULL, *ptr;
+STREAM *S;
+double val;
+
+fprintf(stderr, "\nFormats available for this Movie:");
+
+ptr=GetToken(Formats," ",&Token,0);
+while (ptr)
+{
+if (StrLen(Token)) TokenID=MCopyStr(TokenID,"item:",Token,NULL);
+
+Tempstr=CopyStr(Tempstr,GetVar(Vars,TokenID));
+
+if (strcmp(Token,"reference") !=0)
+{
+	S=HTTPMethod("HEAD",Tempstr,NULL,NULL);
+	fprintf(stderr,"%s",Token);
+	if (S)
+	{
+		Tempstr=CopyStr(Tempstr,STREAMGetValue(S,"HTTP:Content-length"));
+		val=atof(Tempstr);
+		fprintf(stderr, " (%s)",GetHumanReadableDataQty(val,TRUE));
+		STREAMClose(S);
+	}
+}
+fprintf(stderr,", ");
+
+ptr=GetToken(ptr," ",&Token,0);
+}
+
+
+fprintf(stderr,"\n\n",Tempstr);
+}
+
 //this function compares the video formats found on the page to the list of
 //preferences expressed by the user with the '-f' flag, and contained in the
 //global variable 'FormatPreference'
@@ -233,8 +269,7 @@ char *ptr, *Tempstr=NULL, *Fmt=NULL, *FmtID=NULL, *Selected=NULL, *p_ItemFormat;
 int RetVal=-1, FoundMatch=FALSE;
 
 Tempstr=GatherMatchingFormats(Tempstr,"",Vars);
-if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie: %s\n\n",Tempstr);
-
+if (! (Flags & FLAG_QUIET)) DisplayAvailableFormats(Vars, Tempstr);
 
 	ptr=GetToken(FormatPreference,",",&Fmt,0);
 	while (ptr)

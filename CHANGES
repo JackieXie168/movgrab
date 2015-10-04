@@ -1,3 +1,7 @@
+Version 1.1.9
+	Fixes for mefeedia and metatube
+	Added filesizes to 'Available Formats' list
+
 Version 1.1.8
 	Added crazy new youtube formats like 'webm-3D'.
 	Movgrab now honors the 'http_proxy' environment variable

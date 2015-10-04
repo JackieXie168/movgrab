@@ -1266,9 +1266,10 @@ case TYPE_MEFEEDIA:
 #define MEFEEDIA_ITEM_START "href=\""
 #define MEFEEDIA_ITEM_END "\""
 
-if (strstr(Tempstr,MEFEEDIA_FIND))
+ptr=strstr(Tempstr,MEFEEDIA_FIND);
+if (ptr)
 {
-		GenericExtractFromLine(Tempstr, "item:reference",MEFEEDIA_ITEM_START,MEFEEDIA_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
+		GenericExtractFromLine(ptr, "item:reference",MEFEEDIA_ITEM_START,MEFEEDIA_ITEM_END,Vars,EXTRACT_DEQUOTE | EXTRACT_NOSPACES);
 }
 
 
@@ -1664,7 +1665,7 @@ break;
 
 
 case TYPE_METATUBE:
-#define METATUBE_ITEM_START "flashvars.videoPath = \""
+#define METATUBE_ITEM_START "flashvars.src = \""
 #define METATUBE_ITEM_END "\";"
 
 if (strstr(Tempstr,METATUBE_ITEM_START) )
