@@ -8,10 +8,10 @@ bindir=$(prefix)@bindir@
 FLAGS=$(CFLAGS) @DEFS@ 
 
 all: 
-	@cd libUseful-1.0; $(MAKE)
-	$(CC) $(FLAGS) -o movgrab main.c libUseful-1.0/libUseful-1.0.a $(LIBS)
+	@cd libUseful-2.0; $(MAKE)
+	$(CC) $(FLAGS) -o movgrab main.c libUseful-2.0/libUseful-2.0.a $(LIBS)
 clean:
-	@rm -f movgrab libUseful-1.0/*.o libUseful-1.0/*.a libUseful-1.0/*.so
+	@rm -f movgrab libUseful-2.0/*.o libUseful-2.0/*.a libUseful-2.0/*.so
 
 install:
 	$(INSTALL) movgrab $(bindir)

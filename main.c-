@@ -92,7 +92,7 @@ if (STREAMCheckForBytes(StdIn))
 	StripTrailingWhitespace(Tempstr);
 	if (StrLen(Tempstr))
 	{
-		ListAddItem(DownloadQueue,CopyStr(NULL,Tempstr));
+		AddItemToList(DownloadQueue,CopyStr(NULL,Tempstr));
 		if (! (Flags & FLAG_QUIET)) fprintf(stderr,"\r\nQUEUED: %s\n",Tempstr);
 		result=TRUE;
 	}
@@ -264,7 +264,7 @@ ptr=strrchr(Tempstr,'.');
 if (ptr && (StrLen(ptr) < 6)) *ptr='\0';
 
 
-MD5=HashBytes(MD5,"md5",URL,StrLen(URL),0);
+MD5=HashMD5(MD5,URL,StrLen(URL),0);
 Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
 
 DestroyString(MD5);
@@ -885,7 +885,7 @@ endpos=MediaCount;
 		Tempstr=FormatStr(Tempstr,"ID:%d",i);
 		Var=CopyStr(Var,GetVar(Vars,Tempstr));
 		Tempstr=FormatStr(Tempstr,"Title:%d",i);
- 		ListAddNamedItem(Results,GetVar(Vars,Tempstr),CopyStr(NULL,Var));
+ 		AddNamedItemToList(Results,GetVar(Vars,Tempstr),CopyStr(NULL,Var));
 		}
 
 DestroyString(Tempstr);
@@ -900,17 +900,17 @@ int DoGetBerkeley(ListNode *Vars)
 ListNode *Curr, *SelectionList=NULL;
 int RetVal=FALSE;
 
-SelectionList=ListCreate();
+SelectionList=CreateEmptyList();
 GetDownloadSelectionList(ItemSelectionArg,Vars,SelectionList);
 
-Curr=ListGetNext(SelectionList);
+Curr=GetNextListItem(SelectionList);
 while (Curr)
 {
 	if (DownloadItem(Curr->Item,Curr->Tag,0)) RetVal=TRUE;
-	Curr=ListGetNext(Curr);
+	Curr=GetNextListItem(Curr);
 }
 
-ListDestroy(SelectionList,DestroyString);
+DestroyList(SelectionList,DestroyString);
 
 return(RetVal);
 }
@@ -1304,7 +1304,7 @@ ListNode *Curr;
 char *Tempstr=NULL;
 
 Tempstr=CopyStr(Buffer,"");
-Curr=ListGetNext(Vars);
+Curr=GetNextListItem(Vars);
 while (Curr)
 {
 if (strncmp(Curr->Tag,"item:",5)==0)
@@ -1312,7 +1312,7 @@ if (strncmp(Curr->Tag,"item:",5)==0)
 if ((StrLen(Type)==0) || (strncmp(Curr->Tag,Type,StrLen(Type))==0)) Tempstr=MCatStr(Tempstr,Curr->Tag+5," ",NULL);
 }
 
-Curr=ListGetNext(Curr);
+Curr=GetNextListItem(Curr);
 }
 
 return(Tempstr);
@@ -1351,7 +1351,7 @@ if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie:
 	if (Flags & FLAG_DEBUG) fprintf(stderr,"  %s ",Fmt);
 
 		FoundMatch=FALSE;
-		Curr=ListGetNext(Vars);
+		Curr=GetNextListItem(Vars);
 		while (Curr)
 		{
 					if  (RetVal==-1) 
@@ -1380,7 +1380,7 @@ if (! (Flags & FLAG_QUIET)) fprintf(stderr, "\nFormats available for this Movie:
 					}
 					break;
 				}
-				Curr=ListGetNext(Curr);
+				Curr=GetNextListItem(Curr);
 			}
 			if ((! FoundMatch) && (Flags & (FLAG_DEBUG))) fprintf(stderr,"... no\n",Fmt);
 			ptr=GetToken(ptr,",",&Fmt,0);
@@ -1544,7 +1544,7 @@ int RetVal=FALSE;
 
 
 
-Vars=ListCreate();
+Vars=CreateEmptyList();
 SetVar(Vars,"Server",Server);
 if (Port==0) Port=DefaultPort;
 Tempstr=FormatStr(Tempstr,"%d",Port);
@@ -2692,7 +2692,7 @@ else if (! (Flags & FLAG_QUIET))
 	fprintf(stderr,"Format Preference: %s\n\n",FormatPreference);
 }
 
-ListDestroy(Vars,DestroyString);
+DestroyList(Vars,DestroyString);
 
 DestroyString(VarName);
 DestroyString(Token);
@@ -2784,7 +2784,7 @@ fprintf(stderr,"\nFeel free to email me and tell me if you've used this software
 
 fprintf(stderr,"\nIf you want to watch quite a good youtube movie, try 'SPIN', \"movgrab http://www.youtube.com/watch?v=oP59tQf_njc\"\n");
 
-fprintf(stderr,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', Ashish Disawal, Timo Juhani Lindfors and others.\n");
+fprintf(stderr,"\nThanks for bug reports go to: Mark Gamar, Rich Kcsa, 'Rampant Badger', Ashish Disawal and others.\n");
 fprintf(stderr,"\nSpecial thanks to:\n");
 fprintf(stderr,"	'legatvs' for clive (http://clive.sourceforge.net) another downloader into whose code I had to look to figure out how to get youtube and daily motion working again.\n");
 fprintf(stderr,"	Robert Crowley (http://tools.99k.org/) For all sorts of bug reports and advice.\n");
@@ -2851,14 +2851,14 @@ for (i=1; i < argc; i++)
 		Flags |= FLAG_TEST_SITES | FLAG_QUIET;
 		for (j=1; TestLinks[j] !=NULL; j++)
 		{
-		if (StrLen(TestLinks[j])) ListAddNamedItem(DL_List,DownloadTypes[j],CopyStr(NULL,TestLinks[j]));
+		if (StrLen(TestLinks[j])) AddNamedItemToList(DL_List,DownloadTypes[j],CopyStr(NULL,TestLinks[j]));
 			
 		}
 		ItemSelectionArg=CopyStr(ItemSelectionArg,"0");
 	}
 	else
 	{
-		ListAddItem(DL_List,CopyStr(NULL,argv[i]));
+		AddItemToList(DL_List,CopyStr(NULL,argv[i]));
 	}	
 
 }
@@ -3076,7 +3076,7 @@ int result;
 StdIn=STREAMFromFD(0);
 STREAMSetTimeout(StdIn,0);
 
-DownloadQueue=ListCreate();
+DownloadQueue=CreateEmptyList();
 Tempstr=MCopyStr(Tempstr,"Movgrab ",Version,NULL);
 HTTPSetUserAgent(Tempstr);
 FormatPreference=CopyStr(FormatPreference,"mp4,flv,mov,mpg,mpeg,wmv,avi,3gp,reference,mp3,m4a,wma");
@@ -3086,20 +3086,20 @@ ParseCommandLine(argc, argv, DownloadQueue, &OverrideType);
 if (Flags & FLAG_PRINT_USAGE) PrintUsage();
 else if (! (Flags & FLAG_STDIN))
 {
-if (ListSize(DownloadQueue)==0) PrintUsage();
+if (CountItemsInList(DownloadQueue)==0) PrintUsage();
 }
 
 
 while (1)
 {
-	if ((Flags & FLAG_STDIN) && (ListSize(DownloadQueue)==0) )
+	if ((Flags & FLAG_STDIN) && (CountItemsInList(DownloadQueue)==0) )
 	{
 		Tempstr=STREAMReadLine(Tempstr,StdIn);
 		StripTrailingWhitespace(Tempstr);
-		ListAddItem(DownloadQueue,CopyStr(NULL,Tempstr));
+		AddItemToList(DownloadQueue,CopyStr(NULL,Tempstr));
 	}
 
-	Curr=ListGetNext(DownloadQueue);
+	Curr=GetNextListItem(DownloadQueue);
 	while (Curr)
 	{
 		if (Flags & FLAG_TEST_SITES)
@@ -3109,7 +3109,7 @@ while (1)
 		}
 
 		result=GrabMovie((char *) Curr->Item,OverrideType);
-		Next=ListGetNext(Curr); //must do this after grab movie
+		Next=GetNextListItem(Curr); //must do this after grab movie
 																//incase more items added while grabbing
 
 			if (Flags & FLAG_TEST_SITES) 
@@ -3118,7 +3118,7 @@ while (1)
 				else fprintf(stderr," BROKEN\n");
 			}
 			
-		if (result) ListDeleteNode(Curr);
+		if (result) DeleteNodeFromList(Curr);
 
 		Curr=Next;
 	}
