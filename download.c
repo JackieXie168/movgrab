@@ -1,4 +1,5 @@
 #include "download.h"
+#include "outputfiles.h"
 
 pid_t PlayerPid=0;
 char *Player=NULL;

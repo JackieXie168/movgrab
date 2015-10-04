@@ -8,5 +8,7 @@ char *OutputFilesGetFilePath();
 void OpenOutputFiles(char *Title, char *URL, int *FileSize);
 void WriteOutputFiles(char *Data, int Len);
 void AddOutputFile(char *Path, int SingleOutput);
+char *GuessExtn(char *ContentType, char *ID);
+
 
 #endif

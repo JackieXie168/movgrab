@@ -7,7 +7,7 @@ prefix=@prefix@
 bindir=$(prefix)@bindir@
 DESTDIR=
 FLAGS=$(CFLAGS) @DEFS@ 
-OBJ=containerfiles.o outputfiles.c common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o
+OBJ=containerfiles.o outputfiles.o common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o
 
 all: $(OBJ)
 	@cd libUseful-2.0; $(MAKE)

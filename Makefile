@@ -7,7 +7,7 @@ prefix=/usr/local
 bindir=$(prefix)${exec_prefix}/bin
 DESTDIR=
 FLAGS=$(CFLAGS) -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" -DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" -DSTDC_HEADERS=1 -DHAVE_LIBZ=1 
-OBJ=containerfiles.o outputfiles.c common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o
+OBJ=containerfiles.o outputfiles.o common.o cbsnews.o dailymotion.o  ehow.o  youtube.o servicetypes.o extract_text.o download.o
 
 all: $(OBJ)
 	@cd libUseful-2.0; $(MAKE)

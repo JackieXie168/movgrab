@@ -32,11 +32,13 @@ char *GuessExtn(char *ContentType, char *ID)
 {
 char *ptr=NULL;
 
-if (ID) ptr=strchr(ID,'.');
-if (!ptr) ptr=".flv";
+if (! StrLen(ID)) return(".flv");
+
+ptr=strchr(ID,'.');
+if (! StrLen(ptr)) ptr=".flv";
 
 
-if (ContentType)
+if (StrLen(ContentType))
 {
 if (strcasecmp(ContentType,"audio/mp3")==0) ptr=".mp3";
 else if (strcasecmp(ContentType,"audio/mpeg")==0) ptr=".mp3";
@@ -47,6 +49,7 @@ else if (strcasecmp(ContentType,"video/3gpp")==0) ptr=".3gp";
 else if (strcasecmp(ContentType,"audio/webm")==0) ptr=".webm";
 else if (strcasecmp(ContentType,"video/webm")==0) ptr=".webm";
 }
+
 
 return(ptr);
 }
