@@ -1,3 +1,17 @@
+Version 1.1.13 
+	Fixed Academic Earth.
+	Fixed Teachertube.
+	Fixed Escapist Magazine.
+
+	Added "International Business Times",
+	Added "Sidney Morning Herald",
+	Added "Press TV (Iran)",
+	Added www.videojug.com
+
+	Removed Dead Site: VideosFacebook
+
+	Added support for youtube /embed/ format links
+
 Version 1.1.12
 	Big thank you to Abhisek Sanyal for submitting a patch that fixed broken youtube!
 	Thanks to 'nibbles' for a bunch of bugfixes that let movgrab compile under OSX

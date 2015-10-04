@@ -95,6 +95,9 @@ if (! (Flags & FLAG_RESUME))
 	Tempstr=MCatStr(Tempstr,"-",MD5,NULL);
 }
 
+//Some stupid sites start pagenames with a space, and we don't want this in the filename
+StripLeadingWhitespace(Tempstr);
+
 DestroyString(MD5);
 
 return(Tempstr);
