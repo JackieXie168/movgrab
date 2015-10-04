@@ -117,8 +117,8 @@ DestroyString(Tempstr);
 //Display progress of download
 void DisplayProgress(char *FullTitle, char *Format, double bytes_read, double DocSize,time_t Now, int PrintName)
 {
-double Percent, Bps=0;
-char *HUDocSize=NULL, *BpsStr=NULL, *Title=NULL;
+double Percent, Bps=0, ETAsecs;
+char *HUDocSize=NULL, *BpsStr=NULL, *ETAStr=NULL, *Title=NULL;
 static time_t SpeedStart=0;
 static double PrevBytesRead=0;
 
@@ -149,7 +149,20 @@ if (DocSize)
 
 	Percent=bytes_read * 100.0 / DocSize;
 
-	if (! (Flags & FLAG_QUIET)) fprintf(stderr,"	Progress: %0.2f%%  %s of %s  %s        \r",Percent,GetHumanReadableDataQty(bytes_read,0),HUDocSize,BpsStr);
+	if (! (Flags & FLAG_QUIET)) 
+	{
+		if (bytes_read > 0)
+		{
+		ETAsecs=(DocSize-bytes_read) / Bps;
+		ETAStr=FormatStr(ETAStr,"%d:%02d",(int) ETAsecs/60, (int) ETAsecs % 60);
+		}
+		else ETAStr=CopyStr(ETAStr,"??:??");
+
+		fprintf(stderr,"	Progress: %0.2f%%  %s of %s  %s  ETA: %s         \r",Percent,GetHumanReadableDataQty(bytes_read,0),HUDocSize,BpsStr,ETAStr);
+		
+	}
+
+
 	sprintf(CmdLine,"%s %0.2f%% %s          \0",ProgName,Percent,Title);
 
 	if ((PlayerPid==0) && (Percent > PlayerLaunchPercent) && (Player)) LaunchPlayer();

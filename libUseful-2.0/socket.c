@@ -606,8 +606,8 @@ switch (val)
 //		if ((StrLen(KeyFile)==0) && (StrLen(Pass) > 0)) Tempstr=CopyStr(Tempstr,"ssh -2 -e none ");
 //		else 
 
-		//Tempstr=CopyStr(Tempstr,"ssh -2 -T ");
-		Tempstr=CopyStr(Tempstr,"ssh -2 ");
+		Tempstr=CopyStr(Tempstr,"ssh -2 -T ");
+		//Tempstr=CopyStr(Tempstr,"ssh -2 ");
 		if (StrLen(KeyFile))
 		{
 
@@ -888,11 +888,11 @@ int val;
 }
 
 
-#ifdef HAVE_LIBSSL
 int INTERNAL_SSL_INIT()
 {
 static int InitDone=FALSE;
 
+#ifdef HAVE_LIBSSL
 if (InitDone) return(TRUE);
   SSL_library_init();
 #ifdef USE_OPENSSL_ADD_ALL_ALGORITHMS
@@ -901,9 +901,16 @@ if (InitDone) return(TRUE);
   SSL_load_error_strings();
 
   InitDone=TRUE;
+
   return(TRUE);
-}
 #endif
+  return(FALSE);
+}
+
+int SSLAvailable()
+{
+return(INTERNAL_SSL_INIT());
+}
 
 int DoSSLClientNegotiation(STREAM *S, int Flags)
 {

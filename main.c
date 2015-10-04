@@ -84,8 +84,16 @@ ptr=HTTPParseURL(Path,&Proto,&Server,&Port,NULL,NULL);
 Doc=CopyStr(Doc,ptr);
 if (strcasecmp(Proto,"https")==0) 
 {
-Flags |= FLAG_HTTPS;
-DefaultPort=443;
+	if (SSLAvailable)
+	{
+		Flags |= FLAG_HTTPS;
+		DefaultPort=443;
+	}
+	else
+	{
+		printf("SSL NOT COMPILED IN! Switching from 'https' to 'http'\n");
+		NextPath=MCopyStr(NextPath,"http://",Server,"/",ptr);
+	}
 }
 if (Port==0) Port=DefaultPort;
 
@@ -221,10 +229,11 @@ int FmtIDMatches(char *FmtID, char *CurrItem, char *ItemData)
 }
 
 
-void DisplayAvailableFormats(ListNode *Vars, char *Formats)
+int DisplayAvailableFormats(ListNode *Vars, char *Formats)
 {
 char *Token=NULL, *TokenID=NULL, *Tempstr=NULL, *ptr;
 STREAM *S;
+int result=TRUE;
 
 fprintf(stderr, "\nFormats available for this Movie:");
 
@@ -241,6 +250,14 @@ if (strcmp(Token,"reference") !=0)
 	fprintf(stderr,"%s",Token);
 	if (S)
 	{
+		Tempstr=CopyStr(Tempstr,STREAMGetValue(S,"HTTP:ResponseCode"));
+		if (strcmp(Tempstr,"200") !=0) 
+		{
+			printf("\nERROR: %s\n",Tempstr);
+			result=FALSE;
+			break;
+		}
+
 		Tempstr=CopyStr(Tempstr,STREAMGetValue(S,"HTTP:Content-length"));
 		fprintf(stderr, " (%s)",GetHumanReadableDataQty(strtod(Tempstr,NULL),FALSE));
 		STREAMClose(S);
@@ -256,6 +273,8 @@ fprintf(stderr,"\n\n",Tempstr);
 DestroyString(Token);
 DestroyString(TokenID);
 DestroyString(Tempstr);
+
+return(result);
 }
 
 //this function compares the video formats found on the page to the list of

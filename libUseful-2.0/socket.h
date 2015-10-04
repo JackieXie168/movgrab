@@ -75,6 +75,7 @@ char *IPStrToHostName(char *);
 char *IPtoStr(unsigned long);
 unsigned long StrtoIP(char *);
 int IsIPAddress(char *);
+int SSLAvailable();
 
 
 int STREAMAddConnectionHop(STREAM *S, char *Value);

@@ -346,6 +346,11 @@ else if (strstr(Server,"animehere.com"))
 {
  Type=TYPE_ANIMEHERE;
 }
+else if (strstr(Server,".google."))
+{
+ Type=TYPE_GOOGLE_URL;
+}
+
 return(Type);
 }
 
@@ -557,6 +562,16 @@ else if (Type==TYPE_PRINCETON)
 else if (Type==TYPE_VIMEO)
 {
  	NextPath=MCopyStr(NextPath,"http://player.vimeo.com/video/",Doc,NULL);
+}
+else if (Type==TYPE_GOOGLE_URL)
+{
+	ptr=strstr(Path,"url=");
+	if (ptr)
+	{
+		ptr+=4;
+ 		ptr=GetToken(ptr,"&",&Token,NULL);
+ 		NextPath=HTTPUnQuote(NextPath,Token);
+	}
 }
 else
 {
@@ -1220,13 +1235,13 @@ break;
 case TYPE_DAILYMOTION:
 #define DAILYMOTION_ITEM "oembed?url="
 #define DAILYMOTION_ITEM_END "&format=xml"
-#define DAILYMOTION_TITLE_START "<h1 class=\"dmco_title\"><span class=\"title\" title=\""
-#define DAILYMOTION_TITLE_END "\""
+#define DAILYMOTION_TITLE_START "<title>"
+#define DAILYMOTION_TITLE_END "</title>"
 
 
   if (strstr(Tempstr,DAILYMOTION_TITLE_START))
   {
-    GenericExtractFromLine(Tempstr, "Title",DAILYMOTION_TITLE_START,DAILYMOTION_TITLE_END,Vars,EXTRACT_DEQUOTE);
+    GenericExtractFromLine(Tempstr, "Title",DAILYMOTION_TITLE_START,DAILYMOTION_TITLE_END,Vars, EXTRACT_DEQUOTE | EXTRACT_DEHTMLQUOTE);
   }
 
 
@@ -2225,6 +2240,9 @@ case TYPE_ANIMEHERE_STAGE2:
 break;
 
 
+case TYPE_GOOGLE_URL:
+		SetVar(Vars,"item:reference",URL);
+break;
 
 
 
