@@ -9,7 +9,7 @@ OBJ=string.o list.o socket.o unix_socket.o file.o GeneralFunctions.o DataProcess
 
 
 all: $(OBJ)
-	#$(CC) $(FLAGS) $(LIBS) -shared -o libUseful-1.0.so $(OBJ)
+	$(CC) $(FLAGS) $(LIBS) -shared -o libUseful-1.0.so $(OBJ)
 	#ld -i -o libUseful-1.0.a $(OBJ)
 	ar rcs libUseful-1.0.a $(OBJ)
 

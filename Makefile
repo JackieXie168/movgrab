@@ -1,6 +1,6 @@
 # Generated automatically from Makefile.in by configure.
 CC = gcc
-VERSION = 1.0.1
+VERSION = 1.0.2
 CFLAGS = -g -O2
 LIBS = 
 FLAGS=$(CFLAGS)  -DSTDC_HEADERS=1 

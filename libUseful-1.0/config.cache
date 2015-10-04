@@ -18,6 +18,7 @@ ac_cv_lib_crypto_EVP_CIPHER_CTX_init=${ac_cv_lib_crypto_EVP_CIPHER_CTX_init=yes}
 ac_cv_lib_esd_esd_open_sound=${ac_cv_lib_esd_esd_open_sound=no}
 ac_cv_lib_esq_esq_open_sound=${ac_cv_lib_esq_esq_open_sound=no}
 ac_cv_lib_ssl_SSL_library_init=${ac_cv_lib_ssl_SSL_library_init=yes}
+ac_cv_lib_z_deflate=${ac_cv_lib_z_deflate=yes}
 ac_cv_lib_z_deflateInit=${ac_cv_lib_z_deflateInit=no}
 ac_cv_lib_z_deflateInit_=${ac_cv_lib_z_deflateInit_=yes}
 ac_cv_prog_CC=${ac_cv_prog_CC=gcc}

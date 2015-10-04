@@ -4,6 +4,16 @@
 ListNode *Cookies=NULL;
 char *g_UserAgent=NULL;
 char *g_Proxy=NULL;
+int g_Flags=0;
+
+void HTTPAuthSet(HTTPAuthStruct *Auth, char *Logon, char *Password, int Type)
+{
+	Auth->Logon=CopyStr(Auth->Logon,Logon);
+	Auth->Password=CopyStr(Auth->Password,Password);
+	Auth->Flags |= Type;
+}
+
+
 
 void HTTPAuthDestroy(void *p_Auth)
 {
@@ -237,10 +247,8 @@ Info->PostContentLength=ContentLength;
 
 if (StrLen(Logon) || StrLen(Password))
 {
-	if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
-	Info->Authorization->Logon=CopyStr(Info->Authorization->Logon,Logon);
-	Info->Authorization->Password=CopyStr(Info->Authorization->Password,Password);
-	Info->Authorization->Flags |= HTTP_AUTH_BASIC;
+if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	HTTPAuthSet(Info->Authorization,Logon, Password, HTTP_AUTH_BASIC);
 }
 
 }
@@ -256,6 +264,7 @@ Info=(HTTPInfoStruct *) calloc(1,sizeof(HTTPInfoStruct));
 HTTPInfoSetValues(Info, Host, Port, Logon, Password, Method, Doc, ContentType, ContentLength);
 
 if (StrLen(g_Proxy)) Info->Proxy=CopyStr(Info->Proxy,g_Proxy);
+if (g_Flags) Info->Flags=g_Flags;
 
 return(Info);
 }
@@ -311,15 +320,19 @@ char *AppendCookies(char *InStr, ListNode *CookieList)
 	Tempstr=InStr;
 	Curr=GetNextListItem(CookieList);
 
-	if (Curr) Tempstr=CatStr(Tempstr,"Cookie: ");
-	while ( Curr )
+	if (Curr) 
 	{
+		Tempstr=CatStr(Tempstr,"Cookie: ");
+		while ( Curr )
+		{
 		Tempstr=MCatStr(Tempstr," ",(char *)Curr->Item,NULL);
 		Curr=GetNextListItem(Curr);
 		if (Curr) Tempstr=CatStr(Tempstr, ";");
+		}
+
+		Tempstr=CatStr(Tempstr,"\r\n");
 	}
 
-	Tempstr=CatStr(Tempstr,"\r\n");
 return(Tempstr);
 }
 
@@ -395,7 +408,6 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 		else if (strcmp(Token,"Set-Cookie")==0) HTTPParseCookie(Info,ptr);
 		else if (strcmp(Token,"Date")==0) Info->Timestamp=CopyStr(Info->Timestamp,ptr);
 		else if (
-			(strcasecmp(Token,"Content-Encoding")==0) ||
 			(strcasecmp(Token,"Transfer-Encoding")==0)
 		)
 		{
@@ -404,6 +416,24 @@ if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HEADER: %s\n",Header);
 			{
 				Info->Flags |= HTTP_CHUNKED;
 			}
+		}
+		else if (strcasecmp(Token,"Content-Encoding")==0) 
+		{
+			strlwr(ptr);
+			if (
+					(strcmp(ptr,"gzip")==0) ||
+					(strcmp(ptr,"x-gzip")==0)
+				)
+			{
+				Info->Flags |= HTTP_GZIP;
+			}
+			if (
+					(strcmp(ptr,"deflate")==0) 
+				)
+			{
+				Info->Flags |= HTTP_DEFLATE;
+			}
+
 		}
 	}
 
@@ -516,10 +546,7 @@ else SendStr=CatStr(SendStr,Info->Doc);
 if (Info->Flags & HTTP_VER1_0) SendStr=CatStr(SendStr," HTTP/1.0\r\n");
 else
 {
-SendStr=CatStr(SendStr," HTTP/1.1\r\n");
-SendStr=CatStr(SendStr,"Host: ");
-SendStr=CatStr(SendStr,Info->Host);
-SendStr=CatStr(SendStr,"\r\n");
+SendStr=MCatStr(SendStr," HTTP/1.1\r\n","Host: ",Info->Host,"\r\n",NULL);
 }
 
 if (StrLen(Info->PostContentType) >0)
@@ -561,7 +588,18 @@ SendStr=CatStr(SendStr,Buffer);
 
 if (StrLen(Info->IfModifiedSince)) SendStr=MCatStr(SendStr,"If-Modified-Since: ",Info->IfModifiedSince,"\r\n",NULL);
 SendStr=CatStr(SendStr,"Accept: */*\r\n");
-SendStr=CatStr(SendStr,"Accept-Encoding:\r\n");
+
+Tempstr=CopyStr(Tempstr,"");
+if (DataProcessorAvailable("Compression","gzip")) Tempstr=CatStr(Tempstr,"gzip");
+if (DataProcessorAvailable("Compression","zlib")) 
+{
+if (StrLen(Tempstr)) Tempstr=CatStr(Tempstr,", deflate");
+else Tempstr=CatStr(Tempstr,"deflate");
+}
+
+if (StrLen(Tempstr)) SendStr=MCatStr(SendStr,"Accept-Encoding: ",Tempstr,"\r\n",NULL);
+else SendStr=CatStr(SendStr,"Accept-Encoding:\r\n");
+
 if (Info->Flags & HTTP_KEEPALIVE) 
 {
 //if (Info->Flags & HTTP_VER1_0) 
@@ -585,7 +623,7 @@ Curr=GetNextListItem(Curr);
 SendStr=AppendCookies(SendStr,Cookies);
 SendStr=CatStr(SendStr,"\r\n");
 
-if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HTTPSEND: %s\n\n",SendStr);
+if (Info->Flags & HTTP_DEBUG) fprintf(stderr,"HTTPSEND: ------\n%s------\n\n",SendStr);
 STREAMWriteLine(SendStr,S);
 STREAMFlush(S);
 
@@ -661,7 +699,7 @@ char *Tempstr=NULL;
 
 Header->ContentLength=0;
 Header->RedirectPath=CopyStr(Header->RedirectPath,"");
-Header->Flags &= ~HTTP_CHUNKED;
+Header->Flags &= ~(HTTP_CHUNKED | HTTP_GZIP | HTTP_DEFLATE);
 Tempstr=STREAMReadLine(Tempstr,S);
 if (Tempstr)
 {
@@ -778,12 +816,11 @@ if (StrLen(Info->Proxy))
 	
 	if (strcasecmp(Proto,"https")==0) 
 	{
-		Flags |= HTTP_SSL; 
+		Flags |= CONNECT_SSL; 
 		if (Port==0) Port=443;
 	}
 	else 
 	{
-		Flags &= ~HTTP_SSL;
 		if (Port==0) Port=80;
 	}
 }
@@ -791,11 +828,11 @@ else
 {
 	Host=CopyStr(Host,Info->Host);
 	Port=Info->Port;
+	if (Info->Flags & HTTP_SSL) Flags |= CONNECT_SSL;
 }
 
-if (STREAMConnectToHost(S,Host,Port,0))
+if (STREAMConnectToHost(S,Host,Port,Flags))
 {
-	if (Flags & HTTP_SSL) DoSSLClientNegotiation(S,FALSE);
 	HTTPSendHeaders(S,Info);
 }
 else
@@ -827,13 +864,17 @@ while (1)
 		Info->ResponseCode=CopyStr(Info->ResponseCode,"");
 		if (StrLen(Info->PostData)) 
 		{
-
 			STREAMWriteLine(Info->PostData,Info->S);
 			STREAMFlush(Info->S);
 		}
 		HTTPReadHeaders(Info->S,Info);
 		result=HTTPProcessResponse(Info);
 		if (Info->Flags & HTTP_CHUNKED) HTTPAddChunkedProcessor(Info->S);
+		if (Info->Flags & HTTP_GZIP) 
+		{
+			STREAMAddStandardDataProcessor(Info->S,"compression","gzip","");
+		}
+		if (Info->Flags & HTTP_DEFLATE) STREAMAddStandardDataProcessor(Info->S,"compression","zlib","");
 
 		if (result == HTTP_OKAY) break;
 		if (result == HTTP_NOTFOUND) break;
@@ -880,31 +921,47 @@ Info->S=NULL;
 return(Info->S);
 }
 
-
-STREAM *HTTPMethod(char *Method, char *URL, char *Logon, char *Password)
+HTTPInfoStruct *HTTPInfoFromURL(char *Method, char *URL)
 {
 HTTPInfoStruct *Info;
-char *Host=NULL, *Doc=NULL, *Proto=NULL, *ContentType=NULL;
+char *Proto=NULL, *User=NULL, *Pass=NULL;
 char *ptr=NULL, *dptr, *p_port;
 int Port=0;
-STREAM *S;
 
 
-dptr=HTTPParseURL(URL, &Proto, &Host, &Port, NULL, NULL);
-if (Port==0) Port=80;
-Doc=MCopyStr(Doc,"/",dptr,NULL);
+Info=HTTPInfoCreate("", 0, "", "", Method, "", "",0);
+dptr=HTTPParseURL(URL, &Proto, &Info->Host, &Info->Port, &User, &Pass);
+if (StrLen(User) || StrLen(Pass))
+{
+	Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	HTTPAuthSet(Info->Authorization,User, Pass, HTTP_AUTH_BASIC);
+}
+
+
+if (Info->Port==0)
+{
+	if (strcmp(Proto,"https")==0) Info->Port=443;
+	else Info->Port=80;
+}
+if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
+
+Info->Doc=MCopyStr(Info->Doc,"/",dptr,NULL);
 if (StrLen(dptr))
 {
-	ContentType=CopyStr(ContentType,"");
 	if (strcmp(Method,"POST")==0)
 	{
-	ptr=strchr(Doc,'?');
+	ptr=strchr(Info->Doc,'?');
 	if (ptr) 
 	{
 		*ptr='\0';
 		ptr++;
-	  if (StrLen(ptr)) ContentType=CopyStr(ContentType,"application/x-www-form-urlencoded");
+	  if (StrLen(ptr)) 
+		{
+			Info->PostContentType=CopyStr(Info->PostContentType,"application/x-www-form-urlencoded");
 
+			Info->PostData=CopyStr(Info->PostData,ptr);
+			Info->PostContentLength=StrLen(ptr);
+		}
 	}
 	}
 	else 
@@ -913,17 +970,26 @@ if (StrLen(dptr))
 	}
 }
 
-Info=HTTPInfoCreate(Host, Port, Logon, Password, Method, Doc, ContentType, StrLen(ptr));
-if (StrLen(ptr)) Info->PostData=CopyStr(Info->PostData,ptr);
-if (strcmp(Proto,"https")==0) Info->Flags |= HTTP_SSL;
+
+DestroyString(Proto);
+return(Info);
+}
 
 
+STREAM *HTTPMethod(char *Method, char *URL, char *Logon, char *Password)
+{
+HTTPInfoStruct *Info;
+STREAM *S;
+
+
+Info=HTTPInfoFromURL(Method, URL);
+if (StrLen(Logon) || StrLen(Password))
+{
+	if (! Info->Authorization) Info->Authorization=(HTTPAuthStruct *) calloc(1,sizeof(HTTPAuthStruct));
+	HTTPAuthSet(Info->Authorization,Logon, Password, HTTP_AUTH_BASIC);
+}
 S=HTTPTransact(Info);
 
-DestroyString(ContentType);
-DestroyString(Host);
-DestroyString(Doc);
-DestroyString(Proto);
 HTTPInfoDestroy(Info);
 return(S);
 }
@@ -968,4 +1034,9 @@ g_UserAgent=CopyStr(g_UserAgent,AgentName);
 void HTTPSetProxy(char *Proxy)
 {
 g_Proxy=CopyStr(g_Proxy,Proxy);
+}
+
+void HTTPSetFlags(int Flags)
+{
+g_Flags=Flags;
 }

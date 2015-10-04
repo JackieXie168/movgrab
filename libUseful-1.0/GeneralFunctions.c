@@ -768,7 +768,7 @@ Curr=GetNextListItem(Curr);
 
 char *SubstituteVarsInString(char *Buffer, char *Fmt, ListNode *Vars, int Flags)
 {
-char *ReturnStr=NULL, *FmtPtr, *VarName=NULL;
+char *ReturnStr=NULL, *FmtPtr, *VarName=NULL, *Tempstr=NULL;
 int count, VarIsPointer=FALSE;
 ListNode *Curr;
 int len=0, i;
@@ -830,8 +830,15 @@ while (*FmtPtr !=0)
    				Curr=ListFindNamedItem(Vars,VarName);
 				if (Curr && (StrLen(Curr->Item) > 0))
 				{
-				   if (Flags & SUBS_QUOTE_VARS) ReturnStr=CatStr(ReturnStr,"'");
-				   ReturnStr=CatStr(ReturnStr,(char *) Curr->Item);
+					if (Flags & SUBS_QUOTE_VARS) ReturnStr=CatStr(ReturnStr,"'");
+					if (Flags & SUBS_STRIP_VARS_WHITESPACE) 
+					{
+						Tempstr=CopyStr(Tempstr,(char *) Curr->Item);
+						StripTrailingWhitespace(Tempstr);
+						StripLeadingWhitespace(Tempstr);
+				    	ReturnStr=CatStr(ReturnStr,Tempstr);
+					}
+				    else ReturnStr=CatStr(ReturnStr,(char *) Curr->Item);
 				   if (Flags & SUBS_QUOTE_VARS) ReturnStr=CatStr(ReturnStr,"'");
 				   len=StrLen(ReturnStr);
 				}
@@ -858,6 +865,7 @@ FmtPtr++;
 }
 
 
+DestroyString(Tempstr);
 DestroyString(VarName);
 return(ReturnStr);
 }
@@ -1076,7 +1084,7 @@ while (ptr && (*ptr != '\0'))
 
 		if (*Token=='#')
 		{
-			Output=AddCharToBuffer(Output,len,strtol(Token,NULL,16));
+			Output=AddCharToBuffer(Output,len,strtol(Token+1,NULL,16));
 			len++;
 		}
 		else if (strcmp(Token,"amp")==0)

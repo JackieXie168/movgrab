@@ -747,6 +747,7 @@ TProcessingModule *StandardDataProcessorCreate(const char *Class, const char *Na
 {
 TProcessingModule *Mod=NULL;
 
+
 #ifdef HAVE_LIBSSL
 #ifdef HAVE_LIBCRYPTO
 if (strcasecmp(Class,"crypto")==0)
@@ -801,7 +802,7 @@ if (strcasecmp(Class,"compression")==0)
    Mod->Args=CopyStr(Mod->Args,Args);
    Mod->Name=CopyStr(Mod->Name,Name);
 
-   if (strcmp(Name,"zlib")==0) Mod->Init=zlibProcessorInit;
+   if (strcasecmp(Name,"zlib")==0) Mod->Init=zlibProcessorInit;
    else Mod->Init=gzipProcessorInit;
    
    Mod->Write=zlibProcessorWrite;
@@ -867,13 +868,24 @@ return(TRUE);
 }
 
 
+int DataProcessorAvailable(const char *Class, const char *Name)
+{
+int result=FALSE;
+TProcessingModule *Mod;
+
+Mod=StandardDataProcessorCreate(Class,Name,"");
+if (Mod) result=TRUE;
+
+DataProcessorDestroy(Mod);
+return(result);
+}
 
 
 int STREAMAddStandardDataProcessor(STREAM *S, const char *Class, const char *Name, const char *Args)
 {
-TProcessingModule *Mod;
+TProcessingModule *Mod=NULL;
 
-Mod=StandardDataProcessorCreate(Class,Name,Args);
+Mod=StandardDataProcessorCreate(Class,Name,"");
 if (Mod) 
 {
 STREAMAddDataProcessor(S, Mod, Args);

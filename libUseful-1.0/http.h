@@ -25,6 +25,8 @@
 #define HTTP_SSL 1024
 #define HTTP_SSL_REWRITE 2048
 #define HTTP_CIRCULAR_REDIRECTS 4096
+#define HTTP_GZIP 8192
+#define HTTP_DEFLATE 16384
 
 
 typedef struct
@@ -76,6 +78,7 @@ void HTTPInfoSetValues(HTTPInfoStruct *Info, char *Host, int Port, char *Logon, 
 HTTPInfoStruct *HTTPInfoCreate(char *Host, int Port, char *Logon, char *Password, char *Method, char *Doc, char *ContentType, int ContentLength);
 STREAM *HTTPConnect(HTTPInfoStruct *Info);
 STREAM *HTTPTransact(HTTPInfoStruct *Info);
+HTTPInfoStruct *HTTPInfoFromURL(char *Method, char *URL);
 STREAM *HTTPMethod(char *Method, char *URL, char *Logon, char *Password);
 STREAM *HTTPGet(char *URL, char *Logon, char *Password);
 int HTTPReadBytes(STREAM *Con, char **Buffer);
@@ -84,6 +87,6 @@ void HTTPCopyToSTREAM(STREAM *Con, STREAM *S);
 int HTTPDownload(char *URL, char *Login, char *Password, STREAM *S);
 void HTTPSetUserAgent(char *AgentName);
 void HTTPSetProxy(char *Proxy);
-
+void HTTPSetFlags(int Flags);
 
 #endif
